@@ -1,0 +1,4 @@
+-J-DentityExpansionLimit=0
+-J-DtotalEntitySizeLimit=0
+-J-Djdk.xml.totalEntitySizeLimit=0
+-J-Xmx32768M
