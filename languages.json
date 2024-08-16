@@ -1,0 +1,40 @@
+[
+   {
+      "code" : "en",
+      "name" : "English",
+      "disambiguationCategory" : "Disambiguation",
+      "disambiguationTemplates" : [
+         "disambiguation",
+         "disambig",
+         "geodis"
+      ],
+      "redirectIdentifier" : "REDIRECT",
+      "aliases" : [
+         {
+            "from" : "WP",
+            "to" : "Wikipedia"
+         },
+         {
+            "from" : "WT",
+            "to" : "Wikipedia talk"
+         },
+         {
+            "from" : "Image",
+            "to" : "File"
+         },
+         {
+            "from" : "Image talk",
+            "to" : "File talk"
+         },
+         {
+            "from" : "Project",
+            "to" : "Wikipedia"
+         },
+         {
+            "from" : "Project talk",
+            "to" : "Wikipedia talk"
+         }
+      ]
+   }
+]
+

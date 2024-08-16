@@ -8,8 +8,11 @@ scalaVersion := "2.13.14"
 lazy val scalaTestVersion = "3.2.19"
 
 libraryDependencies ++= Seq(
+  "com.lihaoyi" %% "upickle" % "4.0.0",
   "io.airlift" % "aircompressor" % "0.27",
-  "org.scalatest" %% "scalatest-freespec" % scalaTestVersion % "test",
-  "org.scalatest" %% "scalatest-mustmatchers" % scalaTestVersion % "test",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
+  "org.scalatest" %% "scalatest-flatspec" % scalaTestVersion % "test",
+  "org.scalatest" %% "scalatest-shouldmatchers" % scalaTestVersion % "test",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
+  "org.slf4j" % "slf4j-api" % "2.0.16",
+  "org.slf4j" % "slf4j-simple" % "2.0.16"
 )
