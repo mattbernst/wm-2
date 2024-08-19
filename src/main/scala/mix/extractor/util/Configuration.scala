@@ -3,7 +3,8 @@ package mix.extractor.util
 import mix.extractor.types.Language
 
 case class ConfiguredProperties(
-                                 language: Language
+                                 language: Language,
+                                 fragmentWorkers: Int
                                )
 
 object Configuration extends Logging {
@@ -42,8 +43,19 @@ object Configuration extends Logging {
         val msg = s"Did not find Language entry for $lang in $languagesFile"
         throw new NoSuchElementException(msg)
       }
+
+    val fragmentWorkers: Int = {
+      val envVar = "N_FRAGMENT_WORKERS"
+      sys.env.getOrElse(envVar, {
+        val default = "4"
+        logger.warn(s"No $envVar set for fragment worker count -- defaulting to $default")
+        default
+      })
+        .toInt
+    }
     ConfiguredProperties(
-      language = language
+      language = language,
+      fragmentWorkers = fragmentWorkers
     )
   }
 

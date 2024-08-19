@@ -2,8 +2,8 @@ package mix.extractor
 
 import mix.extractor.util.{Configuration, Logging}
 
-import java.io.FileInputStream
-import javax.xml.parsers.SAXParserFactory
+import java.nio.charset.StandardCharsets
+import scala.io.Source
 
 object WikipediaExtractor extends Logging {
 
@@ -16,16 +16,24 @@ object WikipediaExtractor extends Logging {
 
     val xmlFilePath = args(0)
     logger.info(s"Starting WikipediaExtractor with language ${Configuration.props.language.name}, input $xmlFilePath")
+    val dumpSource = Source.fromFile(xmlFilePath)(StandardCharsets.UTF_8)
+    val splitter = new WikipediaPageSplitter(dumpSource.getLines())
+    val workers = assignWorkers(Configuration.props.fragmentWorkers, splitter.getFromQueue _)
 
-    val factory = SAXParserFactory.newInstance()
-    val saxParser = factory.newSAXParser()
-    val handler = new WikipediaXMLHandler
-    val inputStream = new FileInputStream(xmlFilePath)
-    saxParser.parse(inputStream, handler)
-    inputStream.close()
+    splitter.extractPages()
+    dumpSource.close()
+    logger.info(s"Split out ${splitter.pageCount} pages")
+    workers.foreach(_.thread.join())
+
 
     // Following wikipedia-miner, we need to:
     // - Process XML fragments into DumpPage via the pageSummary InitialMapper
     // - Iteratively process DumpPage results via SubsequentMapper until all Unforwarded counts reach 0.
+  }
+
+  private def assignWorkers(n: Int, source: () => Option[String]): Seq[FragmentWorker] = {
+    0.until(n).map { id =>
+      FragmentToDumpPage.worker(id, source)
+    }
   }
 }
