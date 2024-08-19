@@ -3,7 +3,6 @@ package mix.extractor
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 
 class WikipediaPageSplitter(source: Iterator[String], queueSize: Int = Short.MaxValue) {
-  // Running count of pages extracted
   var pageCount = 0
 
   /**

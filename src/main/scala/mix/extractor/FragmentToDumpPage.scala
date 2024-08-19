@@ -56,9 +56,8 @@ object FragmentToDumpPage extends Logging {
 //    if (title == "Animalia (book)") {
 //      println(pageXML)
 //    }
-//    assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
-//    assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
-//    assert(text.nonEmpty, s"Expected non-empty page text. Input was:\n $pageXML")
+    assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
+    assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
 
     DumpPage(
       id = id,
@@ -78,8 +77,13 @@ object FragmentToDumpPage extends Logging {
           source() match {
             case Some(article) =>
               val result = processFragment(article)
+            if (result.text.isEmpty) {
+              logger.warn(s"Did not get any page text for $result")
+            }
+            else {
               // TODO do something with result
               // println(result.copy(text = "MARKUP"), result.text.length)
+            }
             case None =>
               completed = true
               logger.info(s"FragmentWorker $id finished")
