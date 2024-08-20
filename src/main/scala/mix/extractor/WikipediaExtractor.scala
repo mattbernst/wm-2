@@ -17,7 +17,9 @@ object WikipediaExtractor extends Logging {
     val xmlFilePath = args(0)
     logger.info(s"Starting WikipediaExtractor with language ${Configuration.props.language.name}, input $xmlFilePath")
     val dumpSource = Source.fromFile(xmlFilePath)(StandardCharsets.UTF_8)
-    val splitter = new WikipediaPageSplitter(dumpSource.getLines())
+    val dumpStrings = dumpSource.getLines()
+    val head = dumpStrings.take(128).toSeq // TODO get siteinfo from head
+    val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
     val workers = assignWorkers(Configuration.props.fragmentWorkers, splitter.getFromQueue _)
 
     splitter.extractPages()
@@ -33,7 +35,7 @@ object WikipediaExtractor extends Logging {
 
   private def assignWorkers(n: Int, source: () => Option[String]): Seq[FragmentWorker] = {
     0.until(n).map { id =>
-      FragmentToDumpPage.worker(id, source)
+      FragmentProcessor.fragmentWorker(id, source)
     }
   }
 }

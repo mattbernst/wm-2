@@ -1,0 +1,128 @@
+<mediawiki xmlns="http://www.mediawiki.org/xml/export-0.10/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mediawiki.org/xml/export-0.10/ http://www.mediawiki.org/xml/export-0.10.xsd" version="0.10" xml:lang="en">
+  <siteinfo>
+    <sitename>Wikipedia</sitename>
+    <dbname>enwiki</dbname>
+    <base>https://en.wikipedia.org/wiki/Main_Page</base>
+    <generator>MediaWiki 1.41.0-wmf.24</generator>
+    <case>first-letter</case>
+    <namespaces>
+      <namespace key="-2" case="first-letter">Media</namespace>
+      <namespace key="-1" case="first-letter">Special</namespace>
+      <namespace key="0" case="first-letter" />
+      <namespace key="1" case="first-letter">Talk</namespace>
+      <namespace key="2" case="first-letter">User</namespace>
+      <namespace key="3" case="first-letter">User talk</namespace>
+      <namespace key="4" case="first-letter">Wikipedia</namespace>
+      <namespace key="5" case="first-letter">Wikipedia talk</namespace>
+      <namespace key="6" case="first-letter">File</namespace>
+      <namespace key="7" case="first-letter">File talk</namespace>
+      <namespace key="8" case="first-letter">MediaWiki</namespace>
+      <namespace key="9" case="first-letter">MediaWiki talk</namespace>
+      <namespace key="10" case="first-letter">Template</namespace>
+      <namespace key="11" case="first-letter">Template talk</namespace>
+      <namespace key="12" case="first-letter">Help</namespace>
+      <namespace key="13" case="first-letter">Help talk</namespace>
+      <namespace key="14" case="first-letter">Category</namespace>
+      <namespace key="15" case="first-letter">Category talk</namespace>
+      <namespace key="100" case="first-letter">Portal</namespace>
+      <namespace key="101" case="first-letter">Portal talk</namespace>
+      <namespace key="118" case="first-letter">Draft</namespace>
+      <namespace key="119" case="first-letter">Draft talk</namespace>
+      <namespace key="710" case="first-letter">TimedText</namespace>
+      <namespace key="711" case="first-letter">TimedText talk</namespace>
+      <namespace key="828" case="first-letter">Module</namespace>
+      <namespace key="829" case="first-letter">Module talk</namespace>
+      <namespace key="2300" case="case-sensitive">Gadget</namespace>
+      <namespace key="2301" case="case-sensitive">Gadget talk</namespace>
+      <namespace key="2302" case="case-sensitive">Gadget definition</namespace>
+      <namespace key="2303" case="case-sensitive">Gadget definition talk</namespace>
+    </namespaces>
+  </siteinfo>
+  <page>
+    <title>AccessibleComputing</title>
+    <ns>0</ns>
+    <id>10</id>
+    <redirect title="Computer accessibility" />
+    <revision>
+      <id>1002250816</id>
+      <parentid>854851586</parentid>
+      <timestamp>2021-01-23T15:15:01Z</timestamp>
+      <contributor>
+        <username>Elli</username>
+        <id>20842734</id>
+      </contributor>
+      <minor />
+      <comment>shel</comment>
+      <model>wikitext</model>
+      <format>text/x-wiki</format>
+      <text bytes="111" xml:space="preserve">#REDIRECT [[Computer accessibility]]
+
+{{rcat shell|
+{{R from move}}
+{{R from CamelCase}}
+{{R unprintworthy}}
+}}</text>
+      <sha1>kmysdltgexdwkv2xsml3j44jb56dxvn</sha1>
+    </revision>
+  </page>
+  <page>
+    <title>Anarchism</title>
+    <ns>0</ns>
+    <id>12</id>
+    <revision>
+      <id>1173143824</id>
+      <parentid>1172966198</parentid>
+      <timestamp>2023-08-31T15:06:22Z</timestamp>
+      <contributor>
+        <username>Citation bot</username>
+        <id>7903804</id>
+      </contributor>
+      <comment>Add: issue. | [[:en:WP:UCB|Use this bot]]. [[:en:WP:DBUG|Report bugs]]. | Suggested by Corvus florensis | #UCB_webform 1919/2500</comment>
+      <model>wikitext</model>
+      <format>text/x-wiki</format>
+      <text bytes="110933" xml:space="preserve">{{short description|Political philosophy and movement}}
+{{other uses}}
+{{redirect2|Anarchist|Anarchists|other uses|Anarchist (disambiguation)}}
+{{About|the philosophy against authority|the state of government without authority|Anarchy}}
+{{good article}}
+{{pp-semi-indef}}
+{{use British English|date=August 2021}}
+{{use dmy dates|date=August 2021}}
+{{Use shortened footnotes|date=May 2023}}
+{{anarchism sidebar}}
+{{basic forms of government}}
+
+'''Anarchism''' is a [[political philosophy]] and [[Political movement|movement]] that is skeptical of all justifications for [[authority]] and seeks to abolish the [[institutions]] it claims maintain unnecessary [[coercion]] and [[Social hierarchy|hierarchy]], typically including [[State (polity)|nation states]],{{sfn|Suissa|2019b|ps=: &quot;...as many anarchists have stressed, it is not government as such that they find objectionable, but the hierarchical forms of government associated with the nation state.&quot;}} and [[capitalism]]. Anarchism advocates for the replacement of the state with [[Stateless society|stateless societies]] and [[Voluntary association|voluntary]] [[Free association (communism and anarchism)|free associations]]. As a historically [[left-wing]] movement, this reading of anarchism is placed on the [[Far-left politics|farthest left]] of the [[political spectrum]], usually described as the [[libertarian]] wing of the [[socialist movement]] ([[libertarian socialism]]).
+
+[[Humans]] have lived in [[society|societies]] without formal hierarchies long before the establishment of states, [[realm]]s, or [[empire]]s. With the rise of organised hierarchical bodies, [[scepticism]] toward authority also rose. Although traces of anarchist ideas are found all throughout history, modern anarchism emerged from the [[Age of Enlightenment|Enlightenment]]. During the latter half of the 19th and the first decades of the 20th century, the anarchist movement flourished in most parts of the world and had a significant role in workers' struggles for [[emancipation]]. [[Anarchist schools of thought|Various anarchist schools of thought]] formed during this period. Anarchists have taken part in several revolutions, most notably in the [[Paris Commune]], the [[Russian Civil War]] and the [[Spanish Civil War]], whose end marked the end of the [[classical era of anarchism]]. In the last decades of the 20th and into the 21st century, the anarchist movement has been resurgent once more, growing in popularity and influence within [[anti-capitalist]], [[anti-war]] and [[anti-globalisation]] movements.
+
+Anarchists employ [[diversity of tactics|diverse approaches]], which may be generally divided into revolutionary and [[evolutionary strategies]]; there is significant overlap between the two. Evolutionary methods try to simulate what an anarchist society might be like, but revolutionary tactics, which have historically taken a violent turn, aim to overthrow authority and the state. Many facets of human civilization have been influenced by anarchist theory, critique, and [[Praxis (process)|praxis]].
+{{toc limit|3}}
+
+== Etymology, terminology, and definition ==
+{{main|Definition of anarchism and libertarianism}}
+{{see also|Glossary of anarchism}}
+[[File:WilhelmWeitling.jpg|thumb|[[Wilhelm Weitling]] is an example of a writer who added to anarchist theory without using the exact term.{{sfn|Carlson|1972|pp=22–23}}]]
+The etymological origin of ''anarchism'' is from the Ancient Greek ''anarkhia'', meaning &quot;without a ruler&quot;, composed of the prefix ''an-'' (&quot;without&quot;) and the word ''arkhos'' (&quot;leader&quot; or &quot;ruler&quot;). The suffix ''[[-ism]]'' denotes the ideological current that favours [[anarchy]].{{sfnm|1a1=Bates|1y=2017|1p=128|2a1=Long|2y=2013|2p=217}} ''Anarchism'' appears in English from 1642 as ''anarchisme'' and ''anarchy'' from 1539; early English usages emphasised a sense of disorder.{{sfnm|1a1=Merriam-Webster|1y=2019|1loc=&quot;Anarchism&quot;|2a1=''Oxford English Dictionary''|2y=2005|2loc=&quot;Anarchism&quot;|3a1=Sylvan|3y=2007|3p=260}} Various factions within the [[French Revolution]] labelled their opponents as ''anarchists'', although few such accused shared many views with later anarchists. Many revolutionaries of the 19th century such as [[William Godwin]] (1756–1836) and [[Wilhelm Weitling]] (1808–1871) would contribute to the anarchist doctrines of the next generation but did not use ''anarchist'' or ''anarchism'' in describing themselves or their beliefs.{{sfn|Joll|1964|pp=27–37}}
+
+The first political philosopher to call himself an ''anarchist'' ({{lang-fr|anarchiste}}) was [[Pierre-Joseph Proudhon]] (1809–1865), marking the formal birth of anarchism in the mid-19th century. Since the 1890s and beginning in France,{{sfn|Nettlau|1996|p=162}} ''[[libertarianism]]'' has often been used as a synonym for anarchism{{sfn|Guérin|1970|loc=&quot;The Basic Ideas of Anarchism&quot;}} and its use as a synonym is still common outside the United States.{{sfnm|1a1=Ward|1y=2004|1p=62|2a1=Goodway|2y=2006|2p=4|3a1=Skirda|3y=2002|3p=183|4a1=Fernández|4y=2009|4p=9}} Some usages of ''libertarianism'' refer to [[individualistic]] [[free-market]] philosophy only, and [[free-market anarchism]] in particular is termed ''libertarian anarchism''.{{sfn|Morris|2002|p=61}}
+
+While the term ''libertarian'' has been largely synonymous with anarchism,{{sfnm|1a1=Marshall|1y=1992|1p=641|2a1=Cohn|2y=2009|2p=6}} its meaning has more recently been diluted by wider adoption from ideologically disparate groups,{{sfn|Marshall|1992|p=641}} including both the [[New Left]] and [[libertarian Marxists]], who do not associate themselves with [[authoritarian socialists]] or a [[vanguard party]], and extreme [[cultural liberals]], who are primarily concerned with [[civil liberties]].{{sfn|Marshall|1992|p=641}} Additionally, some anarchists use ''[[libertarian socialist]]''{{sfnm|1a1=Marshall|1y=1992|1p=641|2a1=Chomsky|2y=2005|2p=123|3a1=Cohn|3y=2009|3p=6|4a1=Levy|4a2=Adams|4y=2018|4p=104}} to avoid anarchism's negative connotations and emphasise its connections with [[socialism]].{{sfn|Marshall|1992|p=641}} ''Anarchism'' is broadly used to describe the [[anti-authoritarian]] wing of the [[socialist movement]].{{sfn|Levy|Adams|2018|p=104}}{{refn|In ''Anarchism: From Theory to Practice'' (1970),{{sfn|Guérin|1970|p=12}} anarchist historian [[Daniel Guérin]] described it as a synonym for [[libertarian socialism]], and wrote that anarchism &quot;is really a synonym for socialism. The anarchist is primarily a socialist whose aim is to abolish the exploitation of man by man. Anarchism is only one of the streams of socialist thought, that stream whose main components are concern for liberty and haste to abolish the State.&quot;{{sfn|Arvidsson|2017}} In his many works on anarchism, such as ''Chomsky on Anarchism'' (2005),{{sfn|Chomsky|2005|p=123}} historian [[Noam Chomsky]] describes anarchism, alongside [[libertarian Marxism]], as the [[libertarian]] wing of [[socialism]].{{sfn|Otero|1994|p=617}}|group=nb}} Anarchism is contrasted to socialist forms which are state-oriented or from above.{{sfn|Osgood|1889|p=1}} Scholars of anarchism generally highlight anarchism's socialist credentials{{sfn|Newman|2005|p=15}} and criticise attempts at creating dichotomies between the two.{{sfn|Morris|2015|p=64}} Some scholars describe anarchism as having many influences from [[liberalism]],{{sfn|Marshall|1992|p=641}} and being both liberal and socialist but more so.{{sfn|Walter|2002|p=44}} Many scholars reject [[anarcho-capitalism]] as a misunderstanding of anarchist principles.{{sfnm|1a1=Marshall|1y=1992|1pp=564–565|2a1=Jennings|2y=1993|2p=143|3a1=Gay|3a2=Gay|3y=1999|3p=15|4a1=Morris|4y=2008|4p=13|5a1=Johnson|5y=2008|5p=169|6a1=Franks|6y=2013|6pp=393–394}}{{refn|[[Herbert L. Osgood]] claimed that anarchism is &quot;the extreme antithesis&quot; of [[authoritarian communism]] and [[state socialism]].{{sfn|Osgood|1889|p=1}} [[Peter Marshall (author)|Peter Marshall]] states that &quot;[i]n general anarchism is closer to socialism than liberalism. ... Anarchism finds itself largely in the socialist camp, but it also has outriders in liberalism. It cannot be reduced to socialism, and is best seen as a separate and distinctive doctrine.&quot;{{sfn|Marshall|1992|p=641}} According to [[Jeremy Jennings]], &quot;[i]t is hard not to conclude that these ideas&quot;, referring to [[anarcho-capitalism]], &quot;are described as anarchist only on the basis of a misunderstanding of what anarchism is.&quot; Jennings adds that &quot;anarchism does not stand for the untrammelled freedom of the individual (as the 'anarcho-capitalists' appear to believe) but, as we have already seen, for the extension of individuality and community.&quot;{{sfn|Jennings|1999|p=147}} [[Nicolas Walter]] wrote that &quot;anarchism does derive from liberalism and socialism both historically and ideologically. ... In a sense, anarchists always remain liberals and socialists, and whenever they reject what is good in either they betray anarchism itself. ... We are liberals but more so, and socialists but more so.&quot;{{sfn|Walter|2002|p=44}} Michael Newman includes anarchism as one of many [[socialist traditions]], especially the more socialist-aligned tradition following Proudhon and [[Mikhail Bakunin]].{{sfn|Newman|2005|p=15}} [[Brian Morris (anthropologist)|Brian Morris]] argues that it is &quot;conceptually and historically misleading&quot; to &quot;create a dichotomy between socialism and anarchism.&quot;{{sfn|Morris|2015|p=64}}|group=nb}}
+
+While [[Anti-statism|opposition to the state]] is central to anarchist thought, defining ''anarchism'' is not an easy task for scholars, as there is a lot of discussion among scholars and anarchists on the matter, and various currents perceive anarchism slightly differently.{{sfn|Long|2013|p=217}}{{refn|One common definition adopted by anarchists is that anarchism is a cluster of political philosophies opposing [[authority]] and [[hierarchical organisation]], including [[Anarchism and capitalism|capitalism]], [[Anarchism and nationalism|nationalism]], the [[State (polity)|state]], and all associated [[institution]]s, in the conduct of all [[human relations]] in favour of a society based on [[decentralisation]], [[freedom]], and [[voluntary association]]. Scholars highlight that this definition has the same shortcomings as the definition based on anti-authoritarianism (''[[a posteriori]]'' conclusion), anti-statism (anarchism is much more than that),{{sfnm|1a1=McLaughlin|1y=2007|1p=166|2a1=Jun|2y=2009|2p=507|3a1=Franks|3y=2013|3pp=386–388}} and etymology (negation of rulers).{{sfnm|1a1=McLaughlin|1y=2007|1pp=25–29|2a1=Long|2y=2013|2pp=217}}|group=nb}} Major definitional elements include the will for a non-coercive society, the rejection of the state apparatus, the belief that human nature allows humans to exist in or progress toward such a non-coercive society, and a suggestion on how to act to pursue the ideal of anarchy.{{sfn|McLaughlin|2007|pp=25–26}}
+
+== History ==
+{{main|History of anarchism}}
+
+=== Pre-modern era ===
+[[File:Paolo Monti - Servizio fotografico (Napoli, 1969) - BEIC 6353768.jpg|thumb|upright=.7|[[Zeno of Citium]] ({{Circa|334|262 BC}}), whose ''[[Republic (Zeno)|Republic]]'' inspired [[Peter Kropotkin]]{{sfn|Marshall|1993|p=70}}]]
+Before the creation of towns and cities, established authority did not exist. It was after the institution of authority that anarchistic ideas were espoused as a reaction.{{sfn|Graham|2005|pp=xi–xiv}} The most notable precursors to anarchism in the ancient world were in China and Greece. In China, [[philosophical anarchism]] (the discussion on the legitimacy of the state) was delineated by [[Taoism|Taoist]] philosophers [[Zhuang Zhou]] and [[Laozi]].{{sfnm|1a1=Coutinho|1y=2016|2a1=Marshall|2y=1993|2p=54}} Alongside [[Stoicism]], Taoism has been said to have had &quot;significant anticipations&quot; of anarchism.{{Sfn|Sylvan|2007|p=257}}
+
+Anarchic attitudes were also articulated by tragedians and philosophers in Greece. [[Aeschylus]] and [[Sophocles]] used the myth of [[Antigone]] to illustrate the conflict between laws imposed by the state and personal [[autonomy]]. [[Socrates]] questioned [[Athens|Athenian]] authorities constantly and insisted on the right of individual freedom of conscience. [[Cynicism (philosophy)|Cynics]] dismissed human law (''[[Nomos (sociology)|nomos]]'') and associated authorities while trying to live according to nature (''[[physis]]''). [[Stoics]] were supportive of a society based on unofficial and friendly relations among its citizens without the presence of a state.{{sfn|Marshall|1993|pp=4, 66–73}}
+
+In [[Middle Ages|medieval Europe]], there was no anarchistic activity except some ascetic religious movements. These, and other Muslim movements, later gave birth to [[Anarchism and religion|religious anarchism]]. In the [[Sasanian Empire]], [[Mazdak]] called for an [[egalitarian]] society and the [[abolition of monarchy]], only to be soon executed by Emperor [[Kavad I]].{{sfn|Marshall|1993|p=86}}
+
+In [[Basra]], religious sects preached against the state.{{Sfn|Crone|2000|pp=3, 21–25}} In Europe, various sects developed anti-state and libertarian tendencies.{{sfn|Nettlau|1996|p=8}} Renewed interest in antiquity during the [[Renaissance]] and in private judgment during the [[Reformation]] restored elements of anti-authoritarian secularism, particularly in France.{{sfn|Marshall|1993|p=108}} [[Age of Enlightenment|Enlightenment]] challenges to intellectual authority (secular and religious) and the [[List of revolutions and rebellions|revolutions of the 1790s and 1848]] all spurred the ideological development of what became the era of classical anarchism.{{sfn|Levy|Adams|2018|p=307}}
+
+=== Modern era ===
+During the [[French Revolution]], partisan groups such as the [[Enragés]] and the {{lang|fr|[[sans-culottes]]}} saw a turning point in the fermentation of anti-state and federalist sentiments.{{sfn|Marshall|1993|p=4}} The first anarchist currents developed throughout the 18th century as [[William Godwin]] espoused [[philosophical anarchism]] in England, morally delegitimising the state, [[Max Stirner]]'s thinking paved the way to [[Individualist anarchism|individualism]] and [[Pierre-Joseph Proudhon]]'s theory of [[Mutualism (economic theory)|mutualism]] found fertile soil in France.{{sfn|Marshall|1993|pp=4–5}} By the late 1870s, various anarchist schools of thought had become well-defined and a wave of then unprecedented [[globalisation]] occurred from 1880 to 1914.{{sfn|Levy|2011|pp=10–15}} This era of [[classical anarchism]] lasted until the end of the [[Spanish Civil War]] and is considered the golden age of anarchism.{{sfn|Marshall|1993|pp=4–5}}
