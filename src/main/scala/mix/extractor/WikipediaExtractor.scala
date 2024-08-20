@@ -1,5 +1,6 @@
 package mix.extractor
 
+import mix.extractor.types.SiteInfo
 import mix.extractor.util.{Configuration, Logging}
 
 import java.nio.charset.StandardCharsets
@@ -18,7 +19,8 @@ object WikipediaExtractor extends Logging {
     logger.info(s"Starting WikipediaExtractor with language ${Configuration.props.language.name}, input $xmlFilePath")
     val dumpSource = Source.fromFile(xmlFilePath)(StandardCharsets.UTF_8)
     val dumpStrings = dumpSource.getLines()
-    val head = dumpStrings.take(128).toSeq // TODO get siteinfo from head
+    val head = dumpStrings.take(128).toSeq
+    val siteInfo = SiteInfo(head.mkString("\n"))
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
     val workers = assignWorkers(Configuration.props.fragmentWorkers, splitter.getFromQueue _)
 
