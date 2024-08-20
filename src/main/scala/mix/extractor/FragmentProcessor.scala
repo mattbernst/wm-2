@@ -1,6 +1,6 @@
 package mix.extractor
 
-import mix.extractor.types.{ARTICLE, DumpPage}
+import mix.extractor.types.{ARTICLE, DumpPage, Namespace, SiteInfo}
 import mix.extractor.util.Logging
 
 import java.io.StringReader
@@ -12,38 +12,56 @@ import scala.util.{Failure, Success, Try}
 
 case class FragmentWorker(thread: Thread)
 
-object FragmentProcessor extends Logging {
-
-
+class FragmentProcessor(siteInfo: SiteInfo) extends Logging {
   /**
-   * Convert a single Wikipedia page of XML to a structured DumpPage
+   * Convert a single Wikipedia page of XML to a structured DumpPage.
+   * Only categories, templates, and articles get converted by default;
+   * other page types can be ignored.
    *
    * @param pageXML A string of XML as extracted by WikipediaPageSplitter
-   * @return        A DumpPage with text and structured page data
+   * @return        An optional DumpPage with text and structured page data
    */
-  def fragmentToPage(pageXML: String): DumpPage = {
+  def fragmentToPage(pageXML: String,
+                     validNamespaces: Set[Namespace] = defaultValidNamespaces): Option[DumpPage] = {
     val tags = fragmentToMap(pageXML)
-    val id = tags("id").headOption.map(_.toInt).getOrElse(0)
     val title = tags("title").headOption.getOrElse("")
-    assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
-    assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
+    val namespace = getNamespace(title)
+    if (validNamespaces.contains(namespace)) {
+      val id = tags("id").headOption.map(_.toInt).getOrElse(0)
+      assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
+      assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
 
-    val text = tags("text").headOption.getOrElse("")
-    val lastEdited = tags("timestamp")
-      .flatMap(editDate => Try(dateFormat.parse(editDate)).toOption)
-      .headOption
-      .map(_.toInstant.toEpochMilli)
-      .getOrElse(0L)
+      val text = tags("text").headOption.getOrElse("")
+      val lastEdited = tags("timestamp")
+        .flatMap(editDate => Try(dateFormat.parse(editDate)).toOption)
+        .headOption
+        .map(_.toInstant.toEpochMilli)
+        .getOrElse(0L)
 
-    DumpPage(
-      id = id,
-      pageType = ARTICLE, // TODO
-      title = title,
-      text = text,
-      target = "???", // TODO
-      lastEdited = lastEdited
-    )
+      val res = DumpPage(
+        id = id,
+        pageType = ARTICLE, // TODO
+        title = title,
+        text = text,
+        target = "???", // TODO
+        lastEdited = lastEdited
+      )
+      Some(res)
+    }
+    else {
+      None
+    }
   }
+
+  /**
+   * Determine the namespace from the page title. Titles in a namespace start
+   * with a prefix: value that can be matched in siteinfo.
+   *
+   * @param title A page title
+   * @return      The matching namespace, or default namespace if nothing matches
+   */
+  private[extractor] def getNamespace(title: String): Namespace =
+    siteInfo.prefixToNamespace(title.split(':').head)
 
   /**
    * Convert an XML fragment to a map with one or more string values for each
@@ -91,19 +109,21 @@ object FragmentProcessor extends Logging {
     result.withDefaultValue(ListBuffer[String]())
   }
 
-  def fragmentWorker(id: Int, source: () => Option[String]): FragmentWorker = {
+  def fragmentWorker(id: Int,
+                     source: () => Option[String]): FragmentWorker = {
     val thread = new Thread(() => {
       var completed = false
       while (!completed) {
         source() match {
           case Some(article) if article.trim.nonEmpty =>
-            val result = fragmentToPage(article)
-            if (result.text.isEmpty) {
-              logger.warn(s"Did not get any page text for $result")
-            }
-            else {
-              // TODO do something with result
-              // println(result.copy(text = "MARKUP"), result.text.length)
+            fragmentToPage(article).foreach { result =>
+              if (result.text.isEmpty) {
+                logger.warn(s"Did not get any page text for $result")
+              }
+              else {
+                // TODO do something with result
+                // println(result.copy(text = "MARKUP"), result.text.length)
+              }
             }
           case _ =>
             completed = true
@@ -115,6 +135,15 @@ object FragmentProcessor extends Logging {
     thread.setDaemon(true)
     thread.start()
     FragmentWorker(thread)
+  }
+
+  val defaultValidNamespaces: Set[Namespace] = {
+    val article = siteInfo.defaultNamespace
+    val category = siteInfo.namespaces.find(_.name == "Category")
+    val template = siteInfo.namespaces.find(_.name == "Template")
+    require(category.nonEmpty, s"SiteInfo namespaces is missing category: ${siteInfo.namespaces}")
+    require(template.nonEmpty, s"SiteInfo namespaces is missing template: ${siteInfo.namespaces}")
+    Set(article, category.get, template.get)
   }
 
   private val inputFactory = XMLInputFactory.newInstance

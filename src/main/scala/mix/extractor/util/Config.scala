@@ -7,7 +7,7 @@ case class ConfiguredProperties(
                                  fragmentWorkers: Int
                                )
 
-object Configuration extends Logging {
+object Config extends Logging {
 
   lazy val profile: String = {
     val envVar = "PROFILE"

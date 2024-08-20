@@ -17,6 +17,16 @@ case class SiteInfo(
                      kase: Casing,
                      namespaces: Seq[Namespace]
                    )
+{
+  val defaultNamespace: Namespace =
+    namespaces.find(_.key == 0).getOrElse(throw new NoSuchElementException("No namespace 0 in siteinfo!"))
+
+  val prefixToNamespace: Map[String, Namespace] =
+    namespaces
+      .map(ns => (ns.name, ns))
+      .toMap
+      .withDefaultValue(defaultNamespace)
+}
 
 object SiteInfo {
   def apply(input: String): SiteInfo = {

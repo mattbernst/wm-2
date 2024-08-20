@@ -23,8 +23,10 @@ class WikipediaPageSplitter(source: Iterator[String], queueSize: Int = Short.Max
   def extractPages(): Unit = {
     while (source.hasNext) {
       val slice = Text.tagSlice("page", source)
-      queue.put(slice)
-      pageCount += 1
+      if (slice.nonEmpty) {
+        queue.put(slice)
+        pageCount += 1
+      }
     }
   }
 

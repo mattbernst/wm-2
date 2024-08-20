@@ -1,8 +1,7 @@
 package mix.extractor
 
-import mix.extractor.types.ARTICLE
+import mix.extractor.types.*
 import mix.extractor.util.{Text, UnitSpec}
-import pprint.PPrinter.BlackWhite
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -11,7 +10,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
   it should "extract standard fields from a basic article" in {
-    val page = FragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/animalia.xml"))
+    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/animalia.xml"))
     page.id shouldBe 332
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
@@ -20,7 +19,7 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "handle an article that has been blanked" in {
-    val page = FragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/missing-text.xml"))
+    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/missing-text.xml"))
     page.id shouldBe 551039
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G"
@@ -45,7 +44,48 @@ class FragmentProcessorSpec extends UnitSpec {
       "timestamp" -> ListBuffer("2008-08-23T19:20:29Z")
     )
 
-    val result = FragmentProcessor.fragmentToMap(Text.readTextFile("src/test/resources/missing-text.xml"))
+    val result = fragmentProcessor.fragmentToMap(Text.readTextFile("src/test/resources/missing-text.xml"))
     result shouldBe expected
   }
+
+  private lazy val siteInfo = SiteInfo(
+    siteName = "Wikipedia",
+    dbName = "enwiki",
+    base = "https://en.wikipedia.org/wiki/Main_Page",
+    kase = FIRST_LETTER,
+    namespaces = List(
+      Namespace(key = -2, kase = FIRST_LETTER, name = "Media"),
+      Namespace(key = -1, kase = FIRST_LETTER, name = "Special"),
+      Namespace(key = 0, kase = FIRST_LETTER, name = ""),
+      Namespace(key = 1, kase = FIRST_LETTER, name = "Talk"),
+      Namespace(key = 2, kase = FIRST_LETTER, name = "User"),
+      Namespace(key = 3, kase = FIRST_LETTER, name = "User talk"),
+      Namespace(key = 4, kase = FIRST_LETTER, name = "Wikipedia"),
+      Namespace(key = 5, kase = FIRST_LETTER, name = "Wikipedia talk"),
+      Namespace(key = 6, kase = FIRST_LETTER, name = "File"),
+      Namespace(key = 7, kase = FIRST_LETTER, name = "File talk"),
+      Namespace(key = 8, kase = FIRST_LETTER, name = "MediaWiki"),
+      Namespace(key = 9, kase = FIRST_LETTER, name = "MediaWiki talk"),
+      Namespace(key = 10, kase = FIRST_LETTER, name = "Template"),
+      Namespace(key = 11, kase = FIRST_LETTER, name = "Template talk"),
+      Namespace(key = 12, kase = FIRST_LETTER, name = "Help"),
+      Namespace(key = 13, kase = FIRST_LETTER, name = "Help talk"),
+      Namespace(key = 14, kase = FIRST_LETTER, name = "Category"),
+      Namespace(key = 15, kase = FIRST_LETTER, name = "Category talk"),
+      Namespace(key = 100, kase = FIRST_LETTER, name = "Portal"),
+      Namespace(key = 101, kase = FIRST_LETTER, name = "Portal talk"),
+      Namespace(key = 118, kase = FIRST_LETTER, name = "Draft"),
+      Namespace(key = 119, kase = FIRST_LETTER, name = "Draft talk"),
+      Namespace(key = 710, kase = FIRST_LETTER, name = "TimedText"),
+      Namespace(key = 711, kase = FIRST_LETTER, name = "TimedText talk"),
+      Namespace(key = 828, kase = FIRST_LETTER, name = "Module"),
+      Namespace(key = 829, kase = FIRST_LETTER, name = "Module talk"),
+      Namespace(key = 2300, kase = CASE_SENSITIVE, name = "Gadget"),
+      Namespace(key = 2301, kase = CASE_SENSITIVE, name = "Gadget talk"),
+      Namespace(key = 2302, kase = CASE_SENSITIVE, name = "Gadget definition"),
+      Namespace(key = 2303, kase = CASE_SENSITIVE, name = "Gadget definition talk")
+    )
+  )
+
+  private lazy val fragmentProcessor = new FragmentProcessor(siteInfo)
 }
