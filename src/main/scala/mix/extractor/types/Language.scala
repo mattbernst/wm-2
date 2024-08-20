@@ -12,10 +12,10 @@ object NamespaceAlias {
 case class Language(
                      code: String, // e.g. "en"
                      name: String, // e.g. "English"
-                     disambiguationCategory: String,
+                     disambiguationCategories: Seq[String],
                      // See https://en.wikipedia.org/wiki/Template:Disambiguation
                      disambiguationTemplates: Seq[String],
-                     redirectIdentifier: String,
+                     redirectIdentifiers: Seq[String],
                      // See https://en.wikipedia.org/wiki/Wikipedia:Namespace#Aliases_and_pseudo-namespaces
                      aliases: Seq[NamespaceAlias]
                    )

@@ -10,7 +10,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
   it should "extract standard fields from a basic article" in {
-    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/animalia.xml"))
+    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/animalia.xml")).get
     page.id shouldBe 332
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
@@ -18,14 +18,9 @@ class FragmentProcessorSpec extends UnitSpec {
     page.lastEdited shouldBe 1463364739000L // "2016-05-15T19:12:19Z"
   }
 
-  it should "handle an article that has been blanked" in {
-    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/missing-text.xml"))
-    page.id shouldBe 551039
-    page.pageType shouldBe ARTICLE
-    page.title shouldBe "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G"
-    page.target shouldBe "???"
-    page.lastEdited shouldBe 1219544429000L
-    page.text shouldBe ""
+  it should "return nothing for a Wikipedia: namespace" in {
+    val result = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/missing-text.xml"))
+    result shouldBe None
   }
 
   behavior of "fragmentToMap"
@@ -46,6 +41,26 @@ class FragmentProcessorSpec extends UnitSpec {
 
     val result = fragmentProcessor.fragmentToMap(Text.readTextFile("src/test/resources/missing-text.xml"))
     result shouldBe expected
+  }
+
+  behavior of "getNamespace"
+
+  it should "get the default namespace for a title without prefix" in {
+    fragmentProcessor.getNamespace("Apollo 11") shouldBe siteInfo.defaultNamespace
+  }
+
+  it should "get the default namespace for a title with no matching prefix" in {
+    fragmentProcessor.getNamespace("A.D. Police: Dead End City") shouldBe siteInfo.defaultNamespace
+  }
+
+  it should "get the matching namespace for a defined namespace (1)" in {
+    val expected = siteInfo.prefixToNamespace("Template")
+    fragmentProcessor.getNamespace("Template:Periodic table") shouldBe expected
+  }
+
+  it should "get the matching namespace for a defined namespace (2)" in {
+    val expected = siteInfo.prefixToNamespace("Category")
+    fragmentProcessor.getNamespace("Category:Brass instruments") shouldBe expected
   }
 
   private lazy val siteInfo = SiteInfo(

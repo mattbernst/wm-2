@@ -2,13 +2,17 @@
    {
       "code" : "en",
       "name" : "English",
-      "disambiguationCategory" : "Disambiguation",
+      "disambiguationCategories" : [
+         "Disambiguation"
+      ],
       "disambiguationTemplates" : [
          "disambiguation",
          "disambig",
          "geodis"
       ],
-      "redirectIdentifier" : "REDIRECT",
+      "redirectIdentifiers" : [
+         "REDIRECT"
+      ],
       "aliases" : [
          {
             "from" : "WP",

@@ -9,9 +9,9 @@ class LanguageSpec extends UnitSpec {
     val lang = Language(
       code = "en",
       name = "English",
-      disambiguationCategory = "Disambiguation",
+      disambiguationCategories = Seq("Disambiguation"),
       disambiguationTemplates = Seq("disambiguation", "disambig", "geodis"),
-      redirectIdentifier = "REDIRECT",
+      redirectIdentifiers = Seq("REDIRECT"),
       aliases = Seq(
         NamespaceAlias(from = "WP", to = "Wikipedia"),
         NamespaceAlias(from = "WT", to = "Wikipedia talk")
