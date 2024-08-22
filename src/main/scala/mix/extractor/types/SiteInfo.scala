@@ -26,6 +26,20 @@ case class SiteInfo(
       .map(ns => (ns.name, ns))
       .toMap
       .withDefaultValue(defaultNamespace)
+
+  // These common keys are frequently referenced during data processing.
+  // The numbers each refer to a namespace. The numbering is used consistently
+  // across different language Wikipedia dumps.
+  val MAIN_KEY: Int = 0
+  val SPECIAL_KEY: Int = -1
+  val FILE_KEY: Int = 6
+  val TEMPLATE_KEY: Int = 10
+  val CATEGORY_KEY: Int = 14
+  // To be sure, validate that all common keys are found in current namespaces
+  Seq(MAIN_KEY, SPECIAL_KEY, FILE_KEY, TEMPLATE_KEY, CATEGORY_KEY).foreach { key =>
+    val msg = s"Expected to find common key $key in namespaces, but it was missing: $namespaces"
+    assert(namespaces.map(_.key).contains(key), msg)
+  }
 }
 
 object SiteInfo {

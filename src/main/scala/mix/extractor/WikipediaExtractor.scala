@@ -21,7 +21,7 @@ object WikipediaExtractor extends Logging {
     val dumpStrings = dumpSource.getLines()
     val head = dumpStrings.take(128).toSeq
     val siteInfo = SiteInfo(head.mkString("\n"))
-    val fragmentProcessor = new FragmentProcessor(siteInfo)
+    val fragmentProcessor = new FragmentProcessor(siteInfo, Config.props.language)
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
