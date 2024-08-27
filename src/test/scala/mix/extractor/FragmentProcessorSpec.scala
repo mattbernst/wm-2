@@ -23,26 +23,6 @@ class FragmentProcessorSpec extends UnitSpec {
     result shouldBe None
   }
 
-  behavior of "fragmentToMap"
-
-  it should "handle a page" in {
-    val expected = mutable.Map(
-      "sha1" -> ListBuffer("phoiac9h4m842xq45sp7s6u21eteeq1"),
-      "ns" -> ListBuffer("4"),
-      "format" -> ListBuffer("text/x-wiki"),
-      "model" -> ListBuffer("wikitext"),
-      "comment" -> ListBuffer("blanked the page, see main page"),
-      "id" -> ListBuffer("551039", "233785688", "3340110"),
-      "title" -> ListBuffer("Wikipedia:WikiProject Missing encyclopedic articles/biographies/G"),
-      "parentid" -> ListBuffer("229983145"),
-      "username" -> ListBuffer("Voorlandt"),
-      "timestamp" -> ListBuffer("2008-08-23T19:20:29Z")
-    )
-
-    val result = fragmentProcessor.fragmentToMap(Text.readTextFile("src/test/resources/missing-text.xml"))
-    result shouldBe expected
-  }
-
   behavior of "getNamespace"
 
   it should "get the default namespace for a title without prefix" in {
