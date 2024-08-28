@@ -1,4 +1,4 @@
-package mix.extractor.types
+package wiki.extractor.types
 
 // Recognized types of Wikipedia pages
 sealed trait PageType

@@ -1,6 +1,6 @@
-package mix.extractor.types
+package wiki.extractor.types
 
-import mix.extractor.util.{Text, UnitSpec}
+import wiki.extractor.util.{Text, UnitSpec}
 
 class SiteInfoSpec extends UnitSpec {
   behavior of "apply"

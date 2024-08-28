@@ -1,6 +1,6 @@
-package mix.extractor
+package wiki.extractor
 
-import mix.extractor.util.Text
+import wiki.extractor.util.Text
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 

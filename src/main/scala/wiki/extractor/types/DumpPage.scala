@@ -1,4 +1,4 @@
-package mix.extractor.types
+package wiki.extractor.types
 
 case class DumpPage(
                      id: Int,

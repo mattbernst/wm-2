@@ -1,10 +1,7 @@
-package mix.extractor
+package wiki.extractor
 
-import mix.extractor.types.*
-import mix.extractor.util.{Text, UnitSpec}
-
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import wiki.extractor.types.*
+import wiki.extractor.util.{Text, UnitSpec}
 
 class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"

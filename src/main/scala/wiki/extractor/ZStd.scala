@@ -1,4 +1,4 @@
-package mix.extractor
+package wiki.extractor
 
 import io.airlift.compress.zstd.{ZstdCompressor, ZstdDecompressor}
 

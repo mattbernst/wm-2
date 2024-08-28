@@ -1,6 +1,6 @@
-package mix.extractor.types
+package wiki.extractor.types
 
-import mix.extractor.util.UnitSpec
+import wiki.extractor.util.UnitSpec
 
 class LanguageSpec extends UnitSpec {
   behavior of "serialization/deserialization"

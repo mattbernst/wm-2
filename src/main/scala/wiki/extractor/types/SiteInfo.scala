@@ -1,6 +1,6 @@
-package mix.extractor.types
+package wiki.extractor.types
 
-import mix.extractor.util.Text
+import wiki.extractor.util.Text
 
 import scala.xml.*
 

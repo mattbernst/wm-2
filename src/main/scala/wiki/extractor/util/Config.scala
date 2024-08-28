@@ -1,6 +1,6 @@
-package mix.extractor.util
+package wiki.extractor.util
 
-import mix.extractor.types.Language
+import wiki.extractor.types.Language
 
 case class ConfiguredProperties(
                                  language: Language,

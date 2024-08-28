@@ -1,4 +1,4 @@
-organization := "mix"
+organization := "wiki"
 name := "wm-2"
 version := "1.0"
 

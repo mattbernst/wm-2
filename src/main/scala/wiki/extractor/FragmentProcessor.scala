@@ -1,7 +1,7 @@
-package mix.extractor
+package wiki.extractor
 
-import mix.extractor.types.*
-import mix.extractor.util.Logging
+import wiki.extractor.types.*
+import wiki.extractor.util.Logging
 
 import java.text.SimpleDateFormat
 import scala.util.Try

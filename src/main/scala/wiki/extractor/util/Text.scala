@@ -1,4 +1,4 @@
-package mix.extractor.util
+package wiki.extractor.util
 
 import scala.io.Source
 

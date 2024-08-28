@@ -1,4 +1,4 @@
-package mix.extractor.util
+package wiki.extractor.util
 
 class TextSpec extends UnitSpec {
   behavior of "tagSlice"

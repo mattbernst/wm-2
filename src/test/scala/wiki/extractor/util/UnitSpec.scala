@@ -1,4 +1,4 @@
-package mix.extractor.util
+package wiki.extractor.util
 
 import org.scalatest.*
 import org.scalatest.flatspec.*

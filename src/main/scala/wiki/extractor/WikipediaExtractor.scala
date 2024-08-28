@@ -1,14 +1,14 @@
-package mix.extractor
+package wiki.extractor
 
-import mix.extractor.types.SiteInfo
-import mix.extractor.util.{Config, Logging}
+import wiki.extractor.types.SiteInfo
+import wiki.extractor.util.{Config, Logging}
 
 import java.nio.charset.StandardCharsets
 import scala.io.Source
 
 object WikipediaExtractor extends Logging {
 
-  // e.g. sbt "runMain mix.extractor.WikipediaExtractor /Users/mernst/git/mix/wm-data/wm-extract-20160713/input/dump.xml"
+  // e.g. sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/mix/wm-data/wm-extract-20160713/input/dump.xml"
   def main(args: Array[String]): Unit = {
     if (args.length != 1) {
       println(s"Usage: WikipediaExtractor <path-to-xml-dump> (${args.toSeq})")
