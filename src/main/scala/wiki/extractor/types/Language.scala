@@ -21,20 +21,6 @@ case class Language(
                      aliases: Seq[NamespaceAlias]
                    ) {
 
-  val redirectPattern: Pattern = {
-    val redirectRegex = new StringBuffer("\\#")
-    redirectRegex.append("(")
-    redirectIdentifiers.foreach { ri =>
-      redirectRegex.append(ri)
-      redirectRegex.append("|")
-    }
-
-    redirectRegex.deleteCharAt(redirectRegex.length - 1)
-    redirectRegex.append(")[:\\s]*(?:\\[\\[(.*)\\]\\]|(.*))")
-
-    Pattern.compile(redirectRegex.toString, Pattern.CASE_INSENSITIVE)
-  }
-
   val disambiguationPattern: Pattern = {
     var disambigCategoryRegex: String = null
     if (disambiguationCategories.nonEmpty) {

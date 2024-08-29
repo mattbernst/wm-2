@@ -4,6 +4,7 @@ import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
 import java.text.SimpleDateFormat
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 import scala.xml.XML
 
@@ -36,15 +37,8 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
         .headOption
         .map(_.toInstant.toEpochMilli)
         .getOrElse(0L)
-      val pageType = getPageType(text, namespace)
-      val redirectTarget = if (pageType == REDIRECT) {
-        val res = getRedirectTarget(text)
-        assert(res.nonEmpty, s"Expected to get redirect target for REDIRECT: $id $text")
-        res
-      }
-      else {
-        None
-      }
+      val redirects = getRedirects(text)
+      val pageType = getPageType(pageText = text, redirects = redirects, namespace = namespace)
 
       val res = DumpPage(
         id = id,
@@ -52,7 +46,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
         pageType = pageType,
         title = title, // TODO normalize title
         text = text,
-        redirectTarget = redirectTarget,
+        redirectTarget = redirects.headOption,
         lastEdited = lastEdited
       )
       Some(res)
@@ -102,15 +96,18 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
 
 
   /**
-   * Get the page type from the page text and namespace. We need the page text
-   * to determine if the page is a redirect or disambiguation. Otherwise, the
-   * type can be determined from the namespace.
+   * Get the page type from the page text, redirects, and namespace. We need
+   * the page text to determine if the page is a disambiguation. Otherwise,
+   * the type can be determined from the namespace or redirects.
    *
    * @param pageText  Wikipedia markup for the page content
+   * @param redirects One or more bracketed-text pages following a #REDIRECT
    * @param namespace The namespace that the page belongs to
    */
-  private[extractor] def getPageType(pageText: String, namespace: Namespace): PageType = {
-    if (language.redirectPattern.matcher(pageText).find()) {
+  private[extractor] def getPageType(pageText: String,
+                                     redirects: Seq[String],
+                                     namespace: Namespace): PageType = {
+    if (redirects.nonEmpty) {
       REDIRECT
     }
     else {
@@ -136,26 +133,34 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
   }
 
   /**
-   * Get the redirect target for a redirect page.
+   * Get the pages following a #redirect directive.
    *
    * @param pageText Wikipedia markup for the page content
-   * @return         The target, or None if no target could be found
+   * @return         All pages inside double brackets, following a redirect
    */
-  private[extractor] def getRedirectTarget(pageText: String): Option[String] = {
-    val matcher = language.redirectPattern.matcher(pageText)
-    if (matcher.find()) {
-      val result = if (matcher.group(2) != null) {
-        matcher.group(2)
+  private[extractor] def getRedirects(pageText: String): Seq[String] = {
+    val identifiers = new ListBuffer[String]
+    var startIndex = -1
+    val head = pageText.take(Byte.MaxValue).toUpperCase
+
+    if (head.contains("#REDIRECT")) {
+      pageText.indices.foreach { i =>
+        if (pageText(i) == '[') {
+          startIndex = i + 1
+        } else if (pageText(i) == ']' && startIndex != -1) {
+          identifiers.append(pageText.substring(startIndex, i))
+          startIndex = -1
+        }
       }
-      else {
-        // println(s"3, ${matcher.group(3)}, ${pageText.take(500)}...")
-        matcher.group(3)
-      }
-      Some(result)
     }
-    else {
-      None
-    }
+
+    identifiers
+      .toSeq
+      // We want to get whole-page identifiers, so convert redirects like
+      // "Thermal expansion#Coefficient of thermal expansion"
+      // to
+      // "Thermal expansion"
+      .map(_.split('#').head)
   }
 
   val defaultValidNamespaces: Set[Namespace] = {
