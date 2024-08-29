@@ -4,7 +4,6 @@ import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
 import java.text.SimpleDateFormat
-import scala.collection.mutable.ListBuffer
 import scala.util.Try
 import scala.xml.XML
 
@@ -16,6 +15,10 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
    * Only categories, templates, and articles get converted by default;
    * other page types can be ignored.
    *
+   * For the format of the XML to be processed, see
+   * https://www.mediawiki.org/wiki/Help:Export#Export_format
+   * and https://www.mediawiki.org/xml/export-0.11.xsd
+   *
    * @param pageXML A string of XML as extracted by WikipediaPageSplitter
    * @return        An optional DumpPage with text and structured page data
    */
@@ -23,6 +26,8 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
                      validNamespaces: Set[Namespace] = defaultValidNamespaces): Option[DumpPage] = {
     val xml = XML.loadString(pageXML)
     val title = (xml \ "title").text
+    // e.g. <redirect title="History of Afghanistan" />
+    val redirect = (xml \ "redirect" \ "@title").headOption.map(_.text)
     val namespace = getNamespace(title)
     if (validNamespaces.contains(namespace)) {
       val id = (xml \ "id").text.toInt
@@ -37,8 +42,13 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
         .headOption
         .map(_.toInstant.toEpochMilli)
         .getOrElse(0L)
-      val redirects = getRedirects(text)
-      val pageType = getPageType(pageText = text, redirects = redirects, namespace = namespace)
+
+      val pageType = if (redirect.nonEmpty) {
+        REDIRECT
+      }
+      else {
+        inferPageType(pageText = text, namespace = namespace)
+      }
 
       val res = DumpPage(
         id = id,
@@ -46,7 +56,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
         pageType = pageType,
         title = title, // TODO normalize title
         text = text,
-        redirectTarget = redirects.headOption,
+        redirectTarget = redirect,
         lastEdited = lastEdited
       )
       Some(res)
@@ -96,71 +106,34 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
 
 
   /**
-   * Get the page type from the page text, redirects, and namespace. We need
+   * Infer the page type from the page text and namespace. We need
    * the page text to determine if the page is a disambiguation. Otherwise,
-   * the type can be determined from the namespace or redirects.
+   * the type can be determined from the namespace or presence of a
+   * redirect declaration.
    *
    * @param pageText  Wikipedia markup for the page content
-   * @param redirects One or more bracketed-text pages following a #REDIRECT
    * @param namespace The namespace that the page belongs to
    */
-  private[extractor] def getPageType(pageText: String,
-                                     redirects: Seq[String],
-                                     namespace: Namespace): PageType = {
-    if (redirects.nonEmpty) {
-      REDIRECT
-    }
-    else {
-      // There's one case for every namespace that needs to be handled.
-      // Update this match if defaultValidNamespaces expands.
-      namespace.key match {
-        case siteInfo.CATEGORY_KEY =>
-          CATEGORY
-        case siteInfo.TEMPLATE_KEY =>
-          TEMPLATE
-        case siteInfo.MAIN_KEY =>
-          if (language.disambiguationPattern.matcher(pageText).find()) {
-            DISAMBIGUATION
-          }
-          else {
-            ARTICLE
-          }
-        case _ =>
-          logger.error(s"Got INVALID page type from namespace $namespace and page text $pageText")
-          INVALID
-      }
-    }
-  }
-
-  /**
-   * Get the pages following a #redirect directive.
-   *
-   * @param pageText Wikipedia markup for the page content
-   * @return         All pages inside double brackets, following a redirect
-   */
-  private[extractor] def getRedirects(pageText: String): Seq[String] = {
-    val identifiers = new ListBuffer[String]
-    var startIndex = -1
-    val head = pageText.take(Byte.MaxValue).toUpperCase
-
-    if (head.contains("#REDIRECT")) {
-      pageText.indices.foreach { i =>
-        if (pageText(i) == '[') {
-          startIndex = i + 1
-        } else if (pageText(i) == ']' && startIndex != -1) {
-          identifiers.append(pageText.substring(startIndex, i))
-          startIndex = -1
+  private[extractor] def inferPageType(pageText: String,
+                                       namespace: Namespace): PageType = {
+    // There's one case for every namespace that needs to be handled.
+    // Update this match if defaultValidNamespaces expands.
+    namespace.key match {
+      case siteInfo.CATEGORY_KEY =>
+        CATEGORY
+      case siteInfo.TEMPLATE_KEY =>
+        TEMPLATE
+      case siteInfo.MAIN_KEY =>
+        if (language.disambiguationPattern.matcher(pageText).find()) {
+          DISAMBIGUATION
         }
-      }
+        else {
+          ARTICLE
+        }
+      case _ =>
+        logger.error(s"Got INVALID page type from namespace $namespace and page text $pageText")
+        INVALID
     }
-
-    identifiers
-      .toSeq
-      // We want to get whole-page identifiers, so convert redirects like
-      // "Thermal expansion#Coefficient of thermal expansion"
-      // to
-      // "Thermal expansion"
-      .map(_.split('#').head)
   }
 
   val defaultValidNamespaces: Set[Namespace] = {

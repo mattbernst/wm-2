@@ -15,6 +15,15 @@ class FragmentProcessorSpec extends UnitSpec {
     page.lastEdited shouldBe 1463364739000L // "2016-05-15T19:12:19Z"
   }
 
+  it should "detect a redirect page" in {
+    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    page.id shouldBe 10
+    page.pageType shouldBe REDIRECT
+    page.title shouldBe "AccessibleComputing"
+    page.redirectTarget shouldBe Some("Computer accessibility")
+    page.lastEdited shouldBe 1414324223000L
+  }
+
   it should "return nothing for a Wikipedia: namespace" in {
     val result = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/missing-text.xml"))
     result shouldBe None
@@ -40,81 +49,28 @@ class FragmentProcessorSpec extends UnitSpec {
     fragmentProcessor.getNamespace("Category:Brass instruments") shouldBe expected
   }
 
-  behavior of "getRedirects"
 
-  it should "get nothing for a non-redirect page" in {
-    val text = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/animalia.xml")).get.text
-    fragmentProcessor.getRedirects(text) shouldBe Seq()
-  }
-
-  it should "get redirect for a page that is redirected TO (1)" in {
-    val text = "#REDIRECT [[History of Afghanistan]] {{R from CamelCase}}"
-    fragmentProcessor.getRedirects(text) shouldBe Seq("History of Afghanistan")
-  }
-
-  it should "get redirect for a page that is redirected TO (2)" in {
-    val text = "#REDIRECT [[Constructed language]]"
-    fragmentProcessor.getRedirects(text) shouldBe Seq("Constructed language")
-  }
-
-  it should "get redirect for a page that is redirected TO (3)" in {
-    val text = "#REDIRECT [[Molecular mass]][[Category:Amount of substance]]"
-    fragmentProcessor.getRedirects(text) shouldBe Seq("Molecular mass", "Category:Amount of substance")
-  }
-
-  it should "get redirect for a page that is redirected TO (4)" in {
-    val text = "#Redirect [[Computer hardware]]"
-    fragmentProcessor.getRedirects(text) shouldBe Seq("Computer hardware")
-  }
-
-  it should "get redirect for a page that is redirected TO (5)" in {
-    val text = "#redirect[[Birth control]]"
-    fragmentProcessor.getRedirects(text) shouldBe Seq("Birth control")
-  }
-
-  it should "get redirect for a page that is redirected TO a specific article section" in {
-    val text = "#REDIRECT [[Thermal expansion#Coefficient of thermal expansion]]"
-    fragmentProcessor.getRedirects(text) shouldBe Seq("Thermal expansion")
-  }
-
-  // N.B. in the original Milne wikipediaminer code, the DumpPageParser.java
-  // code treated pages as redirects whether they were redirected TO or FROM.
-  // Either this was a mistake in the original code or the redirectTarget was
-  // reused even in cases where it was a source rather than a direct. I believe
-  // that the original code was in error.
-  it should "get nothing for a page that is redirected FROM" in {
-    val text = """{{redirect|Faithful Departed|the Cranberries album|To the Faithful Departed}}
-                 """.stripMargin
-    fragmentProcessor.getRedirects(text) shouldBe Seq()
-  }
-
-  behavior of "getPageType"
-
-  it should "detect a REDIRECT page from redirects" in {
-    val pageText = """#REDIRECT [[Molecular mass]][[Category:Amount of substance]]"""
-    val redirects = fragmentProcessor.getRedirects(pageText)
-    fragmentProcessor.getPageType(pageText, redirects, siteInfo.defaultNamespace) shouldBe REDIRECT
-  }
+  behavior of "inferPageType"
 
   // TODO the disambiguation detector is broken, since the Mercury page should
   // match. Fix this later.
   ignore should "detect a DISAMBIGUATION page from page text" in {
     val pageText = Text.readTextFile("src/test/resources/mercury.txt")
     println(language.disambiguationPattern.matcher(pageText).find())
-    fragmentProcessor.getPageType(pageText, Seq(), siteInfo.defaultNamespace) shouldBe DISAMBIGUATION
+    fragmentProcessor.inferPageType(pageText, siteInfo.defaultNamespace) shouldBe DISAMBIGUATION
   }
 
   it should "detect a CATEGORY page from namespace" in {
-    fragmentProcessor.getPageType("foo", Seq(), siteInfo.prefixToNamespace("Category")) shouldBe CATEGORY
+    fragmentProcessor.inferPageType("foo", siteInfo.prefixToNamespace("Category")) shouldBe CATEGORY
   }
 
   it should "detect a TEMPLATE page from namespace" in {
-    fragmentProcessor.getPageType("foo", Seq(), siteInfo.prefixToNamespace("Template")) shouldBe TEMPLATE
+    fragmentProcessor.inferPageType("foo", siteInfo.prefixToNamespace("Template")) shouldBe TEMPLATE
   }
 
   it should "detect an INVALID page from namespace" in {
     val namespace = Namespace(key = -3, kase = FIRST_LETTER, name = "Unknown")
-    fragmentProcessor.getPageType("foo", Seq(), namespace) shouldBe INVALID
+    fragmentProcessor.inferPageType("foo", namespace) shouldBe INVALID
   }
 
   private lazy val language = Language(
