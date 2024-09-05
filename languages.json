@@ -2,16 +2,16 @@
    {
       "code" : "en",
       "name" : "English",
-      "disambiguationCategories" : [
-         "Disambiguation"
-      ],
-      "disambiguationTemplates" : [
+      "disambiguationPrefixes" : [
+         "dab",
          "disambiguation",
          "disambig",
-         "geodis"
-      ],
-      "redirectIdentifiers" : [
-         "REDIRECT"
+         "geodis",
+         "schooldis",
+         "call sign disambiguation",
+         "airport disambiguation",
+         "genus disambiguation",
+         "school disambiguation"
       ],
       "aliases" : [
          {

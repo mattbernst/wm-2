@@ -4,7 +4,6 @@ import upickle.default.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-import java.util.regex.Pattern
 
 case class NamespaceAlias(from: String, to: String)
 object NamespaceAlias {
@@ -13,62 +12,29 @@ object NamespaceAlias {
 case class Language(
                      code: String, // e.g. "en"
                      name: String, // e.g. "English"
-                     disambiguationCategories: Seq[String],
                      // See https://en.wikipedia.org/wiki/Template:Disambiguation
-                     disambiguationTemplates: Seq[String],
-                     redirectIdentifiers: Seq[String],
+                     // and also transclusion_counts.json after running with
+                     // COUNT_LAST_TRANSCLUSIONS=true
+                     disambiguationPrefixes: Seq[String],
                      // See https://en.wikipedia.org/wiki/Wikipedia:Namespace#Aliases_and_pseudo-namespaces
                      aliases: Seq[NamespaceAlias]
                    ) {
-
-  val disambiguationPattern: Pattern = {
-    var disambigCategoryRegex: String = null
-    if (disambiguationCategories.nonEmpty) {
-      val tmp = new StringBuffer
-      tmp.append("\\[\\[\\s*")
-      val payload = if (disambiguationCategories.size == 1) {
-        disambiguationCategories.head
-      }
-      else {
-        s"(${disambiguationCategories.mkString("|")})"
-      }
-      tmp.append(payload)
-      tmp.append("\\s*\\]\\]")
-      disambigCategoryRegex = tmp.toString
-    }
-
-    var disambigTemplateRegex: String = null
-    if (disambiguationTemplates.nonEmpty) {
-      val tmp = new StringBuffer
-      tmp.append("\\{\\{\\s*")
-      val payload = if (disambiguationTemplates.size == 1) {
-        disambiguationTemplates.head
-      }
-      else {
-        s"(${disambiguationTemplates.mkString("|")})"
-      }
-      tmp.append(payload)
-      tmp.append("\\s*\\}\\}")
-      disambigTemplateRegex = tmp.toString
-    }
-
-    if (disambigCategoryRegex == null && disambigTemplateRegex == null) {
-      val msg = "Language configuration does not specify any categories or templates for identifying disambiguation pages"
-      throw new AssertionError(msg)
-    }
-
-    if (disambigCategoryRegex != null && disambigTemplateRegex != null) {
-      val combined = s"($disambigCategoryRegex|$disambigTemplateRegex)"
-      Pattern.compile(combined, Pattern.CASE_INSENSITIVE)
-    }
-    else if (disambigCategoryRegex != null) {
-      Pattern.compile(disambigCategoryRegex, Pattern.CASE_INSENSITIVE)
-    }
-    else {
-      Pattern.compile(disambigTemplateRegex, Pattern.CASE_INSENSITIVE)
-    }
+  /**
+   * Determine if the last transclusion from a page indicates that the page is
+   * a disambiguation page. The page is considered a disambiguation page if
+   * the lower-cased, suffix-stripped version of the transclusion matches
+   * one of the lower cased strings in disambiguationPrefixes.
+   *
+   * @param transclusion The last transclusion found on a page
+   * @return             Whether the transclusion matches a disambiguation prefix
+   */
+  def isDisambiguation(transclusion: String): Boolean = {
+    val tHead = transclusion.split('|').head.toLowerCase
+    normalizedDisambiguationPrefixes.contains(tHead)
   }
 
+  private val normalizedDisambiguationPrefixes: Set[String] =
+    disambiguationPrefixes.map(_.toLowerCase).toSet
 }
 
 object Language {

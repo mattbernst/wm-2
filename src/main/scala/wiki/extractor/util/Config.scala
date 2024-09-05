@@ -4,7 +4,8 @@ import wiki.extractor.types.Language
 
 case class ConfiguredProperties(
                                  language: Language,
-                                 fragmentWorkers: Int
+                                 fragmentWorkers: Int,
+                                 countLastTransclusions: Boolean
                                )
 
 object Config extends Logging {
@@ -13,7 +14,7 @@ object Config extends Logging {
     val envVar = "PROFILE"
     sys.env.getOrElse(envVar, {
       val default = "default"
-      logger.warn(s"No $envVar set for configuration -- using $default")
+      logger.info(s"No $envVar set for configuration -- using $default")
       default
     })
   }
@@ -23,15 +24,16 @@ object Config extends Logging {
       val envVar = "WP_LANG"
       sys.env.getOrElse(envVar, {
         val default = "en"
-        logger.warn(s"No $envVar set for wikipedia language -- defaulting to $default")
+        logger.info(s"No $envVar set for wikipedia language -- defaulting to $default")
         default
       })
     }
+
     val languagesFile: String = {
       val envVar = "LANGUAGES_FILE"
       sys.env.getOrElse(envVar, {
         val default = "languages.json"
-        logger.warn(s"No $envVar set for languages file -- defaulting to $default")
+        logger.info(s"No $envVar set for languages file -- defaulting to $default")
         default
       })
     }
@@ -48,14 +50,26 @@ object Config extends Logging {
       val envVar = "N_FRAGMENT_WORKERS"
       sys.env.getOrElse(envVar, {
         val default = "4"
-        logger.warn(s"No $envVar set for fragment worker count -- defaulting to $default")
+        logger.info(s"No $envVar set for fragment worker count -- defaulting to $default")
         default
       })
         .toInt
     }
+
+    val countLastTransclusions: Boolean = {
+      val envVar = "COUNT_LAST_TRANSCLUSIONS"
+      sys.env.getOrElse(envVar, {
+        val default = "false"
+        logger.info(s"No $envVar set for transclusion diagnostics -- defaulting to $default")
+        default
+      })
+        .toBoolean
+    }
+
     ConfiguredProperties(
       language = language,
-      fragmentWorkers = fragmentWorkers
+      fragmentWorkers = fragmentWorkers,
+      countLastTransclusions = countLastTransclusions
     )
   }
 

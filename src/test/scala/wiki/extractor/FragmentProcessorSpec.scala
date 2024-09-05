@@ -49,14 +49,44 @@ class FragmentProcessorSpec extends UnitSpec {
     fragmentProcessor.getNamespace("Category:Brass instruments") shouldBe expected
   }
 
+  behavior of "getTransclusions"
+
+  it should "get transclusions (1)" in {
+    val pageText = Text.readTextFile("src/test/resources/mercury.txt")
+    val expected = Seq(
+      "wiktionary|Mercury|mercury",
+      "tocright",
+      "HMS|Mercury",
+      "USS|Mercury",
+      "ship|Russian brig|Mercury",
+      "ship||Mercury|ship",
+      "Commons|mercury",
+      "look from",
+      "in title|Mercury",
+      "disambiguation|geo"
+    )
+
+    fragmentProcessor.getTransclusions(pageText) shouldBe expected
+  }
+
+  it should "get transclusions (2)" in {
+    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val expected = Seq("Redr|move|from CamelCase|up")
+
+    fragmentProcessor.getTransclusions(page.text) shouldBe expected
+  }
+
+  it should "get transclusions (3)" in {
+    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val expected = Seq("Redr|move|from CamelCase|up")
+
+    fragmentProcessor.getTransclusions(page.text) shouldBe expected
+  }
 
   behavior of "inferPageType"
 
-  // TODO the disambiguation detector is broken, since the Mercury page should
-  // match. Fix this later.
-  ignore should "detect a DISAMBIGUATION page from page text" in {
+  it should "detect a DISAMBIGUATION page from page text" in {
     val pageText = Text.readTextFile("src/test/resources/mercury.txt")
-    println(language.disambiguationPattern.matcher(pageText).find())
     fragmentProcessor.inferPageType(pageText, siteInfo.defaultNamespace) shouldBe DISAMBIGUATION
   }
 
@@ -76,9 +106,7 @@ class FragmentProcessorSpec extends UnitSpec {
   private lazy val language = Language(
     code = "en",
     name = "English",
-    disambiguationCategories = Seq("Disambiguation"),
-    disambiguationTemplates = Seq("disambiguation", "disambig", "geodis"),
-    redirectIdentifiers = Seq("REDIRECT"),
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
     aliases = Seq(
       NamespaceAlias(from = "WP", to = "Wikipedia"),
       NamespaceAlias(from = "WT", to = "Wikipedia talk")
