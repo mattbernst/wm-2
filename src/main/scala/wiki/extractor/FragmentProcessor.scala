@@ -58,7 +58,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
         id = id,
         namespace = namespace,
         pageType = pageType,
-        title = title, // TODO normalize title
+        title = title,
         text = text,
         redirectTarget = redirect,
         lastEdited = lastEdited
@@ -189,7 +189,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
   private def incrementTransclusion(transclusion: String): Unit = this.synchronized {
     val count = lastTransclusions.getOrElse(transclusion, 0)
     lastTransclusions.put(transclusion, count + 1)
-  }
+  }: Unit // Suppress warning "discarded non-Unit value of type Option[Int]"
 
   val defaultValidNamespaces: Set[Namespace] = {
     val article = siteInfo.defaultNamespace
