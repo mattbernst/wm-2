@@ -1,25 +1,28 @@
 package wiki.extractor
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import upickle.default.*
 import wiki.extractor.types.SiteInfo
 import wiki.extractor.util.{Config, Logging}
 
+import java.io.{BufferedInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
 
 object WikipediaExtractor extends Logging {
 
   // e.g. sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/mix/wm-data/wm-extract-20160713/input/dump.xml"
+  // or sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/mix/wm-data/wm-extract-20160713/input/dump.xml.bz2"
   def main(args: Array[String]): Unit = {
     if (args.length != 1) {
       println(s"Usage: WikipediaExtractor <path-to-xml-dump> (${args.toSeq})")
       sys.exit(1)
     }
 
-    val xmlFilePath = args(0)
-    logger.info(s"Starting WikipediaExtractor with language ${Config.props.language.name}, input $xmlFilePath")
-    val dumpSource = Source.fromFile(xmlFilePath)(StandardCharsets.UTF_8)
+    val dumpFilePath = args(0)
+    logger.info(s"Starting WikipediaExtractor with language ${Config.props.language.name}, input $dumpFilePath")
+    val dumpSource = getInputSource(dumpFilePath)
     val dumpStrings = dumpSource.getLines()
     val head = dumpStrings.take(128).toSeq
     val siteInfo = SiteInfo(head.mkString("\n"))
@@ -43,6 +46,34 @@ object WikipediaExtractor extends Logging {
     // Following wikipedia-miner, we need to:
     // - Process XML fragments into DumpPage via the pageSummary InitialMapper
     // - Iteratively process DumpPage results via SubsequentMapper until all Unforwarded counts reach 0.
+  }
+
+  /**
+   * Get input to process, either directly from a .xml.bz2 dump file as downloaded
+   * from Wikipedia or from an uncompressed .xml file.
+   *
+   * When reading directly from a .bz2 file, decompression is the bottleneck.
+   * Downstream workers will be mostly idle, most cores on a multicore system
+   * will be idle, and the wall clock time to complete will be much higher.
+   *
+   * Run with a previously decompressed input dump unless disk space is at a
+   * dear premium.
+   *
+   * @param  fileName Name of the Wikipedia dump file on disk
+   * @return
+   */
+  private def getInputSource(fileName: String): BufferedSource = {
+    if (fileName.endsWith(".xml")) {
+      Source.fromFile(fileName)(StandardCharsets.UTF_8)
+    }
+    else if (fileName.endsWith(".bz2")) {
+      val input = new BZip2CompressorInputStream(new BufferedInputStream(new FileInputStream(fileName)))
+      logger.warn(s"Reading from compressed bz2 input. This is much slower than uncompressed XML.")
+      Source.fromInputStream(input)
+    }
+    else {
+      throw new RuntimeException(s"Unknown file extension: $fileName")
+    }
   }
 
 
