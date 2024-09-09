@@ -1,3 +1,46 @@
+# Usage
+
+## Extracting data from English Wikipedia
+
+### Software requirements
+
+This software has only been tested under Linux and macOS, though there is no conscious inclusion of platform-specific
+code.
+
+You will need a Java runtime environment and [sbt](https://www.scala-sbt.org/1.x/docs/Setup.html), the Scala build tool.
+The code has been tested on JREs 8 through 21.
+
+The Makefile is written for GNU Make.
+
+### Input data
+
+Download [the latest pages and articles](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
+for English Wikipedia. As of 2024-09-03 the file is about 21 GB compressed, 97 GB decompressed.
+
+It is possible to run the extraction process directly from the downloaded .bz2 file but this will be slow. The
+code will spend of its time decompressing the data and the worker threads will be If you are going to run the extraction
+process more than once, decompress the file with the command line utility `bunzip2` or a similar tool.
+
+### Running extraction
+Run the Makefile `extract` target with `dumpfile` (pointing to your input data) set appropriately, like so:
+
+```
+make extract dumpfile=/Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml
+```
+
+The equivalent sbt command is
+```
+sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml"
+```
+
+With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) this takes about XX minutes to
+complete. TODO: update timing after DB logic merged in.
+
+### Caveats
+
+The software is not deliberately intended to work only for English-language Wikipedia, but there has been very little
+testing with other languages.
+
 # Background
 
 See [this Google tech talk](https://www.youtube.com/watch?v=NFCZuzA4cFc) "Knowledge-based Information Retrieval with
@@ -17,6 +60,8 @@ releases (1.0, 1.1, 1.2) can still be downloaded
 not be buildable, but they contain pre-built JAR files. 1.0 and 1.1 used Perl for the dump extraction process instead
 of Java, and MySQL for the database instead of the [Berkeley DB, Java Edition](https://github.com/berkeleydb/je)
 used by subsequent versions.
+
+The GitHub [wiki for wikipediaminer](https://github.com/dnmilne/wikipediaminer/wiki) is also a good related source.
 
 # Motivation
 The original wikipediaminer is written in an older dialect of Java (started on 1.5, compiles with warnings on
@@ -39,5 +84,4 @@ in Java.
 ## Licensing
 
 This is under the GPL v2 because the wikipediaminer code is too. Although I've directly copied only a little from the
-old code I have read a lot, to the extent that this would probably be a derivative work if anyone cared to argue about
-it in court.
+old code I have read it a lot, to the extent that this would probably count as a derivative work.

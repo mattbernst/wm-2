@@ -11,12 +11,14 @@ import java.nio.file.{Files, Paths}
 import scala.io.{BufferedSource, Source}
 
 object WikipediaExtractor extends Logging {
-
-  // e.g. sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/mix/wm-data/wm-extract-20160713/input/dump.xml"
-  // or sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/mix/wm-data/wm-extract-20160713/input/dump.xml.bz2"
   def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
-      println(s"Usage: WikipediaExtractor <path-to-xml-dump> (${args.toSeq})")
+    val usage = "Usage: WikipediaExtractor <path-to-xml-dump>"
+    if (args.length == 0) {
+      System.err.println(usage)
+    }
+    if (args.length > 1) {
+      val pArgs = args.mkString(", ")
+      println(s"$usage (Expected one file, got multiple arguments: '$pArgs')")
       sys.exit(1)
     }
 

@@ -1,9 +1,7 @@
 package wiki.extractor.types
 
 import upickle.default.*
-
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import wiki.extractor.util.Text
 
 case class NamespaceAlias(from: String, to: String)
 object NamespaceAlias {
@@ -47,5 +45,5 @@ object Language {
     read[Seq[Language]](input)
 
   def fromJSONFile(fileName: String): Seq[Language] =
-    fromJSON(Files.readString(Path.of(fileName), StandardCharsets.UTF_8))
+    fromJSON(Text.readTextFile(fileName))
 }

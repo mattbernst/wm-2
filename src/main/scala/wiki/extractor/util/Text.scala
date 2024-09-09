@@ -1,10 +1,11 @@
 package wiki.extractor.util
 
+import java.nio.charset.StandardCharsets
 import scala.io.Source
 
 object Text extends Logging {
   def readTextFile(fileName: String): String = {
-    val source = Source.fromFile(fileName)
+    val source = Source.fromFile(fileName)(StandardCharsets.UTF_8)
     val lines = source.getLines().toList
     source.close()
     lines.mkString("\n")
