@@ -33,8 +33,8 @@ The equivalent sbt command is
 sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml"
 ```
 
-With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) this takes about XX minutes to
-complete. TODO: update timing after DB logic merged in.
+With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) and the dump file from September
+2024 this takes about 11 minutes to complete. TODO: update timing after DB logic merged in.
 
 ### Caveats
 

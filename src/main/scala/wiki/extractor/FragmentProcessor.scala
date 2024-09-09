@@ -183,7 +183,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
       }
     }
 
-    transclusions.toSeq
+    transclusions.filter(_.nonEmpty).toSeq
   }
 
   private def incrementTransclusion(transclusion: String): Unit = this.synchronized {

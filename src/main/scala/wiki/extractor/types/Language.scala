@@ -27,7 +27,11 @@ case class Language(
    * @return             Whether the transclusion matches a disambiguation prefix
    */
   def isDisambiguation(transclusion: String): Boolean = {
-    val tHead = transclusion.split('|').head.toLowerCase
+    val tHead = transclusion
+      .split('|')
+      .headOption
+      .map(_.toLowerCase)
+      .getOrElse("")
     normalizedDisambiguationPrefixes.contains(tHead)
   }
 
