@@ -1,3 +1,3 @@
 package wiki.extractor.util
 
-trait Logging extends com.typesafe.scalalogging.LazyLogging
+trait Logging extends com.typesafe.scalalogging.StrictLogging

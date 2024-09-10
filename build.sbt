@@ -16,7 +16,9 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest-shouldmatchers" % scalaTestVersion % "test",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "org.slf4j" % "slf4j-api" % "2.0.16",
-  "org.slf4j" % "slf4j-simple" % "2.0.16"
+  "org.slf4j" % "slf4j-simple" % "2.0.16",
+  "org.scalikejdbc" %% "scalikejdbc" % "4.3.1",
+  "org.xerial" % "sqlite-jdbc" % "3.46.1.0"
 )
 
 assembly / assemblyMergeStrategy := {

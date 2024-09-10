@@ -1,5 +1,6 @@
 package wiki.extractor
 
+import wiki.db.Storage
 import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
@@ -12,8 +13,7 @@ import scala.xml.XML
 case class FragmentWorker(thread: Thread)
 
 class FragmentProcessor(siteInfo: SiteInfo,
-                        language: Language,
-                        countTransclusions: Boolean = false) extends Logging {
+                        language: Language) extends Logging {
   /**
    * Convert a single Wikipedia page of XML to a structured DumpPage.
    * Only categories, templates, and articles get converted by default;
@@ -71,7 +71,8 @@ class FragmentProcessor(siteInfo: SiteInfo,
   }
 
   def fragmentWorker(id: Int,
-                     source: () => Option[String]): FragmentWorker = {
+                     source: () => Option[String],
+                     writer: Storage): FragmentWorker = {
     val thread = new Thread(() => {
       var completed = false
       while (!completed) {
@@ -100,24 +101,14 @@ class FragmentProcessor(siteInfo: SiteInfo,
 
 
   /**
-   * Get transclusion counts that accumulated during fragment processing.
-   * This is useful to find the most common transclusions to help develop
-   * heuristics for disambiguation (e.g. configuration values for
-   * disambiguationTemplates in languages.json).
+   * Get counts of how many times each transclusion appeared as the last
+   * transclusion on a page. These counts can be used to narrow the search
+   * for transclusions that indicate a disambiguation page.
    *
-   * Names are sorted most-common first.
-   *
-   * @return Tuples of transclusion names and their appearance counts
+   * @return A map of each transclusion name to a count of appearances
    */
-  def getTransclusionCounts(): Seq[(String, Int)] = {
-    if (!countTransclusions) {
-      logger.error("Called getTransclusionCounts() but countTransclusions was false. No counts recorded.")
-      Seq()
-    }
-    else {
-      lastTransclusions.toSeq.sortBy(-_._2)
-    }
-  }
+  def getLastTransclusionCounts(): Map[String, Int] =
+    lastTransclusions.toMap
 
   /**
    * Determine the namespace from the page title. Titles in a namespace start
@@ -148,7 +139,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
       case siteInfo.MAIN_KEY =>
         val transclusions = getTransclusions(pageText)
         val lastTransclusion = transclusions.lastOption
-        if (countTransclusions) lastTransclusion.foreach(t => incrementTransclusion(t))
+        lastTransclusion.foreach(t => incrementTransclusion(t))
         if (lastTransclusion.exists(t => language.isDisambiguation(t))) {
           DISAMBIGUATION
         }
@@ -188,8 +179,8 @@ class FragmentProcessor(siteInfo: SiteInfo,
 
   private def incrementTransclusion(transclusion: String): Unit = this.synchronized {
     val count = lastTransclusions.getOrElse(transclusion, 0)
-    lastTransclusions.put(transclusion, count + 1)
-  }: Unit // Suppress warning "discarded non-Unit value of type Option[Int]"
+    lastTransclusions.put(transclusion, count + 1): Unit
+  }
 
   val defaultValidNamespaces: Set[Namespace] = {
     val article = siteInfo.defaultNamespace
@@ -203,6 +194,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
   private val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
   // Counting transclusions that end a page can be useful to find the
   // most common disambiguation transclusions for configuring the
-  // disambiguationPrefixes in languages.json
+  // disambiguationPrefixes in languages.json. These are written
+  // to last_transclusion_count in the db.
   private lazy val lastTransclusions = mutable.Map[String, Int]()
 }

@@ -4,8 +4,7 @@ import wiki.extractor.types.Language
 
 case class ConfiguredProperties(
                                  language: Language,
-                                 fragmentWorkers: Int,
-                                 countLastTransclusions: Boolean
+                                 fragmentWorkers: Int
                                )
 
 object Config extends Logging {
@@ -56,20 +55,9 @@ object Config extends Logging {
         .toInt
     }
 
-    val countLastTransclusions: Boolean = {
-      val envVar = "COUNT_LAST_TRANSCLUSIONS"
-      sys.env.getOrElse(envVar, {
-        val default = "false"
-        logger.info(s"No $envVar set for transclusion diagnostics -- defaulting to $default")
-        default
-      })
-        .toBoolean
-    }
-
     ConfiguredProperties(
       language = language,
-      fragmentWorkers = fragmentWorkers,
-      countLastTransclusions = countLastTransclusions
+      fragmentWorkers = fragmentWorkers
     )
   }
 

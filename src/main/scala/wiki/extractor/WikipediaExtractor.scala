@@ -1,13 +1,12 @@
 package wiki.extractor
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
-import upickle.default.*
+import wiki.db.Storage
 import wiki.extractor.types.SiteInfo
 import wiki.extractor.util.{Config, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
 import scala.io.{BufferedSource, Source}
 
 object WikipediaExtractor extends Logging {
@@ -28,27 +27,26 @@ object WikipediaExtractor extends Logging {
     val dumpStrings = dumpSource.getLines()
     val head = dumpStrings.take(128).toSeq
     val siteInfo = SiteInfo(head.mkString("\n"))
+
     val fragmentProcessor = new FragmentProcessor(
       siteInfo = siteInfo,
-      language = Config.props.language,
-      countTransclusions = Config.props.countLastTransclusions
+      language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
+    writer.createTableDefinitions()
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
     splitter.extractPages()
     dumpSource.close()
     logger.info(s"Split out ${splitter.pageCount} pages")
     workers.foreach(_.thread.join())
-
-    if (Config.props.countLastTransclusions) {
-      dumpTransclusions(fragmentProcessor.getTransclusionCounts())
-    }
+    writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
 
     // Following wikipedia-miner, we need to:
     // - Process XML fragments into DumpPage via the pageSummary InitialMapper
     // - Iteratively process DumpPage results via SubsequentMapper until all Unforwarded counts reach 0.
   }
+
 
   /**
    * Get input to process, either directly from a .xml.bz2 dump file as downloaded
@@ -78,24 +76,22 @@ object WikipediaExtractor extends Logging {
     }
   }
 
+  private def writeTransclusions(input: Map[String, Int]): Unit = {
+    logger.info(s"Started writing ${input.size} last-transclusion counts to db")
+    writer.writeLastTransclusionCounts(input)
+    logger.info(s"Finished writing ${input.size} last-transclusion counts to db")
+  }
 
-  /**
-   * Write counts of every transclusion to a JSON file for later analysis.
-   *
-   * @param data Names and counts of every transclusion, ordered most-common-first
-   */
-  private def dumpTransclusions(data: Seq[(String, Int)]): Unit = {
-    val outputName = "transclusion_counts.json"
-    val serialized = write(data).getBytes(StandardCharsets.UTF_8)
-    Files.write(Paths.get(outputName), serialized)
-    logger.info(s"Wrote ${data.size} counts to $outputName")
+  private val writer: Storage = {
+    val name = Config.props.language.code + "_wiki.db"
+    new Storage(name)
   }
 
   private def assignWorkers(n: Int,
                             fragmentProcessor: FragmentProcessor,
                             source: () => Option[String]): Seq[FragmentWorker] = {
     0.until(n).map { id =>
-      fragmentProcessor.fragmentWorker(id = id, source = source)
+      fragmentProcessor.fragmentWorker(id = id, source = source, writer = writer)
     }
   }
 }
