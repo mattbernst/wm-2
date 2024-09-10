@@ -1,5 +1,6 @@
 package wiki.extractor
 
+import io.airlift.compress.zstd.ZstdInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import wiki.db.{PageWriter, Storage}
 import wiki.extractor.types.SiteInfo
@@ -52,15 +53,23 @@ object WikipediaExtractor extends Logging {
 
 
   /**
-   * Get input to process, either directly from a .xml.bz2 dump file as downloaded
-   * from Wikipedia or from an uncompressed .xml file.
+   * Get input to process. This can read a .xml.bz2 dump file as downloaded
+   * from Wikipedia, a ZStandard compressed .xml.zst file, or an uncompressed
+   * .xml file.
    *
    * When reading directly from a .bz2 file, decompression is the bottleneck.
    * Downstream workers will be mostly idle, most cores on a multicore system
    * will be idle, and the wall clock time to complete will be much higher.
    *
-   * Run with a previously decompressed input dump unless disk space is at a
-   * dear premium.
+   * Converting the original .bz2 dump to a .zst dump offers reasonable
+   * performance when read here, and it consumes much less disk space than
+   * fully decompressed XML. The .zst dump file is about 20% larger than
+   * a .bz2 file for the same data, but much faster to read. The extraction
+   * process takes about 10% longer when using .zst input than uncompressed
+   * XML.
+   *
+   * Run this with a bz2-compressed dump only if disk space is at a dear
+   * premium.
    *
    * @param  fileName Name of the Wikipedia dump file on disk
    * @return
@@ -72,7 +81,15 @@ object WikipediaExtractor extends Logging {
     else if (fileName.endsWith(".bz2")) {
       val input = new BZip2CompressorInputStream(new BufferedInputStream(new FileInputStream(fileName)))
       logger.warn(s"Reading from compressed bz2 input. This is much slower than uncompressed XML.")
-      Source.fromInputStream(input)
+      Source.fromInputStream(input)(StandardCharsets.UTF_8)
+    }
+    else if (fileName.endsWith(".zst")) {
+      // N.B. the Apache Commons ZstdCompressorInputStream relies on native
+      // libraries that are missing by default on macOS, so use the pure-Java
+      // Airlift library for decompression here.
+      val input = new ZstdInputStream(new BufferedInputStream(new FileInputStream(fileName)))
+      logger.info(s"Reading from compressed zst input.")
+      Source.fromInputStream(input)(StandardCharsets.UTF_8)
     }
     else {
       throw new RuntimeException(s"Unknown file extension: $fileName")

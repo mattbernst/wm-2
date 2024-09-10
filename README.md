@@ -15,7 +15,8 @@ The Makefile is written for GNU Make.
 ### Input data
 
 Download [the latest pages and articles](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
-for English Wikipedia. As of 2024-09-03 the file is about 21 GB compressed, 97 GB decompressed.
+for English Wikipedia. As of 2024-09-03 the file is about 21 GB originally compressed as .bz2, 25 GB compressed as .zst,
+and 97 GB decompressed.
 
 It is possible to run the extraction process directly from the downloaded .bz2 file but this will be slow. The
 code will spend of its time decompressing the data and the worker threads will be If you are going to run the extraction
