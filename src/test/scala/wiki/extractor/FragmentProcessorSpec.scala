@@ -12,7 +12,7 @@ class FragmentProcessorSpec extends UnitSpec {
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
     page.redirectTarget shouldBe None
-    page.lastEdited shouldBe 1463364739000L // "2016-05-15T19:12:19Z"
+    page.lastEdited.get shouldBe 1463364739000L // "2016-05-15T19:12:19Z"
   }
 
   it should "detect a redirect page" in {
@@ -21,7 +21,7 @@ class FragmentProcessorSpec extends UnitSpec {
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
     page.redirectTarget shouldBe Some("Computer accessibility")
-    page.lastEdited shouldBe 1414324223000L
+    page.lastEdited.get shouldBe 1414324223000L
   }
 
   it should "return nothing for a Wikipedia: namespace" in {
@@ -73,14 +73,14 @@ class FragmentProcessorSpec extends UnitSpec {
     val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
     val expected = Seq("Redr|move|from CamelCase|up")
 
-    fragmentProcessor.getTransclusions(page.text) shouldBe expected
+    fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
   }
 
   it should "get transclusions (3)" in {
     val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
     val expected = Seq("Redr|move|from CamelCase|up")
 
-    fragmentProcessor.getTransclusions(page.text) shouldBe expected
+    fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
   }
 
   behavior of "inferPageType"
@@ -99,7 +99,7 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "detect an INVALID page from namespace" in {
-    val namespace = Namespace(key = -3, kase = FIRST_LETTER, name = "Unknown")
+    val namespace = Namespace(id = -3, casing = FIRST_LETTER, name = "Unknown")
     fragmentProcessor.inferPageType("foo", namespace) shouldBe INVALID
   }
 
@@ -117,38 +117,38 @@ class FragmentProcessorSpec extends UnitSpec {
     siteName = "Wikipedia",
     dbName = "enwiki",
     base = "https://en.wikipedia.org/wiki/Main_Page",
-    kase = FIRST_LETTER,
+    casing = FIRST_LETTER,
     namespaces = List(
-      Namespace(key = -2, kase = FIRST_LETTER, name = "Media"),
-      Namespace(key = -1, kase = FIRST_LETTER, name = "Special"),
-      Namespace(key = 0, kase = FIRST_LETTER, name = ""),
-      Namespace(key = 1, kase = FIRST_LETTER, name = "Talk"),
-      Namespace(key = 2, kase = FIRST_LETTER, name = "User"),
-      Namespace(key = 3, kase = FIRST_LETTER, name = "User talk"),
-      Namespace(key = 4, kase = FIRST_LETTER, name = "Wikipedia"),
-      Namespace(key = 5, kase = FIRST_LETTER, name = "Wikipedia talk"),
-      Namespace(key = 6, kase = FIRST_LETTER, name = "File"),
-      Namespace(key = 7, kase = FIRST_LETTER, name = "File talk"),
-      Namespace(key = 8, kase = FIRST_LETTER, name = "MediaWiki"),
-      Namespace(key = 9, kase = FIRST_LETTER, name = "MediaWiki talk"),
-      Namespace(key = 10, kase = FIRST_LETTER, name = "Template"),
-      Namespace(key = 11, kase = FIRST_LETTER, name = "Template talk"),
-      Namespace(key = 12, kase = FIRST_LETTER, name = "Help"),
-      Namespace(key = 13, kase = FIRST_LETTER, name = "Help talk"),
-      Namespace(key = 14, kase = FIRST_LETTER, name = "Category"),
-      Namespace(key = 15, kase = FIRST_LETTER, name = "Category talk"),
-      Namespace(key = 100, kase = FIRST_LETTER, name = "Portal"),
-      Namespace(key = 101, kase = FIRST_LETTER, name = "Portal talk"),
-      Namespace(key = 118, kase = FIRST_LETTER, name = "Draft"),
-      Namespace(key = 119, kase = FIRST_LETTER, name = "Draft talk"),
-      Namespace(key = 710, kase = FIRST_LETTER, name = "TimedText"),
-      Namespace(key = 711, kase = FIRST_LETTER, name = "TimedText talk"),
-      Namespace(key = 828, kase = FIRST_LETTER, name = "Module"),
-      Namespace(key = 829, kase = FIRST_LETTER, name = "Module talk"),
-      Namespace(key = 2300, kase = CASE_SENSITIVE, name = "Gadget"),
-      Namespace(key = 2301, kase = CASE_SENSITIVE, name = "Gadget talk"),
-      Namespace(key = 2302, kase = CASE_SENSITIVE, name = "Gadget definition"),
-      Namespace(key = 2303, kase = CASE_SENSITIVE, name = "Gadget definition talk")
+      Namespace(id = -2, casing = FIRST_LETTER, name = "Media"),
+      Namespace(id = -1, casing = FIRST_LETTER, name = "Special"),
+      Namespace(id = 0, casing = FIRST_LETTER, name = ""),
+      Namespace(id = 1, casing = FIRST_LETTER, name = "Talk"),
+      Namespace(id = 2, casing = FIRST_LETTER, name = "User"),
+      Namespace(id = 3, casing = FIRST_LETTER, name = "User talk"),
+      Namespace(id = 4, casing = FIRST_LETTER, name = "Wikipedia"),
+      Namespace(id = 5, casing = FIRST_LETTER, name = "Wikipedia talk"),
+      Namespace(id = 6, casing = FIRST_LETTER, name = "File"),
+      Namespace(id = 7, casing = FIRST_LETTER, name = "File talk"),
+      Namespace(id = 8, casing = FIRST_LETTER, name = "MediaWiki"),
+      Namespace(id = 9, casing = FIRST_LETTER, name = "MediaWiki talk"),
+      Namespace(id = 10, casing = FIRST_LETTER, name = "Template"),
+      Namespace(id = 11, casing = FIRST_LETTER, name = "Template talk"),
+      Namespace(id = 12, casing = FIRST_LETTER, name = "Help"),
+      Namespace(id = 13, casing = FIRST_LETTER, name = "Help talk"),
+      Namespace(id = 14, casing = FIRST_LETTER, name = "Category"),
+      Namespace(id = 15, casing = FIRST_LETTER, name = "Category talk"),
+      Namespace(id = 100, casing = FIRST_LETTER, name = "Portal"),
+      Namespace(id = 101, casing = FIRST_LETTER, name = "Portal talk"),
+      Namespace(id = 118, casing = FIRST_LETTER, name = "Draft"),
+      Namespace(id = 119, casing = FIRST_LETTER, name = "Draft talk"),
+      Namespace(id = 710, casing = FIRST_LETTER, name = "TimedText"),
+      Namespace(id = 711, casing = FIRST_LETTER, name = "TimedText talk"),
+      Namespace(id = 828, casing = FIRST_LETTER, name = "Module"),
+      Namespace(id = 829, casing = FIRST_LETTER, name = "Module talk"),
+      Namespace(id = 2300, casing = CASE_SENSITIVE, name = "Gadget"),
+      Namespace(id = 2301, casing = CASE_SENSITIVE, name = "Gadget talk"),
+      Namespace(id = 2302, casing = CASE_SENSITIVE, name = "Gadget definition"),
+      Namespace(id = 2303, casing = CASE_SENSITIVE, name = "Gadget definition talk")
     )
   )
 

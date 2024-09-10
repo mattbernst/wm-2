@@ -9,17 +9,17 @@ sealed trait Casing
 case object FIRST_LETTER extends Casing
 case object CASE_SENSITIVE extends Casing
 
-case class Namespace(key: Int, kase: Casing, name: String)
+case class Namespace(id: Int, casing: Casing, name: String)
 case class SiteInfo(
                      siteName: String,
                      dbName: String,
                      base: String,
-                     kase: Casing,
+                     casing: Casing,
                      namespaces: Seq[Namespace]
                    )
 {
   val defaultNamespace: Namespace =
-    namespaces.find(_.key == 0).getOrElse(throw new NoSuchElementException("No namespace 0 in siteinfo!"))
+    namespaces.find(_.id == 0).getOrElse(throw new NoSuchElementException("No namespace 0 in siteinfo!"))
 
   val prefixToNamespace: Map[String, Namespace] =
     namespaces
@@ -38,7 +38,7 @@ case class SiteInfo(
   // To be sure, validate that all common keys are found in current namespaces
   Seq(MAIN_KEY, SPECIAL_KEY, FILE_KEY, TEMPLATE_KEY, CATEGORY_KEY).foreach { key =>
     val msg = s"Expected to find common key $key in namespaces, but it was missing: $namespaces"
-    assert(namespaces.map(_.key).contains(key), msg)
+    assert(namespaces.map(_.id).contains(key), msg)
   }
 }
 
@@ -59,7 +59,7 @@ object SiteInfo {
       siteName = (xml \ "sitename").text,
       dbName = (xml \ "dbname").text,
       base = (xml \ "base").text,
-      kase = caseToCasing((xml \ "case").text),
+      casing = caseToCasing((xml \ "case").text),
       namespaces = namespaces
     )
   }

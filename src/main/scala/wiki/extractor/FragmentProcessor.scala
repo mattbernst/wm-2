@@ -1,6 +1,6 @@
 package wiki.extractor
 
-import wiki.db.Storage
+import wiki.db.PageWriter
 import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
@@ -39,19 +39,18 @@ class FragmentProcessor(siteInfo: SiteInfo,
       assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
       val revision = xml \ "revision"
 
-      val text = (revision \ "text").text
+      val text = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
       val lastEdited = (revision \ "timestamp")
         .map(_.text)
         .flatMap(editDate => Try(dateFormat.parse(editDate)).toOption)
         .headOption
         .map(_.toInstant.toEpochMilli)
-        .getOrElse(0L)
 
       val pageType = if (redirect.nonEmpty) {
         REDIRECT
       }
       else {
-        inferPageType(pageText = text, namespace = namespace)
+        inferPageType(pageText = text.getOrElse(""), namespace = namespace)
       }
 
       val res = DumpPage(
@@ -72,19 +71,20 @@ class FragmentProcessor(siteInfo: SiteInfo,
 
   def fragmentWorker(id: Int,
                      source: () => Option[String],
-                     writer: Storage): FragmentWorker = {
+                     writer: PageWriter): FragmentWorker = {
+    val progressDotInterval = 10000
     val thread = new Thread(() => {
+      var count = 0
       var completed = false
       while (!completed) {
         source() match {
           case Some(article) if article.trim.nonEmpty =>
             fragmentToPage(article).foreach { result =>
-              if (result.text.isEmpty) {
-                logger.warn(s"Did not get any page text for $result")
-              }
-              else {
-                // TODO do something with result
-                // println(result.copy(text = "MARKUP"), result.text.length)
+              writer.addPage(result)
+              count += 1
+              if (count % progressDotInterval == 0) {
+                System.err.print(".")
+                System.err.flush()
               }
             }
           case _ =>
@@ -133,7 +133,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
                                        namespace: Namespace): PageType = {
     // There's one case for every namespace that needs to be handled.
     // Update this match if defaultValidNamespaces expands.
-    namespace.key match {
+    namespace.id match {
       case siteInfo.CATEGORY_KEY => CATEGORY
       case siteInfo.TEMPLATE_KEY => TEMPLATE
       case siteInfo.MAIN_KEY =>

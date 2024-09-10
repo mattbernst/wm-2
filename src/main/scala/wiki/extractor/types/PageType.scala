@@ -14,3 +14,20 @@ case object DISAMBIGUATION extends PageType
 case object TEMPLATE extends PageType
 // A type of page that we don't currently deal with
 case object INVALID extends PageType
+
+object PageTypes {
+  val byNumber: Map[Int, PageType] =
+    tuples.map(t => (t._2, t._1)).toMap
+
+  val bySymbol: Map[PageType, Int] =
+    tuples.toMap
+
+  private lazy val tuples: Seq[(PageType, Int)] = Seq(
+    (ARTICLE, 1),
+    (CATEGORY, 2),
+    (REDIRECT, 3),
+    (DISAMBIGUATION, 4),
+    (TEMPLATE, 5),
+    (INVALID, 6)
+  )
+}

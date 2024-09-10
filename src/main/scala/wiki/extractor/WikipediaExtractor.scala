@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
-import wiki.db.Storage
+import wiki.db.{PageWriter, Storage}
 import wiki.extractor.types.SiteInfo
 import wiki.extractor.util.{Config, Logging}
 
@@ -33,13 +33,16 @@ object WikipediaExtractor extends Logging {
       language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    writer.createTableDefinitions()
+    dbStorage.createTableDefinitions()
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
     splitter.extractPages()
     dumpSource.close()
-    logger.info(s"Split out ${splitter.pageCount} pages")
     workers.foreach(_.thread.join())
+    logger.info(s"Split out ${splitter.pageCount} pages")
+    writer.stopWriting()
+    writer.writerThread.join()
+    logger.info(s"Wrote ${writer.pageCount} pages to database")
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
 
     // Following wikipedia-miner, we need to:
@@ -76,16 +79,33 @@ object WikipediaExtractor extends Logging {
     }
   }
 
+  /**
+   * Write last-transclusions of above-average size to the database. The
+   * accumulated statistics can help to configure the disambiguationPrefixes
+   * for a new language in languages.json. Only common names (those with
+   * above average counts) are included because less common ones are unlikely
+   * to be useful and because writing all the minor names to the db can be
+   * time-consuming.
+   *
+   * @param input A map of transclusion names to counts
+   */
   private def writeTransclusions(input: Map[String, Int]): Unit = {
-    logger.info(s"Started writing ${input.size} last-transclusion counts to db")
-    writer.writeLastTransclusionCounts(input)
-    logger.info(s"Finished writing ${input.size} last-transclusion counts to db")
+    assert(input.nonEmpty)
+    val totalCounts = input.values.map(_.toDouble).sum
+    val average = totalCounts / input.size
+    val aboveAverage = input.filter {
+      case (_, n) => n > average
+    }
+    logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
+    dbStorage.writeLastTransclusionCounts(aboveAverage)
+    logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db")
   }
 
-  private val writer: Storage = {
-    val name = Config.props.language.code + "_wiki.db"
-    new Storage(name)
-  }
+  private val dbStorage: Storage =
+    new Storage(fileName = Config.props.language.code + "_wiki.db")
+
+  private val writer: PageWriter =
+    new PageWriter(dbStorage)
 
   private def assignWorkers(n: Int,
                             fragmentProcessor: FragmentProcessor,
