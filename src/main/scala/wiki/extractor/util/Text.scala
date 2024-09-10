@@ -22,7 +22,7 @@ object Text extends Logging {
    * @return        The extracted XML fragment, including opening/closing tags
    */
   def tagSlice(tag: String, source: Iterator[String]): String = {
-    val accumulator = new StringBuilder
+    val accumulator = new java.lang.StringBuilder
     val open = s"<$tag>"
     val close = s"</$tag>"
     var completed = false

@@ -98,7 +98,7 @@ object WikipediaExtractor extends Logging {
     }
     logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
     dbStorage.writeLastTransclusionCounts(aboveAverage)
-    logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db")
+    logger.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
   }
 
   private val dbStorage: Storage =
