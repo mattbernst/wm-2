@@ -1,16 +1,6 @@
 package wiki.extractor.util
 
-import java.nio.charset.StandardCharsets
-import scala.io.Source
-
-object Text extends Logging {
-  def readTextFile(fileName: String): String = {
-    val source = Source.fromFile(fileName)(StandardCharsets.UTF_8)
-    val lines = source.getLines().toList
-    source.close()
-    lines.mkString("\n")
-  }
-
+object Text {
   /**
    * Extract one XML slice from an input source by looking for matched opening
    * and closing tags. This works assuming that opening tags appear as single
@@ -22,7 +12,9 @@ object Text extends Logging {
    * @return        The extracted XML fragment, including opening/closing tags
    */
   def tagSlice(tag: String, source: Iterator[String]): String = {
-    val accumulator = new java.lang.StringBuilder
+    val initialCapacity = 4096
+
+    val accumulator = new java.lang.StringBuilder(initialCapacity)
     val open = s"<$tag>"
     val close = s"</$tag>"
     var completed = false
@@ -37,7 +29,8 @@ object Text extends Logging {
         completed = true
       }
       if (accumulating) {
-        accumulator.append(line + "\n")
+        accumulator.append(line)
+        accumulator.append("\n")
       }
     }
 

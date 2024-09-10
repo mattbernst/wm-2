@@ -52,7 +52,7 @@ class PageWriter(writer: Storage, queueSize: Int = Short.MaxValue) extends Loggi
       Seq()
     }
     if (pages.nonEmpty) {
-      // Write any unknown namespaces
+      // Write any unknown namespaces as they are encountered
       pages
         .map(_.namespace)
         .toSet

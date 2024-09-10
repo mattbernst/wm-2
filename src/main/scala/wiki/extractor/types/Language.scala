@@ -1,7 +1,7 @@
 package wiki.extractor.types
 
 import upickle.default.*
-import wiki.extractor.util.Text
+import wiki.extractor.util.FileHelpers
 
 case class NamespaceAlias(from: String, to: String)
 object NamespaceAlias {
@@ -49,5 +49,5 @@ object Language {
     read[Seq[Language]](input)
 
   def fromJSONFile(fileName: String): Seq[Language] =
-    fromJSON(Text.readTextFile(fileName))
+    fromJSON(FileHelpers.readTextFile(fileName))
 }

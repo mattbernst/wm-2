@@ -1,9 +1,8 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.db.types.NamedSql
-import wiki.extractor.types.{DumpPage, Namespace, PageTypes}
-import wiki.extractor.util.Logging
+import wiki.extractor.types.*
+import wiki.extractor.util.{FileHelpers, Logging}
 
 /**
  * A SQLite database storage writer and reader for representing and mining
@@ -22,7 +21,7 @@ class Storage(fileName: String) extends Logging {
    * @param input A map of transclusion names to counts
    */
   def writeLastTransclusionCounts(input: Map[String, Int]): Unit = {
-    val batches = input.toSeq.grouped(batchInsertSize)
+    val batches = input.toSeq.sorted.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val params: Seq[Seq[SQLSyntax]] = batch.map(t => Seq(sqls"${t._1}", sqls"${t._2}"))
@@ -46,6 +45,29 @@ class Storage(fileName: String) extends Logging {
       sql"""INSERT INTO namespace
            (id, casing, name) VALUES (${input.id}, ${input.casing}, ${input.name})"""
         .update() : Unit
+    }
+  }
+
+  /**
+   * Read a namespace from the namespace table. A namespace may exist in the
+   * Wikipedia dump file but be absent from the namespace table if it is not
+   * one of the valid namespaces extracted by fragmentToPage in
+   * FragmentProcessor.scala
+   *
+   * @param id The numeric ID of the namespace to read
+   * @return   A namespace, if found in the table
+   */
+  def readNamespace(id: Int): Option[Namespace] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT * FROM namespace WHERE id=$id"""
+        .map { rs =>
+          val casing: Casing = rs.string("casing") match {
+            case "FIRST_LETTER" => FIRST_LETTER
+            case "CASE_SENSITIVE" => CASE_SENSITIVE
+          }
+          Namespace(id = rs.int("id"), casing = casing, name = rs.string("name"))
+        }
+        .single()
     }
   }
 
@@ -102,11 +124,18 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  /**
+   *  Create all tables from the .sql files in sql/tables/
+   */
   def createTableDefinitions(): Unit = {
+    val pattern = "sql/tables/*.sql"
+    val tableDefinitions = FileHelpers.glob("sql/tables/*.sql").sorted
+    require(tableDefinitions.nonEmpty, s"No SQL files for tables found in $pattern")
     DB.localTx { implicit session =>
-      Storage.tableDefinitions.foreach { ns =>
-        logger.info(s"Creating ${ns.name} in $fileName")
-        Storage.execute(ns.statement)
+      tableDefinitions.foreach { fileName =>
+        val sql = FileHelpers.readTextFile(fileName)
+        logger.info(s"Creating table from $fileName")
+        Storage.execute(sql)
       }
     }
   }
@@ -115,50 +144,6 @@ class Storage(fileName: String) extends Logging {
 }
 
 object Storage {
-  val tableDefinitions: Seq[NamedSql] = Seq(
-    NamedSql(
-      name = "last_transclusion_count",
-      statement = """CREATE TABLE IF NOT EXISTS last_transclusion_count
-                    |(
-                    |    name      TEXT NOT NULL,
-                    |    n         INTEGER NOT NULL,
-                    |    PRIMARY KEY (name)
-                    |);""".stripMargin
-    ),
-    NamedSql(
-      name = "namespace",
-      statement = """CREATE TABLE IF NOT EXISTS namespace
-                    |(
-                    |    id        INTEGER NOT NULL,
-                    |    casing    TEXT NOT NULL,
-                    |    name      TEXT NOT NULL,
-                    |    PRIMARY KEY (id)
-                    |);""".stripMargin
-    ),
-    NamedSql(
-      name = "page",
-      statement = """CREATE TABLE IF NOT EXISTS page
-                    |(
-                    |    id              INTEGER NOT NULL,
-                    |    namespace_id    INTEGER NOT NULL,
-                    |    page_type       INTEGER NOT NULL,
-                    |    last_edited     INTEGER,
-                    |    title           TEXT NOT NULL,
-                    |    redirect_target TEXT,
-                    |    PRIMARY KEY (id)
-                    |);""".stripMargin
-    ),
-    NamedSql(
-      name = "page_markup",
-      statement = """CREATE TABLE IF NOT EXISTS page_markup
-                    |(
-                    |    page_id INTEGER NOT NULL,
-                    |    markup  TEXT,
-                    |    PRIMARY KEY (page_id)
-                    |);""".stripMargin
-    )
-  )
-
   def execute(sqls: String*)(implicit session: DBSession): Unit = {
     @annotation.tailrec
     def loop(xs: List[String], errors: List[Throwable]): Unit = {

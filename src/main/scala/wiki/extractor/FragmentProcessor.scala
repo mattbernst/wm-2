@@ -181,6 +181,9 @@ class FragmentProcessor(siteInfo: SiteInfo,
     lastTransclusions.put(transclusion, count + 1): Unit
   }
 
+  // Only pages from valid namespaces get persisted to the database and
+  // subsequently processed. The default valid namespaces are the
+  // default namespace (articles), categories, and templates.
   val defaultValidNamespaces: Set[Namespace] = {
     val article = siteInfo.defaultNamespace
     val category = siteInfo.namespaces.find(_.name == "Category")

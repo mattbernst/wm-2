@@ -45,7 +45,7 @@ class TextSpec extends UnitSpec {
   </siteinfo>
 """
 
-    val text = Text.readTextFile("src/test/resources/dump-head.xml")
+    val text = FileHelpers.readTextFile("src/test/resources/dump-head.xml")
     val res = Text.tagSlice("siteinfo", text.split('\n').iterator)
     res shouldBe expected
   }
@@ -85,7 +85,7 @@ class TextSpec extends UnitSpec {
     </namespaces>
 """
 
-    val text = Text.readTextFile("src/test/resources/dump-head.xml")
+    val text = FileHelpers.readTextFile("src/test/resources/dump-head.xml")
     val res = Text.tagSlice("namespaces", text.split('\n').iterator)
     res shouldBe expected
   }

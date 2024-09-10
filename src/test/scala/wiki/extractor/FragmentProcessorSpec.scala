@@ -1,13 +1,13 @@
 package wiki.extractor
 
 import wiki.extractor.types.*
-import wiki.extractor.util.{Text, UnitSpec}
+import wiki.extractor.util.{FileHelpers, UnitSpec}
 
 class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
   it should "extract standard fields from a basic article" in {
-    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/animalia.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/animalia.xml")).get
     page.id shouldBe 332
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
@@ -16,7 +16,7 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "detect a redirect page" in {
-    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get
     page.id shouldBe 10
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
@@ -25,7 +25,7 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "return nothing for a Wikipedia: namespace" in {
-    val result = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/missing-text.xml"))
+    val result = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/missing-text.xml"))
     result shouldBe None
   }
 
@@ -52,7 +52,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "getTransclusions"
 
   it should "get transclusions (1)" in {
-    val pageText = Text.readTextFile("src/test/resources/mercury.txt")
+    val pageText = FileHelpers.readTextFile("src/test/resources/mercury.txt")
     val expected = Seq(
       "wiktionary|Mercury|mercury",
       "tocright",
@@ -70,14 +70,14 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "get transclusions (2)" in {
-    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
   }
 
   it should "get transclusions (3)" in {
-    val page = fragmentProcessor.fragmentToPage(Text.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
@@ -86,7 +86,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "inferPageType"
 
   it should "detect a DISAMBIGUATION page from page text" in {
-    val pageText = Text.readTextFile("src/test/resources/mercury.txt")
+    val pageText = FileHelpers.readTextFile("src/test/resources/mercury.txt")
     fragmentProcessor.inferPageType(pageText, siteInfo.defaultNamespace) shouldBe DISAMBIGUATION
   }
 

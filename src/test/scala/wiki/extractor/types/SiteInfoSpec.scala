@@ -1,12 +1,12 @@
 package wiki.extractor.types
 
-import wiki.extractor.util.{Text, UnitSpec}
+import wiki.extractor.util.{FileHelpers, UnitSpec}
 
 class SiteInfoSpec extends UnitSpec {
   behavior of "apply"
 
   it should "construct a populated SiteInfo from the early portion of a Wikipedia dump" in {
-    val text = Text.readTextFile("src/test/resources/dump-head.xml")
+    val text = FileHelpers.readTextFile("src/test/resources/dump-head.xml")
     val expected = SiteInfo(
       siteName = "Wikipedia",
       dbName = "enwiki",
