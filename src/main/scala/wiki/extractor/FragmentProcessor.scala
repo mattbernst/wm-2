@@ -4,10 +4,10 @@ import wiki.db.PageWriter
 import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
-import java.text.SimpleDateFormat
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
 import scala.xml.XML
 
 case class FragmentWorker(thread: Thread)
@@ -41,9 +41,9 @@ class FragmentProcessor(siteInfo: SiteInfo,
 
       val text = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
       val lastEdited = (revision \ "timestamp")
-        .map(_.text)
-        .flatMap(editDate => Try(dateFormat.parse(editDate)).toOption)
         .headOption
+        .map(_.text)
+        .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
         .map(_.toInstant.toEpochMilli)
 
       val pageType = if (redirect.nonEmpty) {
@@ -98,7 +98,6 @@ class FragmentProcessor(siteInfo: SiteInfo,
     thread.start()
     FragmentWorker(thread)
   }
-
 
   /**
    * Get counts of how many times each transclusion appeared as the last
@@ -191,7 +190,6 @@ class FragmentProcessor(siteInfo: SiteInfo,
     Set(article, category.get, template.get)
   }
 
-  private val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
   // Counting transclusions that end a page can be useful to find the
   // most common disambiguation transclusions for configuring the
   // disambiguationPrefixes in languages.json. These are written

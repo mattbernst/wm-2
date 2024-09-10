@@ -22,7 +22,7 @@ class Storage(fileName: String) extends Logging {
    * @param input A map of transclusion names to counts
    */
   def writeLastTransclusionCounts(input: Map[String, Int]): Unit = {
-    val batches = input.toSeq.grouped(batchInsertSize * 20)
+    val batches = input.toSeq.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val params: Seq[Seq[SQLSyntax]] = batch.map(t => Seq(sqls"${t._1}", sqls"${t._2}"))

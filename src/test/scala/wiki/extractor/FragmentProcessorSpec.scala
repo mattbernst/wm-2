@@ -12,7 +12,7 @@ class FragmentProcessorSpec extends UnitSpec {
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
     page.redirectTarget shouldBe None
-    page.lastEdited.get shouldBe 1463364739000L // "2016-05-15T19:12:19Z"
+    page.lastEdited.get shouldBe 1463339539000L // "2016-05-15T19:12:19Z"
   }
 
   it should "detect a redirect page" in {
@@ -21,7 +21,7 @@ class FragmentProcessorSpec extends UnitSpec {
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
     page.redirectTarget shouldBe Some("Computer accessibility")
-    page.lastEdited.get shouldBe 1414324223000L
+    page.lastEdited.get shouldBe 1414299023000L
   }
 
   it should "return nothing for a Wikipedia: namespace" in {
