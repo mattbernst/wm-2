@@ -69,12 +69,12 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
 
     val fromTitles = pageMap.toSeq
 
-    fromRedirects ++ fromTitles
+    (fromRedirects ++ fromTitles).distinct
   }
 
   /**
    * Get "redirects to nowhere" that should be omitted from the construction of
-   * the flattened page mapping. These dangling redirects ge marked with a
+   * the flattened page mapping. These dangling redirects get marked with a
    * special page type DANGLING_REDIRECT in the page table.
    */
   lazy val danglingRedirects: Seq[Redirect] = {
@@ -86,7 +86,7 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
   }
 
   private val redirectMap = {
-    // Map titles to (redirect, page_id) tuples
+    // Map redirect titles to (redirect_target, page_id) tuples
     val mm = mutable.Map[String, (String, Int)]()
     redirects.foreach(r => mm.put(r.title, (r.redirectTarget, r.pageId)))
     mm
