@@ -33,9 +33,7 @@ object FileHelpers extends Logging {
     if (Files.exists(path)) {
       Try(Files.delete(path)) match {
         case Success(_) =>
-
-        case Failure(exception) =>
-          logger.error(s"Failed to delete file $fileName. Error: ${exception.getMessage}")
+        case Failure(exception) => logger.error(s"Failed to delete file $fileName. Error: ${exception.getMessage}")
       }
     } else {
       logger.warn(s"Could not delete file $fileName because it does not exist.")

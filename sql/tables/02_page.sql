@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS page
     page_type       INTEGER NOT NULL,
     last_edited     INTEGER,
     title           TEXT NOT NULL,
-    redirect_target TEXT,
-    PRIMARY KEY (id)
+    redirect_target TEXT
 );
 

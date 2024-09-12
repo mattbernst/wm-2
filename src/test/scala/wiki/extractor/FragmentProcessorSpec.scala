@@ -7,7 +7,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
   it should "extract standard fields from a basic article" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/animalia.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/animalia.xml"))
     page.id shouldBe 332
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
@@ -16,7 +16,7 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "detect a redirect page" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml"))
     page.id shouldBe 10
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
@@ -24,29 +24,18 @@ class FragmentProcessorSpec extends UnitSpec {
     page.lastEdited.get shouldBe 1414299023000L
   }
 
-  it should "return nothing for a Wikipedia: namespace" in {
+  it should "return an UNHANDLED page type for a Wikipedia: namespace page" in {
+    val expected = DumpPage(
+      id = 551039,
+      namespace = Namespace(id = 4, casing = FIRST_LETTER, name = "Wikipedia"),
+      pageType = UNHANDLED,
+      title = "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G",
+      text = None,
+      redirectTarget = None,
+      lastEdited = Some(1219519229000L)
+    )
     val result = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/missing-text.xml"))
-    result shouldBe None
-  }
-
-  behavior of "getNamespace"
-
-  it should "get the default namespace for a title without prefix" in {
-    fragmentProcessor.getNamespace("Apollo 11") shouldBe siteInfo.defaultNamespace
-  }
-
-  it should "get the default namespace for a title with no matching prefix" in {
-    fragmentProcessor.getNamespace("A.D. Police: Dead End City") shouldBe siteInfo.defaultNamespace
-  }
-
-  it should "get the matching namespace for a defined namespace (1)" in {
-    val expected = siteInfo.prefixToNamespace("Template")
-    fragmentProcessor.getNamespace("Template:Periodic table") shouldBe expected
-  }
-
-  it should "get the matching namespace for a defined namespace (2)" in {
-    val expected = siteInfo.prefixToNamespace("Category")
-    fragmentProcessor.getNamespace("Category:Brass instruments") shouldBe expected
+    result shouldBe expected
   }
 
   behavior of "getTransclusions"
@@ -70,14 +59,14 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "get transclusions (2)" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml"))
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
   }
 
   it should "get transclusions (3)" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get
+    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml"))
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
@@ -91,16 +80,16 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "detect a CATEGORY page from namespace" in {
-    fragmentProcessor.inferPageType("foo", siteInfo.prefixToNamespace("Category")) shouldBe CATEGORY
+    fragmentProcessor.inferPageType("foo", siteInfo.namespaceById(14)) shouldBe CATEGORY
   }
 
   it should "detect a TEMPLATE page from namespace" in {
-    fragmentProcessor.inferPageType("foo", siteInfo.prefixToNamespace("Template")) shouldBe TEMPLATE
+    fragmentProcessor.inferPageType("foo", siteInfo.namespaceById(10)) shouldBe TEMPLATE
   }
 
-  it should "detect an INVALID page from namespace" in {
+  it should "detect an UNHANDLED page from namespace" in {
     val namespace = Namespace(id = -3, casing = FIRST_LETTER, name = "Unknown")
-    fragmentProcessor.inferPageType("foo", namespace) shouldBe INVALID
+    fragmentProcessor.inferPageType("foo", namespace) shouldBe UNHANDLED
   }
 
   private lazy val language = Language(

@@ -2,8 +2,8 @@ package wiki.extractor
 
 import io.airlift.compress.zstd.ZstdInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
-import wiki.db.{PageWriter, Storage}
-import wiki.extractor.types.SiteInfo
+import wiki.db.{PageWriter, Redirect, Storage}
+import wiki.extractor.types.{DANGLING_REDIRECT, SiteInfo}
 import wiki.extractor.util.{Config, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
@@ -45,10 +45,9 @@ object WikipediaExtractor extends Logging {
     writer.writerThread.join()
     logger.info(s"Wrote ${writer.pageCount} pages to database")
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
-
-    // Following wikipedia-miner, we need to:
-    // - Process XML fragments into DumpPage via the pageSummary InitialMapper
-    // - Iteratively process DumpPage results via SubsequentMapper until all Unforwarded counts reach 0.
+    val danglingRedirects = storeMappedTitles()
+    createIndexes()
+    markDanglingRedirects(danglingRedirects)
   }
 
 
@@ -116,6 +115,49 @@ object WikipediaExtractor extends Logging {
     logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
     dbStorage.writeLastTransclusionCounts(aboveAverage)
     logger.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
+  }
+
+  /**
+   * Resolve all title-to-ID mappings (e.g. resolve redirects) and store the
+   * flattened data in the title_to_page table.
+   *
+   * @return Dangling redirects that need their page type updated
+   */
+  private def storeMappedTitles(): Seq[Redirect] = {
+    logger.info(s"Getting TitleFinder data")
+    val redirects = dbStorage.readRedirects()
+    logger.info(s"Loaded ${redirects.length} redirects")
+    val titlePageMap = dbStorage.readTitlePageMap()
+    logger.info(s"Loaded ${titlePageMap.size} title-to-ID map entries")
+    val tf = new TitleFinder(titlePageMap, redirects)
+
+    logger.info(s"Started writing title to page ID mappings to db")
+    val fpm = tf.getFlattenedPageMapping()
+    dbStorage.writeTitleToPage(fpm)
+    logger.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
+    tf.danglingRedirects
+  }
+
+  /**
+   * This adds indexes to the db tables. It runs after all bulk inserts because
+   * inserts are slower if the indexes already exist.
+   */
+  private def createIndexes(): Unit = {
+    logger.info(s"Starting to create indexes on db")
+    dbStorage.createIndexes()
+    logger.info(s"Finished creating indexes on db")
+  }
+
+  /**
+   * Mark all dangling redirect pages that were discovered during
+   * redirect resolution. This has to run after createIndexes() or
+   * it takes way too long to find the page by ID.
+   *
+   * @param input Dangling redirect pages that need to be marked
+   */
+  private def markDanglingRedirects(input: Seq[Redirect]): Unit = {
+    input.foreach(r => dbStorage.updatePageType(r.pageId, DANGLING_REDIRECT))
+    logger.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
   }
 
   private val dbStorage: Storage =

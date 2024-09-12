@@ -21,11 +21,10 @@ case class SiteInfo(
   val defaultNamespace: Namespace =
     namespaces.find(_.id == 0).getOrElse(throw new NoSuchElementException("No namespace 0 in siteinfo!"))
 
-  val prefixToNamespace: Map[String, Namespace] =
+  val namespaceById: Map[Int, Namespace] =
     namespaces
-      .map(ns => (ns.name, ns))
+      .map(ns => (ns.id, ns))
       .toMap
-      .withDefaultValue(defaultNamespace)
 
   // These common keys are frequently referenced during data processing.
   // The numbers each refer to a namespace. The numbering is used consistently

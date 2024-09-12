@@ -12,8 +12,11 @@ case object REDIRECT extends PageType
 case object DISAMBIGUATION extends PageType
 // A page that can be transcluded into other pages
 case object TEMPLATE extends PageType
+// A redirect page that points to a missing page. See discussion of
+// "Roger Broughton" in TitleFinder.scala
+case object DANGLING_REDIRECT extends PageType
 // A type of page that we don't currently deal with
-case object INVALID extends PageType
+case object UNHANDLED extends PageType
 
 object PageTypes {
   val byNumber: Map[Int, PageType] =
@@ -28,6 +31,7 @@ object PageTypes {
     (REDIRECT, 3),
     (DISAMBIGUATION, 4),
     (TEMPLATE, 5),
-    (INVALID, 6)
+    (DANGLING_REDIRECT, 6),
+    (UNHANDLED, 7)
   )
 }

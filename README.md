@@ -22,6 +22,10 @@ It is possible to run the extraction process directly from the downloaded .bz2 f
 code will spend of its time decompressing the data and the worker threads will be If you are going to run the extraction
 process more than once, decompress the file with the command line utility `bunzip2` or a similar tool.
 
+Running extraction from a .zst compressed input is somewhat slower than from uncompressed input but saves a great deal
+of disk space on storage-constrained systems like entry level laptops. It is much faster than reading the input
+from .bz2.
+
 ### Running extraction
 Run the Makefile `extract` target with `dumpfile` (pointing to your input data) set appropriately, like so:
 
@@ -35,7 +39,7 @@ sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-
 ```
 
 With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) and the dump file from September
-2024 this takes about 13 minutes to complete. The output SQLite database is about 66 GB on disk, with most of the space
+2024 this takes about 25 minutes to complete. The output SQLite database is about 86 GB on disk, with most of the space
 consumed by `page_markup`.
 
 ### Caveats

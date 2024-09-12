@@ -16,57 +16,49 @@ class FragmentProcessor(siteInfo: SiteInfo,
                         language: Language) extends Logging {
   /**
    * Convert a single Wikipedia page of XML to a structured DumpPage.
-   * Only categories, templates, and articles get converted by default;
-   * other page types can be ignored.
    *
    * For the format of the XML to be processed, see
    * https://www.mediawiki.org/wiki/Help:Export#Export_format
    * and https://www.mediawiki.org/xml/export-0.11.xsd
    *
    * @param pageXML A string of XML as extracted by WikipediaPageSplitter
-   * @return        An optional DumpPage with text and structured page data
+   * @return        A DumpPage with text and structured page data
    */
-  def fragmentToPage(pageXML: String,
-                     validNamespaces: Set[Namespace] = defaultValidNamespaces): Option[DumpPage] = {
+  def fragmentToPage(pageXML: String): DumpPage = {
     val xml = XML.loadString(pageXML)
     val title = (xml \ "title").text
     // e.g. <redirect title="History of Afghanistan" />
     val redirect = (xml \ "redirect" \ "@title").headOption.map(_.text)
-    val namespace = getNamespace(title)
-    if (validNamespaces.contains(namespace)) {
-      val id = (xml \ "id").text.toInt
-      assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
-      assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
-      val revision = xml \ "revision"
+    val namespaceId = (xml \ "ns").text.toInt
+    val namespace = siteInfo.namespaceById(namespaceId)
+    val id = (xml \ "id").text.toInt
+    assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
+    assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
+    val revision = xml \ "revision"
 
-      val text = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-      val lastEdited = (revision \ "timestamp")
-        .headOption
-        .map(_.text)
-        .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
-        .map(_.toInstant.toEpochMilli)
+    val text = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+    val lastEdited = (revision \ "timestamp")
+      .headOption
+      .map(_.text)
+      .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
+      .map(_.toInstant.toEpochMilli)
 
-      val pageType = if (redirect.nonEmpty) {
-        REDIRECT
-      }
-      else {
-        inferPageType(pageText = text.getOrElse(""), namespace = namespace)
-      }
-
-      val res = DumpPage(
-        id = id,
-        namespace = namespace,
-        pageType = pageType,
-        title = title,
-        text = text,
-        redirectTarget = redirect,
-        lastEdited = lastEdited
-      )
-      Some(res)
+    val pageType = if (redirect.nonEmpty) {
+      REDIRECT
     }
     else {
-      None
+      inferPageType(pageText = text.getOrElse(""), namespace = namespace)
     }
+
+    DumpPage(
+      id = id,
+      namespace = namespace,
+      pageType = pageType,
+      title = title,
+      text = text,
+      redirectTarget = redirect,
+      lastEdited = lastEdited
+    )
   }
 
   def fragmentWorker(id: Int,
@@ -79,13 +71,12 @@ class FragmentProcessor(siteInfo: SiteInfo,
       while (!completed) {
         source() match {
           case Some(article) if article.trim.nonEmpty =>
-            fragmentToPage(article).foreach { result =>
-              writer.addPage(result)
-              count += 1
-              if (count % progressDotInterval == 0) {
-                System.err.print(".")
-                System.err.flush()
-              }
+            val result = fragmentToPage(article)
+            writer.addPage(result)
+            count += 1
+            if (count % progressDotInterval == 0) {
+              System.err.print(".")
+              System.err.flush()
             }
           case _ =>
             completed = true
@@ -110,16 +101,6 @@ class FragmentProcessor(siteInfo: SiteInfo,
     lastTransclusions.toMap
 
   /**
-   * Determine the namespace from the page title. Titles in a namespace start
-   * with a prefix: value that can be matched in siteinfo.
-   *
-   * @param title A page title
-   * @return      The matching namespace, or default namespace if nothing matches
-   */
-  private[extractor] def getNamespace(title: String): Namespace =
-    siteInfo.prefixToNamespace(title.split(':').head)
-
-  /**
    * Infer the page type from the page text and namespace. We need
    * the page text to determine if the page is a disambiguation. Otherwise,
    * the type can be determined from the namespace or presence of a
@@ -130,8 +111,6 @@ class FragmentProcessor(siteInfo: SiteInfo,
    */
   private[extractor] def inferPageType(pageText: String,
                                        namespace: Namespace): PageType = {
-    // There's one case for every namespace that needs to be handled.
-    // Update this match if defaultValidNamespaces expands.
     namespace.id match {
       case siteInfo.CATEGORY_KEY => CATEGORY
       case siteInfo.TEMPLATE_KEY => TEMPLATE
@@ -147,8 +126,8 @@ class FragmentProcessor(siteInfo: SiteInfo,
         }
 
       case _ =>
-        logger.error(s"Got INVALID page type from namespace $namespace and page text $pageText")
-        INVALID
+        // Distinguish more PageTypes based on namespaces?
+        UNHANDLED
     }
   }
 
@@ -179,18 +158,6 @@ class FragmentProcessor(siteInfo: SiteInfo,
   private def incrementTransclusion(transclusion: String): Unit = this.synchronized {
     val count = lastTransclusions.getOrElse(transclusion, 0)
     lastTransclusions.put(transclusion, count + 1): Unit
-  }
-
-  // Only pages from valid namespaces get persisted to the database and
-  // subsequently processed. The default valid namespaces are the
-  // default namespace (articles), categories, and templates.
-  val defaultValidNamespaces: Set[Namespace] = {
-    val article = siteInfo.defaultNamespace
-    val category = siteInfo.namespaces.find(_.name == "Category")
-    val template = siteInfo.namespaces.find(_.name == "Template")
-    require(category.nonEmpty, s"SiteInfo namespaces is missing category: ${siteInfo.namespaces}")
-    require(template.nonEmpty, s"SiteInfo namespaces is missing template: ${siteInfo.namespaces}")
-    Set(article, category.get, template.get)
   }
 
   // Counting transclusions that end a page can be useful to find the

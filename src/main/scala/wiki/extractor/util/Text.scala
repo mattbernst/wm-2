@@ -25,7 +25,7 @@ object Text {
       if (trimmed == open) {
         accumulating = true
       }
-      if (trimmed == close) {
+      else if (trimmed == close) {
         completed = true
       }
       if (accumulating) {
