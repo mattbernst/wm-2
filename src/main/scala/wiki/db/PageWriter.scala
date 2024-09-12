@@ -3,8 +3,9 @@ package wiki.db
 import wiki.extractor.types.{DumpPage, Namespace, PageMarkup, PageMarkup_Z}
 import wiki.extractor.util.Logging
 
-import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 
 /**
@@ -19,10 +20,10 @@ import scala.collection.mutable
  * data for the page_markup table or compressed binary PageMarkupZ data
  * for the page_markup_z table.
  *
- * @param writer       A database storage writer
- * @param queueSize    The maximum number of pages enqueued before writing
+ * @param db        A database storage writer
+ * @param queueSize The maximum number of pages enqueued before writing
  */
-class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
+class PageWriter(db: Storage, queueSize: Int = 65000) extends Logging {
   def enableSqliteFastPragmas(): Unit = {
     val pragmas = Seq(
       "pragma cache_size=1048576;",
@@ -32,7 +33,7 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
     )
 
     pragmas.foreach { pragma =>
-      writer.executeUnsafely(pragma)
+      db.executeUnsafely(pragma)
       logger.info(s"Applied SQLite pragma: $pragma")
     }
   }
@@ -67,16 +68,19 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
   }
 
   private def write(): Unit = {
-    val unwritten = if (!queue.isEmpty) {
-      this.synchronized {
-        val entries = queue.toArray.toSeq.map(_.asInstanceOf[QueueEntry])
-        queue.clear()
-        entries
+    val unwritten = {
+      var emptied = false
+      val buffer = new ListBuffer[QueueEntry]
+      while (!emptied && buffer.size < db.batchInsertSize) {
+        Option(queue.poll(1, TimeUnit.SECONDS)) match {
+          case Some(entry) => buffer.append(entry)
+          case None => emptied = true
+        }
       }
+
+      buffer.toSeq
     }
-    else {
-      Seq()
-    }
+
     val pages = unwritten.map(_.page)
     if (pages.nonEmpty) {
       // Write any unknown namespaces as they are encountered
@@ -86,19 +90,19 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
         .toSet
         .diff(seenNamespaces)
         .foreach { namespace =>
-          writer.writeNamespace(namespace)
+          db.writeNamespace(namespace)
           seenNamespaces.add(namespace)
         }
 
       // Write page descriptors and markup
-      writer.writeDumpPages(pages)
+      db.writeDumpPages(pages)
       val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.text))
       if (markups.nonEmpty) {
-        writer.writeMarkups(markups)
+        db.writeMarkups(markups)
       }
       val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.text))
       if (markupsZ.nonEmpty) {
-        writer.writeMarkups_Z(markupsZ)
+        db.writeMarkups_Z(markupsZ)
       }
       pageCount += unwritten.length
     }
