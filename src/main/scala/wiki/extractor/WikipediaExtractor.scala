@@ -171,7 +171,12 @@ object WikipediaExtractor extends Logging {
                             fragmentProcessor: FragmentProcessor,
                             source: () => Option[String]): Seq[FragmentWorker] = {
     0.until(n).map { id =>
-      fragmentProcessor.fragmentWorker(id = id, source = source, writer = writer)
+      fragmentProcessor.fragmentWorker(
+        id = id,
+        source = source,
+        writer = writer,
+        compressMarkup = Config.props.compressMarkup
+      )
     }
   }
 }

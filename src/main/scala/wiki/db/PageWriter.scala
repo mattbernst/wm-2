@@ -1,6 +1,6 @@
 package wiki.db
 
-import wiki.extractor.types.{DumpPage, Namespace}
+import wiki.extractor.types.{DumpPage, Namespace, PageMarkup, PageMarkup_Z}
 import wiki.extractor.util.Logging
 
 import java.util.concurrent.ArrayBlockingQueue
@@ -9,12 +9,18 @@ import scala.collection.mutable
 
 /**
  * A writer with an internal buffer that continually buffers DumpPages and
- * writes them in batches to the page and page_markup database tables. Since
- * it is optimized for write speed while processing a new dump file, it sets
- * SQLite pragmas that are unsafe for general use.
+ * markup, then writes them in batches to the page and page_markup or
+ * page_markup_z database tables. Since it is optimized for write speed while
+ * processing a new dump file, it sets SQLite pragmas that are unsafe for
+ * general use.
  *
- * @param writer     A database storage writer
- * @param queueSize  The maximum number of DumpPages enqueued before writing
+ * The caller can choose between markup readability (for debugging and
+ * spelunking) and compact storage by supplying either string PageMarkup
+ * data for the page_markup table or compressed binary PageMarkupZ data
+ * for the page_markup_z table.
+ *
+ * @param writer       A database storage writer
+ * @param queueSize    The maximum number of pages enqueued before writing
  */
 class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
   def enableSqliteFastPragmas(): Unit = {
@@ -32,13 +38,16 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
   }
 
   /**
-   * Enqueue one page for writing. The page will be automatically written
+   * Enqueue one page for writing along with its markup. The caller supplies
+   * uncompressed or compressed markup. The data will be automatically written
    * by the continually running writerThread.
    *
    * @param page A structured DumpPage
    */
-  def addPage(page: DumpPage): Unit =
-    queue.put(page)
+  def addPage(page: DumpPage,
+              markup: Option[PageMarkup],
+              markup_Z: Option[PageMarkup_Z]): Unit =
+    queue.put(QueueEntry(page = page, markup = markup, markup_Z = markup_Z))
 
   def stopWriting(): Unit = this.synchronized {
     availableForWriting = false
@@ -58,9 +67,9 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
   }
 
   private def write(): Unit = {
-    val pages = if (!queue.isEmpty) {
+    val unwritten = if (!queue.isEmpty) {
       this.synchronized {
-        val entries = queue.toArray.toSeq.map(_.asInstanceOf[DumpPage])
+        val entries = queue.toArray.toSeq.map(_.asInstanceOf[QueueEntry])
         queue.clear()
         entries
       }
@@ -68,9 +77,11 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
     else {
       Seq()
     }
+    val pages = unwritten.map(_.page)
     if (pages.nonEmpty) {
       // Write any unknown namespaces as they are encountered
-      pages
+      unwritten
+        .map(_.page)
         .map(_.namespace)
         .toSet
         .diff(seenNamespaces)
@@ -81,8 +92,15 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
 
       // Write page descriptors and markup
       writer.writeDumpPages(pages)
-      writer.writeMarkups(pages.map(p => (p.id, p.text)))
-      pageCount += pages.length
+      val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.text))
+      if (markups.nonEmpty) {
+        writer.writeMarkups(markups)
+      }
+      val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.text))
+      if (markupsZ.nonEmpty) {
+        writer.writeMarkups_Z(markupsZ)
+      }
+      pageCount += unwritten.length
     }
     else {
       this.synchronized {
@@ -93,9 +111,11 @@ class PageWriter(writer: Storage, queueSize: Int = 65000) extends Logging {
     }
   }
 
+  private case class QueueEntry(page: DumpPage, markup: Option[PageMarkup], markup_Z: Option[PageMarkup_Z])
+
   var pageCount: Int = 0
   private var availableForWriting: Boolean = true
   private var finished: Boolean = false
-  private lazy val queue = new ArrayBlockingQueue[DumpPage](queueSize)
+  private lazy val queue = new ArrayBlockingQueue[QueueEntry](queueSize)
   private lazy val seenNamespaces = mutable.Set[Namespace]()
 }

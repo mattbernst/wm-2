@@ -2,7 +2,7 @@ package wiki.extractor
 
 import wiki.db.PageWriter
 import wiki.extractor.types.*
-import wiki.extractor.util.Logging
+import wiki.extractor.util.{Logging, ZString}
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -11,20 +11,22 @@ import scala.collection.mutable.ListBuffer
 import scala.xml.XML
 
 case class FragmentWorker(thread: Thread)
+case class StructuredPage(page: DumpPage, markup: PageMarkup)
 
 class FragmentProcessor(siteInfo: SiteInfo,
                         language: Language) extends Logging {
   /**
-   * Convert a single Wikipedia page of XML to a structured DumpPage.
+   * Convert a single Wikipedia page of XML to structured output for further
+   * storage and processing.
    *
    * For the format of the XML to be processed, see
    * https://www.mediawiki.org/wiki/Help:Export#Export_format
    * and https://www.mediawiki.org/xml/export-0.11.xsd
    *
    * @param pageXML A string of XML as extracted by WikipediaPageSplitter
-   * @return        A DumpPage with text and structured page data
+   * @return        A StructuredPage with data about the page and its markup
    */
-  def fragmentToPage(pageXML: String): DumpPage = {
+  def extract(pageXML: String): StructuredPage = {
     val xml = XML.loadString(pageXML)
     val title = (xml \ "title").text
     // e.g. <redirect title="History of Afghanistan" />
@@ -37,6 +39,8 @@ class FragmentProcessor(siteInfo: SiteInfo,
     val revision = xml \ "revision"
 
     val text = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+    val markup = PageMarkup(pageId = id, text = text)
+
     val lastEdited = (revision \ "timestamp")
       .headOption
       .map(_.text)
@@ -50,20 +54,22 @@ class FragmentProcessor(siteInfo: SiteInfo,
       inferPageType(pageText = text.getOrElse(""), namespace = namespace)
     }
 
-    DumpPage(
+    val dp = DumpPage(
       id = id,
       namespace = namespace,
       pageType = pageType,
       title = title,
-      text = text,
       redirectTarget = redirect,
       lastEdited = lastEdited
     )
+
+    StructuredPage(page = dp, markup = markup)
   }
 
   def fragmentWorker(id: Int,
                      source: () => Option[String],
-                     writer: PageWriter): FragmentWorker = {
+                     writer: PageWriter,
+                     compressMarkup: Boolean): FragmentWorker = {
     val progressDotInterval = 10000
     val thread = new Thread(() => {
       var count = 0
@@ -71,8 +77,14 @@ class FragmentProcessor(siteInfo: SiteInfo,
       while (!completed) {
         source() match {
           case Some(article) if article.trim.nonEmpty =>
-            val result = fragmentToPage(article)
-            writer.addPage(result)
+            val result = extract(article)
+            if (compressMarkup) {
+              val compressed = PageMarkup_Z(result.markup.pageId, result.markup.text.map(s => ZString.compress(s)))
+              writer.addPage(page = result.page, markup = None, markup_Z = Some(compressed))
+            }
+            else {
+              writer.addPage(page = result.page, markup = Some(result.markup), markup_Z = None)
+            }
             count += 1
             if (count % progressDotInterval == 0) {
               System.err.print(".")

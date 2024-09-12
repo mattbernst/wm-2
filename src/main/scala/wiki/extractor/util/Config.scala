@@ -4,7 +4,8 @@ import wiki.extractor.types.Language
 
 case class ConfiguredProperties(
                                  language: Language,
-                                 fragmentWorkers: Int
+                                 fragmentWorkers: Int,
+                                 compressMarkup: Boolean
                                )
 
 object Config extends Logging {
@@ -48,16 +49,35 @@ object Config extends Logging {
     val fragmentWorkers: Int = {
       val envVar = "N_FRAGMENT_WORKERS"
       sys.env.getOrElse(envVar, {
-        val default = "4"
-        logger.info(s"No $envVar set for fragment worker count -- defaulting to $default")
-        default
-      })
+          val default = "4"
+          logger.info(s"No $envVar set for fragment worker count -- defaulting to $default")
+          default
+        })
         .toInt
     }
 
+    val compressMarkup: Boolean = {
+      val envVar = "COMPRESS_MARKUP"
+      val storeCompressed = sys.env.getOrElse(envVar, {
+          val default = "true"
+          logger.info(s"No $envVar set for markup compression -- defaulting to $default")
+          default
+        })
+        .toBoolean
+      if (storeCompressed) {
+        logger.info(s"Binary compressed markup will be stored in table page_markup_z.")
+      }
+      else {
+        logger.warn(s"Text markup will be stored in table page_markup. This is human-readable but slow.")
+      }
+      storeCompressed
+    }
+
+
     ConfiguredProperties(
       language = language,
-      fragmentWorkers = fragmentWorkers
+      fragmentWorkers = fragmentWorkers,
+      compressMarkup = compressMarkup
     )
   }
 

@@ -39,9 +39,10 @@ sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-
 ```
 
 With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) and the dump file from September
-2024 this takes about 25 minutes to complete. The output SQLite database is about 86 GB on disk, with most of the space
-consumed by `page_markup`. A significant portion of the wall clock time is spent just creating indexes in the SQLite
-database.
+2024 this takes about 25 minutes to complete. The output SQLite database is about 36 GB on disk (87 GB if running with
+no page markup compression), with most of the space consumed by `page_markup_z` or `page_markup` (table used depends on
+"COMPRESS_MARKUP" environment variable). A significant portion of the wall clock time is spent just creating indexes
+in the SQLite database.
 
 ### Caveats
 

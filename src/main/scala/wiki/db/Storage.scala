@@ -2,7 +2,7 @@ package wiki.db
 
 import scalikejdbc.*
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, Logging}
+import wiki.extractor.util.{FileHelpers, Logging, ZString}
 
 import scala.collection.mutable
 
@@ -206,6 +206,65 @@ class Storage(fileName: String) extends Logging {
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
         sql"""INSERT INTO page_markup ($cols) VALUES $values"""
+          .update()
+      }
+    }
+  }
+
+  /**
+   * Get the markup for a single page (if it exists) from the page_markup
+   * table.
+   *
+   * @param pageId The numeric ID for the corresponding page
+   * @return       The stored markup, if it exists
+   */
+  def readMarkup(pageId: Int): Option[String] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT markup FROM page_markup WHERE page_id=$pageId"""
+        .map(rs => rs.stringOpt("markup"))
+        .single()
+        .flatten
+    }
+  }
+
+  /**
+   * Get the markup for a single page (if it exists) from the page_markup_z
+   * table.
+   *
+   * @param pageId The numeric ID for the corresponding page
+   * @return       The stored markup, if it exists
+   */
+  def readMarkup_Z(pageId: Int): Option[String] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT markup FROM page_markup_z WHERE page_id=$pageId"""
+        .map(rs => rs.bytesOpt("markup").map(bin => ZString.decompress(bin)))
+        .single()
+        .flatten
+    }
+  }
+
+  /**
+   * Write compressed page markup to the page_markup_z table. Writing in
+   * compressed form significantly reduces the disk space required for
+   * the database and may be faster than standard uncompressed storage
+   * on systems with relatively slow disks. The downside is that the
+   * page_markup_z data is not human-readable.
+   *
+   * @param input One or more (id, Option[Array[Byte]) tuples to write
+   */
+  def writeMarkups_Z(input: Seq[(Int, Option[Array[Byte]])]): Unit = {
+    val batches = input.grouped(batchInsertSize)
+    DB.autoCommit { implicit session =>
+      batches.foreach { batch =>
+        val cols: SQLSyntax = sqls"""page_id, markup"""
+        val params: Seq[Seq[SQLSyntax]] = batch.map(
+          t => Seq(
+            sqls"${t._1}",
+            sqls"${t._2}"
+          )
+        )
+        val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
+        sql"""INSERT INTO page_markup_z ($cols) VALUES $values"""
           .update()
       }
     }

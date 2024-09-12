@@ -5,7 +5,6 @@ case class DumpPage(
                      namespace: Namespace,
                      pageType: PageType,
                      title: String,
-                     text: Option[String],
                      redirectTarget: Option[String],
                      lastEdited: Option[Long]
                    )

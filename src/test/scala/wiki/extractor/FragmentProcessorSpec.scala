@@ -6,8 +6,8 @@ import wiki.extractor.util.{FileHelpers, UnitSpec}
 class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
-  it should "extract standard fields from a basic article" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/animalia.xml"))
+  it should "extract standard page fields from a basic article" in {
+    val page = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/animalia.xml")).page
     page.id shouldBe 332
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
@@ -16,7 +16,7 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "detect a redirect page" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml"))
+    val page = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).page
     page.id shouldBe 10
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
@@ -30,11 +30,10 @@ class FragmentProcessorSpec extends UnitSpec {
       namespace = Namespace(id = 4, casing = FIRST_LETTER, name = "Wikipedia"),
       pageType = UNHANDLED,
       title = "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G",
-      text = None,
       redirectTarget = None,
       lastEdited = Some(1219519229000L)
     )
-    val result = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/missing-text.xml"))
+    val result = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/missing-text.xml")).page
     result shouldBe expected
   }
 
@@ -59,17 +58,17 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "get transclusions (2)" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml"))
+    val markup = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
-    fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
+    fragmentProcessor.getTransclusions(markup.text.get) shouldBe expected
   }
 
   it should "get transclusions (3)" in {
-    val page = fragmentProcessor.fragmentToPage(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml"))
+    val markup = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
-    fragmentProcessor.getTransclusions(page.text.get) shouldBe expected
+    fragmentProcessor.getTransclusions(markup.text.get) shouldBe expected
   }
 
   behavior of "inferPageType"

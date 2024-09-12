@@ -3,7 +3,7 @@ package wiki.db
 import org.scalatest.BeforeAndAfterAll
 import wiki.extractor.TitleFinder
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.extractor.util.{FileHelpers, UnitSpec, ZString}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   "namespace table" should "write and read back Namespace records" in {
@@ -22,7 +22,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         namespace = defaultNamespace,
         pageType = ARTICLE,
         title = "Ann Arbor, Michigan",
-        text = None,
         redirectTarget = None,
         lastEdited = None
       ),
@@ -31,7 +30,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         namespace = categoryNamespace,
         pageType = ARTICLE,
         title = "Category:Mathematics",
-        text = None,
         redirectTarget = None,
         lastEdited = None
       ),
@@ -40,7 +38,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         namespace = defaultNamespace,
         pageType = REDIRECT,
         title = "AsciiArt",
-        text = None,
         redirectTarget = Some("ASCII art"),
         lastEdited = None
       ),
@@ -49,7 +46,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         namespace = defaultNamespace,
         pageType = ARTICLE,
         title = "ASCII art",
-        text = None,
         redirectTarget = None,
         lastEdited = None
       ),
@@ -58,7 +54,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         namespace = categoryNamespace,
         pageType = REDIRECT,
         title = "Category:Wikipedians who are not a Wikipedian",
-        text = None,
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
         lastEdited = None
       ),
@@ -67,7 +62,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         namespace = categoryNamespace,
         pageType = ARTICLE,
         title = "Category:Wikipedians who retain deleted categories on their userpages",
-        text = None,
         redirectTarget = None,
         lastEdited = None
       )
@@ -83,6 +77,28 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     assertThrows[NoSuchElementException] {
       tf.titleToId("This title does not exist")
     }
+  }
+
+  "page_markup table" should "write and read back markup" in {
+    val markup = """#REDIRECT [[Demographics of Afghanistan]]
+                   |
+                   |{{Redirect category shell|1=
+                   |{{R from CamelCase}}
+                   |}}""".stripMargin
+    val entry = (randomInt(), Some(markup))
+    storage.writeMarkups(Seq(entry))
+    storage.readMarkup(entry._1) shouldBe Some(markup)
+  }
+
+  "page_markup_z table" should "write and read back markup" in {
+    val markup = """#REDIRECT [[Demographics of Afghanistan]]
+                   |
+                   |{{Redirect category shell|1=
+                   |{{R from CamelCase}}
+                   |}}""".stripMargin
+    val entry = (randomInt(), Some(ZString.compress(markup)))
+    storage.writeMarkups_Z(Seq(entry))
+    storage.readMarkup_Z(entry._1) shouldBe Some(markup)
   }
 
   override def afterAll(): Unit = {
