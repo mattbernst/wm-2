@@ -1,7 +1,7 @@
 package wiki.extractor
 
+import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import wiki.db.{PageWriter, Redirect, Storage}
 import wiki.extractor.types.{DANGLING_REDIRECT, SiteInfo}
 import wiki.extractor.util.{Config, Logging}
@@ -78,7 +78,8 @@ object WikipediaExtractor extends Logging {
       Source.fromFile(fileName)(StandardCharsets.UTF_8)
     }
     else if (fileName.endsWith(".bz2")) {
-      val input = new BZip2CompressorInputStream(new BufferedInputStream(new FileInputStream(fileName)))
+      val bz2 = new BZip2HadoopStreams
+      val input = bz2.createInputStream(new BufferedInputStream(new FileInputStream(fileName)))
       logger.warn(s"Reading from compressed bz2 input. This is much slower than uncompressed XML.")
       Source.fromInputStream(input)(StandardCharsets.UTF_8)
     }
