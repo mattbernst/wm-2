@@ -67,8 +67,14 @@ class PageWriter(db: Storage, queueSize: Int = 65000) extends Logging {
     thread
   }
 
+  /**
+   * Consume items from the queue and write them to the database. This batches
+   * data for efficient database writes. If availableForWriting is false and
+   * there is nothing left in the queue, finished will be set to false so the
+   * writer thread can stop.
+   */
   private def write(): Unit = {
-    val unwritten = {
+    val unwritten: Seq[QueueEntry] = {
       var emptied = false
       val buffer = new ListBuffer[QueueEntry]
       while (!emptied && buffer.size < db.batchInsertSize) {
