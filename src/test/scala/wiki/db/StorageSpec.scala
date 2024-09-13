@@ -70,13 +70,10 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.writeDumpPages(pages)
     val tf = new TitleFinder(storage.readTitlePageMap(), storage.readRedirects())
     storage.writeTitleToPage(tf.getFlattenedPageMapping())
-    tf.titleToId("AsciiArt") shouldBe tf.titleToId("ASCII art")
-    tf.titleToId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.titleToId("Category:Wikipedians who retain deleted categories on their userpages")
-    tf.titleToId("Ann Arbor, Michigan") shouldBe pages.head.id
-
-    assertThrows[NoSuchElementException] {
-      tf.titleToId("This title does not exist")
-    }
+    tf.getId("This title does not exist") shouldBe None
+    tf.getId("AsciiArt") shouldBe tf.getId("ASCII art")
+    tf.getId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.getId("Category:Wikipedians who retain deleted categories on their userpages")
+    tf.getId("Ann Arbor, Michigan") shouldBe Some(pages.head.id)
   }
 
   "page_markup table" should "write and read back markup" in {

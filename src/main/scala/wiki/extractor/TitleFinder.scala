@@ -4,15 +4,13 @@ import wiki.db.Redirect
 import wiki.extractor.util.Logging
 
 import scala.collection.mutable
-import scala.util.Try
 
 /**
  * When processing a Wikipedia dump for the first time, the TitleFinder needs
  * both the pageMap and the redirects to be read in from the database to
  * perform redirect resolution. After the resolved title to page mapping has
- * been stored in the database, this can be initialized with just the contents
- * of the title_to_page table as the pageMap parameter (redirects can be
- * left empty).
+ * been stored in the database, a faster title resolver based on hashed titles
+ * can be used.
  *
  * @param pageMap     A map of page titles to page IDs
  * @param redirects   All redirects from the page table
@@ -23,8 +21,7 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
    * Resolve a page title to its page ID. If the title belongs to an ordinary
    * page, get it directly from the title map. Otherwise, the title is a
    * redirect. The redirect-title will get resolved to its redirect target
-   * title and that new title will subsequently be looked up from the title
-   * map.
+   * title and that new title will be looked up recursively.
    *
    * Example: "ASCII art" will be found directly in the title map as page 1884
    * But "AsciiArt" is not there directly. It is in the redirect map, which
@@ -33,11 +30,26 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
    * lookup first.
    *
    * @param title The title of a page, ordinary or redirected
+   * @param depth The current search depth (increments for each redirect followed)
    * @return      The direct ID of an ordinary page, or the ID of the page's
    *              redirect target for a redirect page
    */
-  def titleToId(title: String): Int = {
-    pageMap.getOrElse(title, pageMap(redirectMap(title)._1))
+  def getId(title: String, depth: Int = 1): Option[Int] = {
+    if (depth > maxDepth) {
+      logger.warn(s"Exceeded max depth trying to resolve title '$title' to a non-redirect page")
+      None
+    }
+    else if (pageMap.contains(title)) {
+      pageMap.get(title)
+    }
+    else if (redirectMap.contains(title)) {
+      getId(redirectMap(title)._1, depth + 1)
+    }
+    // Dangling redirect does not point to an ordinary page or to
+    // another redirect
+    else {
+      None
+    }
   }
 
   /**
@@ -59,16 +71,13 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
    * @return A map of page titles to their resolved page IDs
    */
   def getFlattenedPageMapping(): Seq[(String, Int)] = {
-    val badRedirectTitles = danglingRedirects.map(_.title).toSet
-
     val fromRedirects = redirectMap
       .keysIterator
-      .filterNot(title => badRedirectTitles.contains(title))
+      .filterNot(title => getId(title).isEmpty)
       .toSeq
-      .map(title => (title, titleToId(title)))
+      .map(title => (title, getId(title).get))
 
     val fromTitles = pageMap.toSeq
-
     (fromRedirects ++ fromTitles).distinct
   }
 
@@ -80,7 +89,7 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
   lazy val danglingRedirects: Seq[Redirect] = {
     redirectMap
       .keysIterator
-      .filter(title => Try(titleToId(title)).isFailure)
+      .filter(title => getId(title).isEmpty)
       .toSeq
       .map(title => Redirect(pageId = redirectMap(title)._2, title = title, redirectTarget = redirectMap(title)._1))
   }
@@ -91,4 +100,8 @@ class TitleFinder(pageMap: mutable.Map[String, Int],
     redirects.foreach(r => mm.put(r.title, (r.redirectTarget, r.pageId)))
     mm
   }
+
+  // The maximum number of redirects to follow. In practice only self-redirects
+  // appear to have a depth greater than 4.
+  private val maxDepth = 16
 }
