@@ -10,6 +10,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.xml.XML
 
+
 case class FragmentWorker(thread: Thread)
 case class StructuredPage(page: DumpPage, markup: PageMarkup)
 

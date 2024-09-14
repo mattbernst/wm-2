@@ -102,14 +102,14 @@ class PageWriter(db: Storage, queueSize: Int = 65000) extends Logging {
 
       // Write page descriptors and markup
       db.writeDumpPages(pages)
-      val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.text))
-      if (markups.nonEmpty) {
-        db.writeMarkups(markups)
-      }
-      val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.text))
-      if (markupsZ.nonEmpty) {
-        db.writeMarkups_Z(markupsZ)
-      }
+//      val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.text))
+//      if (markups.nonEmpty) {
+//        db.writeMarkups(markups)
+//      }
+//      val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.text))
+//      if (markupsZ.nonEmpty) {
+//        db.writeMarkups_Z(markupsZ)
+//      }
       pageCount += unwritten.length
     }
     else {

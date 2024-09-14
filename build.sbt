@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "2.0.16",
   "org.slf4j" % "slf4j-simple" % "2.0.16",
   "org.scalikejdbc" %% "scalikejdbc" % "4.3.1",
+  "org.sweble.wikitext" % "swc-parser-lazy" % "3.1.9",
   "org.xerial" % "sqlite-jdbc" % "3.46.1.0"
 )
 
