@@ -13,32 +13,7 @@
          "genus disambiguation",
          "school disambiguation"
       ],
-      "aliases" : [
-         {
-            "from" : "WP",
-            "to" : "Wikipedia"
-         },
-         {
-            "from" : "WT",
-            "to" : "Wikipedia talk"
-         },
-         {
-            "from" : "Image",
-            "to" : "File"
-         },
-         {
-            "from" : "Image talk",
-            "to" : "File talk"
-         },
-         {
-            "from" : "Project",
-            "to" : "Wikipedia"
-         },
-         {
-            "from" : "Project talk",
-            "to" : "Wikipedia talk"
-         }
-      ]
+      "rootCategory" : "Category:Main topic classifications"
    }
 ]
 

@@ -95,10 +95,7 @@ class FragmentProcessorSpec extends UnitSpec {
     code = "en",
     name = "English",
     disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
-    aliases = Seq(
-      NamespaceAlias(from = "WP", to = "Wikipedia"),
-      NamespaceAlias(from = "WT", to = "Wikipedia talk")
-    )
+    rootCategory = "Category:Main topic classifications"
   )
 
   private lazy val siteInfo = SiteInfo(
