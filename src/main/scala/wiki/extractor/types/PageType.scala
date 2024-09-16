@@ -19,6 +19,7 @@ case object DANGLING_REDIRECT extends PageType
 case object UNHANDLED extends PageType
 
 object PageTypes {
+
   val byNumber: Map[Int, PageType] =
     tuples.map(t => (t._2, t._1)).toMap
 

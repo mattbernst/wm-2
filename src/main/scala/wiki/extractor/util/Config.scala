@@ -2,11 +2,7 @@ package wiki.extractor.util
 
 import wiki.extractor.types.Language
 
-case class ConfiguredProperties(
-                                 language: Language,
-                                 fragmentWorkers: Int,
-                                 compressMarkup: Boolean
-                               )
+case class ConfiguredProperties(language: Language, fragmentWorkers: Int, compressMarkup: Boolean)
 
 object Config extends Logging {
 
@@ -38,17 +34,15 @@ object Config extends Logging {
       })
     }
 
-    val language = Language
-      .fromJSONFile(languagesFile)
-      .find(_.code == lang)
-      .getOrElse {
-        val msg = s"Did not find Language entry for $lang in $languagesFile"
-        throw new NoSuchElementException(msg)
-      }
+    val language = Language.fromJSONFile(languagesFile).find(_.code == lang).getOrElse {
+      val msg = s"Did not find Language entry for $lang in $languagesFile"
+      throw new NoSuchElementException(msg)
+    }
 
     val fragmentWorkers: Int = {
       val envVar = "N_FRAGMENT_WORKERS"
-      sys.env.getOrElse(envVar, {
+      sys.env
+        .getOrElse(envVar, {
           val default = "4"
           logger.info(s"No $envVar set for fragment worker count -- defaulting to $default")
           default
@@ -58,7 +52,8 @@ object Config extends Logging {
 
     val compressMarkup: Boolean = {
       val envVar = "COMPRESS_MARKUP"
-      val storeCompressed = sys.env.getOrElse(envVar, {
+      val storeCompressed = sys.env
+        .getOrElse(envVar, {
           val default = "true"
           logger.info(s"No $envVar set for markup compression -- defaulting to $default")
           default
@@ -66,13 +61,11 @@ object Config extends Logging {
         .toBoolean
       if (storeCompressed) {
         logger.info(s"Binary compressed markup will be stored in table page_markup_z.")
-      }
-      else {
+      } else {
         logger.warn(s"Text markup will be stored in table page_markup. This is human-readable but slow.")
       }
       storeCompressed
     }
-
 
     ConfiguredProperties(
       language = language,
@@ -84,7 +77,7 @@ object Config extends Logging {
   lazy val props: ConfiguredProperties = {
     profile match {
       case "default" => defaultConfig
-      case _ => throw new Exception(s"No configuration defined for profile: $profile")
+      case _         => throw new Exception(s"No configuration defined for profile: $profile")
     }
   }
 }

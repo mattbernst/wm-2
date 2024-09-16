@@ -58,14 +58,16 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "get transclusions (2)" in {
-    val markup = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
+    val markup =
+      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(markup.text.get) shouldBe expected
   }
 
   it should "get transclusions (3)" in {
-    val markup = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
+    val markup =
+      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(markup.text.get) shouldBe expected

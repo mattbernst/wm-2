@@ -10,48 +10,45 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.xml.XML
 
-
 case class FragmentWorker(thread: Thread)
 case class StructuredPage(page: DumpPage, markup: PageMarkup)
 
-class FragmentProcessor(siteInfo: SiteInfo,
-                        language: Language) extends Logging {
+class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging {
+
   /**
-   * Convert a single Wikipedia page of XML to structured output for further
-   * storage and processing.
-   *
-   * For the format of the XML to be processed, see
-   * https://www.mediawiki.org/wiki/Help:Export#Export_format
-   * and https://www.mediawiki.org/xml/export-0.11.xsd
-   *
-   * @param pageXML A string of XML as extracted by WikipediaPageSplitter
-   * @return        A StructuredPage with data about the page and its markup
-   */
+    * Convert a single Wikipedia page of XML to structured output for further
+    * storage and processing.
+    *
+    * For the format of the XML to be processed, see
+    * https://www.mediawiki.org/wiki/Help:Export#Export_format
+    * and https://www.mediawiki.org/xml/export-0.11.xsd
+    *
+    * @param pageXML A string of XML as extracted by WikipediaPageSplitter
+    * @return        A StructuredPage with data about the page and its markup
+    */
   def extract(pageXML: String): StructuredPage = {
-    val xml = XML.loadString(pageXML)
+    val xml   = XML.loadString(pageXML)
     val title = (xml \ "title").text
     // e.g. <redirect title="History of Afghanistan" />
-    val redirect = (xml \ "redirect" \ "@title").headOption.map(_.text)
+    val redirect    = (xml \ "redirect" \ "@title").headOption.map(_.text)
     val namespaceId = (xml \ "ns").text.toInt
-    val namespace = siteInfo.namespaceById(namespaceId)
-    val id = (xml \ "id").text.toInt
+    val namespace   = siteInfo.namespaceById(namespaceId)
+    val id          = (xml \ "id").text.toInt
     assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
     assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
     val revision = xml \ "revision"
 
-    val text = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+    val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
     val markup = PageMarkup(pageId = id, text = text)
 
-    val lastEdited = (revision \ "timestamp")
-      .headOption
+    val lastEdited = (revision \ "timestamp").headOption
       .map(_.text)
       .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
       .map(_.toInstant.toEpochMilli)
 
     val pageType = if (redirect.nonEmpty) {
       REDIRECT
-    }
-    else {
+    } else {
       inferPageType(pageText = text.getOrElse(""), namespace = namespace)
     }
 
@@ -67,13 +64,15 @@ class FragmentProcessor(siteInfo: SiteInfo,
     StructuredPage(page = dp, markup = markup)
   }
 
-  def fragmentWorker(id: Int,
-                     source: () => Option[String],
-                     writer: PageWriter,
-                     compressMarkup: Boolean): FragmentWorker = {
+  def fragmentWorker(
+    id: Int,
+    source: () => Option[String],
+    writer: PageWriter,
+    compressMarkup: Boolean
+  ): FragmentWorker = {
     val progressDotInterval = 10000
     val thread = new Thread(() => {
-      var count = 0
+      var count     = 0
       var completed = false
       while (!completed) {
         source() match {
@@ -82,8 +81,7 @@ class FragmentProcessor(siteInfo: SiteInfo,
             if (compressMarkup) {
               val compressed = PageMarkup_Z(result.markup.pageId, result.markup.text.map(s => ZString.compress(s)))
               writer.addPage(page = result.page, markup = None, markup_Z = Some(compressed))
-            }
-            else {
+            } else {
               writer.addPage(page = result.page, markup = Some(result.markup), markup_Z = None)
             }
             count += 1
@@ -104,37 +102,35 @@ class FragmentProcessor(siteInfo: SiteInfo,
   }
 
   /**
-   * Get counts of how many times each transclusion appeared as the last
-   * transclusion on a page. These counts can be used to narrow the search
-   * for transclusions that indicate a disambiguation page.
-   *
-   * @return A map of each transclusion name to a count of appearances
-   */
+    * Get counts of how many times each transclusion appeared as the last
+    * transclusion on a page. These counts can be used to narrow the search
+    * for transclusions that indicate a disambiguation page.
+    *
+    * @return A map of each transclusion name to a count of appearances
+    */
   def getLastTransclusionCounts(): Map[String, Int] =
     lastTransclusions.toMap
 
   /**
-   * Infer the page type from the page text and namespace. We need
-   * the page text to determine if the page is a disambiguation. Otherwise,
-   * the type can be determined from the namespace or presence of a
-   * redirect declaration.
-   *
-   * @param pageText  Wikipedia markup for the page content
-   * @param namespace The namespace that the page belongs to
-   */
-  private[extractor] def inferPageType(pageText: String,
-                                       namespace: Namespace): PageType = {
+    * Infer the page type from the page text and namespace. We need
+    * the page text to determine if the page is a disambiguation. Otherwise,
+    * the type can be determined from the namespace or presence of a
+    * redirect declaration.
+    *
+    * @param pageText  Wikipedia markup for the page content
+    * @param namespace The namespace that the page belongs to
+    */
+  private[extractor] def inferPageType(pageText: String, namespace: Namespace): PageType = {
     namespace.id match {
       case siteInfo.CATEGORY_KEY => CATEGORY
       case siteInfo.TEMPLATE_KEY => TEMPLATE
       case siteInfo.MAIN_KEY =>
-        val transclusions = getTransclusions(pageText)
+        val transclusions    = getTransclusions(pageText)
         val lastTransclusion = transclusions.lastOption
         lastTransclusion.foreach(t => incrementTransclusion(t))
         if (lastTransclusion.exists(t => language.isDisambiguation(t))) {
           DISAMBIGUATION
-        }
-        else {
+        } else {
           ARTICLE
         }
 
@@ -145,16 +141,16 @@ class FragmentProcessor(siteInfo: SiteInfo,
   }
 
   /**
-   * Get any transclusions from the page. Transclusions are anything inside
-   * {{double braces like this}}.
-   * See also https://en.wikipedia.org/wiki/Help:Transclusion
-   *
-   * @param pageText Wikipedia markup for the page content
-   * @return         All transclusions from inside double braces
-   */
+    * Get any transclusions from the page. Transclusions are anything inside
+    * {{double braces like this}}.
+    * See also https://en.wikipedia.org/wiki/Help:Transclusion
+    *
+    * @param pageText Wikipedia markup for the page content
+    * @return         All transclusions from inside double braces
+    */
   private[extractor] def getTransclusions(pageText: String): Seq[String] = {
     val transclusions = new ListBuffer[String]
-    var startIndex = -1
+    var startIndex    = -1
 
     pageText.indices.foreach { i =>
       if (pageText(i) == '{') {
