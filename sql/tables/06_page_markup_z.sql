@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS page_markup_z
 (
     page_id INTEGER NOT NULL,
-    markup  BLOB
+    markup  BLOB,
+    json    BLOB
 );
 

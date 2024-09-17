@@ -186,18 +186,19 @@ class Storage(fileName: String) extends Logging {
     * contains the raw markup for each page. The markup is stored in a separate
     * table because it is so much larger than the other page data.
     *
-    * @param input One or more (id, Option[text]) tuples to write
+    * @param input One or more MarkupU tuples to write
     */
-  def writeMarkups(input: Seq[(Int, Option[String])]): Unit = {
+  def writeMarkups(input: Seq[Storage.MarkupU]): Unit = {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""page_id, markup"""
+        val cols: SQLSyntax = sqls"""page_id, markup, json"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
               sqls"${t._1}",
-              sqls"${t._2}"
+              sqls"${t._2}",
+              sqls"${t._3}"
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
@@ -220,8 +221,8 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
-    * Get the markup for a single page (if it exists) from the page_markup_z
-    * table.
+    * Get the raw markup for a single page (if it exists) from the
+    * page_markup_z table.
     *
     * @param pageId The numeric ID for the corresponding page
     * @return       The stored markup, if it exists
@@ -236,24 +237,25 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
-    * Write compressed page markup to the page_markup_z table. Writing in
-    * compressed form significantly reduces the disk space required for
+    * Write compressed page markup and JSON to the page_markup_z table. Writing
+    * in compressed form significantly reduces the disk space required for
     * the database and may be faster than standard uncompressed storage
     * on systems with relatively slow disks. The downside is that the
     * page_markup_z data is not human-readable.
     *
-    * @param input One or more (id, Option[Array[Byte]) tuples to write
+    * @param input One or more MarkupZ tuples to write
     */
-  def writeMarkups_Z(input: Seq[(Int, Option[Array[Byte]])]): Unit = {
+  def writeMarkups_Z(input: Seq[Storage.MarkupZ]): Unit = {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""page_id, markup"""
+        val cols: SQLSyntax = sqls"""page_id, markup, json"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
               sqls"${t._1}",
-              sqls"${t._2}"
+              sqls"${t._2}",
+              sqls"${t._3}"
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
@@ -310,6 +312,8 @@ class Storage(fileName: String) extends Logging {
 }
 
 object Storage {
+  type MarkupZ = (Int, Option[Array[Byte]], Option[Array[Byte]])
+  type MarkupU = (Int, Option[String], Option[String])
 
   def execute(sqls: String*)(implicit session: DBSession): Unit = {
     @annotation.tailrec

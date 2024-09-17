@@ -18,11 +18,15 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "2.0.16",
   "org.slf4j" % "slf4j-simple" % "2.0.16",
   "org.scalikejdbc" %% "scalikejdbc" % "4.3.1",
-  "org.sweble.wikitext" % "swc-parser-lazy" % "3.1.9",
+  "org.sweble.wikitext" % "swc-example-serialization" % "3.1.9",
+  // This is required for Sweble on Java versions above 8
+  "javax.xml.bind" % "jaxb-api" % "2.3.1",
   "org.xerial" % "sqlite-jdbc" % "3.46.1.0"
 )
 
 assembly / assemblyMergeStrategy := {
+  // This strategy is required to assembly a jar with Sweble included
+  case PathList("org", "xmlpull", xs @ _*) => MergeStrategy.first
   case "module-info.class" => MergeStrategy.discard
   case PathList("META-INF", "versions", "9", "module-info.class") => MergeStrategy.discard
   case x =>

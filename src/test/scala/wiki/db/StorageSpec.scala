@@ -1,7 +1,7 @@
 package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
-import wiki.extractor.TitleFinder
+import wiki.extractor.{SwebleSerializer, TitleFinder}
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, UnitSpec, ZString}
 
@@ -84,7 +84,9 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{Redirect category shell|1=
                    |{{R from CamelCase}}
                    |}}""".stripMargin
-    val entry  = (randomInt(), Some(markup))
+    val title  = "Test"
+    val json   = SwebleSerializer.serializeAsJson(title, markup)
+    val entry  = (randomInt(), Some(markup), json)
     storage.writeMarkups(Seq(entry))
     storage.readMarkup(entry._1) shouldBe Some(markup)
   }
@@ -95,7 +97,9 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{Redirect category shell|1=
                    |{{R from CamelCase}}
                    |}}""".stripMargin
-    val entry  = (randomInt(), Some(ZString.compress(markup)))
+    val title  = "Test"
+    val json   = SwebleSerializer.serializeAsJson(title, markup).get
+    val entry  = (randomInt(), Some(ZString.compress(markup)), Some(ZString.compress(json)))
     storage.writeMarkups_Z(Seq(entry))
     storage.readMarkup_Z(entry._1) shouldBe Some(markup)
   }

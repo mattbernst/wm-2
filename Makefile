@@ -15,7 +15,7 @@ extract: build
 format:
 	sbt scalafmtAll
 
-P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=500MB,filename=extraction.jfr
+P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=1000MB,filename=extraction.jfr
 # Profile extraction with Flight Recorder for analysis with Mission Control
 # https://www.oracle.com/java/technologies/jdk-mission-control.html
 # https://github.com/openjdk/jmc

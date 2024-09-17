@@ -2,7 +2,7 @@ package wiki.extractor
 
 import wiki.db.PageWriter
 import wiki.extractor.types.*
-import wiki.extractor.util.{Logging, ZString}
+import wiki.extractor.util.Logging
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -38,8 +38,9 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
     val revision = xml \ "revision"
 
-    val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-    val markup = PageMarkup(pageId = id, text = text)
+    val text     = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+    val swebleJS = text.flatMap(markup => SwebleSerializer.serializeAsJson(title, markup))
+    val markup   = PageMarkup(pageId = id, wikitext = text, json = swebleJS)
 
     val lastEdited = (revision \ "timestamp").headOption
       .map(_.text)
@@ -79,7 +80,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
           case Some(article) if article.trim.nonEmpty =>
             val result = extract(article)
             if (compressMarkup) {
-              val compressed = PageMarkup_Z(result.markup.pageId, result.markup.text.map(s => ZString.compress(s)))
+              val compressed = PageMarkup.compress(result.markup)
               writer.addPage(page = result.page, markup = None, markup_Z = Some(compressed))
             } else {
               writer.addPage(page = result.page, markup = Some(result.markup), markup_Z = None)

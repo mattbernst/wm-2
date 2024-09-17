@@ -62,7 +62,7 @@ class FragmentProcessorSpec extends UnitSpec {
       fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
-    fragmentProcessor.getTransclusions(markup.text.get) shouldBe expected
+    fragmentProcessor.getTransclusions(markup.wikitext.get) shouldBe expected
   }
 
   it should "get transclusions (3)" in {
@@ -70,7 +70,7 @@ class FragmentProcessorSpec extends UnitSpec {
       fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
-    fragmentProcessor.getTransclusions(markup.text.get) shouldBe expected
+    fragmentProcessor.getTransclusions(markup.wikitext.get) shouldBe expected
   }
 
   behavior of "inferPageType"
