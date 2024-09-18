@@ -39,7 +39,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     val revision = xml \ "revision"
 
     val text     = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-    val swebleJS = text.flatMap(markup => SwebleSerializer.serializeAsJson(title, markup))
+    val swebleJS = text.flatMap(markup => WikitextParser.serializeAsJson(title, markup))
     val markup   = PageMarkup(pageId = id, wikitext = text, json = swebleJS)
 
     val lastEdited = (revision \ "timestamp").headOption

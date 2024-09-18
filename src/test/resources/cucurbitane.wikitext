@@ -1,0 +1,133 @@
+{{Chembox
+| Verifiedfields = changed
+| Watchedfields = changed
+| verifiedrevid = 421516894
+| ImageFile = Cucurbitane.svg
+| ImageAlt = 
+| IUPACName = 
+| OtherNames = 
+|Section1={{Chembox Identifiers
+| CASNo = 65441-59-0
+| CASNo_Comment = (5α/β)
+| CASNo_Ref = {{cascite|correct|??}}
+| PubChem = 
+| ChEBI_Ref = {{ebicite|changed|EBI}}
+| ChEBI = 73169
+| SMILES1 = C[C@H](CCCC(C)C)[C@@]1([H])CC[C@@]2(C)[C@]3([H])CC[C@@]4([H])C(C)(C)CCC[C@@]4([H])[C@]3(C)CC[C@@]21C
+| SMILES1_Comment = (5α)
+|  ChemSpiderID1_Ref = {{chemspidercite|changed|chemspider}}
+| ChemSpiderID1 = 25936933
+| ChemSpiderID1_Comment = (5α)
+|  InChI1 = 1/C30H54/c1-21(2)11-9-12-22(3)23-16-18-30(8)26-15-14-24-25(13-10-17-27(24,4)5)28(26,6)19-20-29(23,30)7/h21-26H,9-20H2,1-8H3/t22-,23-,24-,25-,26-,28+,29-,30+/m1/s1
+| InChI1_Comment = (5α)
+|  InChIKey1 = ZYZJWAJOTPNVPI-AUAIAXQGBW
+|  StdInChI_Ref = {{stdinchicite|changed|chemspider}}
+| StdInChI = 1S/C30H54/c1-21(2)11-9-12-22(3)23-16-18-30(8)26-15-14-24-25(13-10-17-27(24,4)5)28(26,6)19-20-29(23,30)7/h21-26H,9-20H2,1-8H3/t22-,23-,24-,25-,26-,28+,29-,30+/m1/s1
+| StdInChI_Comment = (5α)
+|  StdInChIKey_Ref = {{stdinchicite|changed|chemspider}}
+| StdInChIKey = ZYZJWAJOTPNVPI-AUAIAXQGSA-N
+| SMILES2 = C[C@H](CCCC(C)C)[C@@]1([H])CC[C@@]2(C)[C@]3([H])CC[C@]4([H])C(C)(C)CCC[C@@]4([H])[C@]3(C)CC[C@@]21C
+| SMILES2_Comment = (5β)
+| ChemSpiderID2_Ref = {{chemspidercite|changed|chemspider}}
+| ChemSpiderID2 = 28639243
+| ChemSpiderID2_Comment = (5β)
+| InChI2 = 1/C30H54/c1-21(2)11-9-12-22(3)23-16-18-30(8)26-15-14-24-25(13-10-17-27(24,4)5)28(26,6)19-20-29(23,30)7/h21-26H,9-20H2,1-8H3/t22-,23-,24+,25-,26-,28+,29-,30+/m1/s1
+| InChI2_Comment = (5β)
+| InChIKey2 = ZYZJWAJOTPNVPI-QJMYWHNVBB
+| InChI3 = 1S/C30H54/c1-21(2)11-9-12-22(3)23-16-18-30(8)26-15-14-24-25(13-10-17-27(24,4)5)28(26,6)19-20-29(23,30)7/h21-26H,9-20H2,1-8H3/t22-,23-,24+,25-,26-,28+,29-,30+/m1/s1
+| InChI3_Comment = (5β)
+| InChIKey3 = ZYZJWAJOTPNVPI-QJMYWHNVSA-N
+ }}
+|Section2={{Chembox Properties
+| C=30 | H=54
+| Appearance = 
+| Density = 
+| MeltingPt = 
+| BoilingPt = 
+| Solubility = }}
+|Section3={{Chembox Hazards
+| MainHazards = 
+| FlashPt = 
+| AutoignitionPt = }}
+}}
+
+'''Cucurbitane''' is a [[chemical compound]] with formula {{chem|C|30|H|54}} ([[Chemical Abstracts Service|CAS]] number 65441-59-0).  It is a [[polycyclic hydrocarbon|polycyclic]] [[hydrocarbon]], specifically a [[triterpene]].  It is an isomer of [[lanostane]] (specifically '''19(10→9β)''abeo''-lanostane'''), from which it differs by the formal shift of a [[methyl]] group ([[carbon]] number 19) from the 10 to the 9β position in the standard [[steroid]] numbering scheme.<ref name=iupac69>IUPAC Commission on the Nomenclature of Organic Chemistry and IUPAC-IUB Commission on Biochemical Nomenclature (1969), ''The Nomenclature of Steroids&nbsp;— Revised Tentative Rules''. European J. of Biochemistry, volume 10, 1-19</ref><ref name=kumar>Satish Kumar and Raj Kumar (1991), ''Dictionary of Biochemistry''. Anmol Publications, India</ref>
+
+The name is applied to two [[stereoisomer]]s, distinguished by the prefixes '''5α-''' and '''5β''', which differ by the handedness of the bonds at a particular [[carbon]] atom (number 5 in the standard steroid numbering scheme).<ref name=iupac69/>
+
+<gallery>
+File:5alpha-cucurbitane.svg|5α-Cucurbitane
+File:5beta-cucurbitane.svg|5β-Cucurbitane
+</gallery>
+
+==Derivatives==
+
+===Natural compounds===
+Compounds with the basic cucurbitane skeleton are found in many plants, and some are important [[phytomedicine|phytopharmaceuticals]],<ref name=ChenRev>{{Cite journal | last1 = Chen | first1 = J. C. | last2 = Chiu | first2 = M. H. | last3 = Nie | first3 = R. L. | last4 = Cordell | first4 = G. A. | last5 = Qiu | first5 = S. X. | title = Cucurbitacins and cucurbitane glycosides: Structures and biological activities | doi = 10.1039/B418841C | journal = Natural Product Reports | volume = 22 | issue = 3 | pages = 386–399 | year = 2005 | pmid =  16010347| pmc = }}</ref>  Natural cucurbitane-related compounds include:
+
+====Named====
+* [[Balsaminapentaol]], from ''[[Momordica balsamina]]''.<ref name="rama2009"/>
+* [[Balsaminol A]], from ''Momordica balsamina''.<ref name="rama2009"/>
+* [[Balsaminol B]], from ''Momordica balsamina''.<ref name="rama2009">{{Cite journal | last1 = Ramalhete | first1 = C. T. | last2 = Mansoor | first2 = T. A. | last3 = Mulhovo | first3 = S. | last4 = Molnár | first4 = J. | last5 = Ferreira | first5 = M. J. U. | title = Cucurbitane-Type Triterpenoids from the African PlantMomordica balsamina | doi = 10.1021/np900457u | journal = Journal of Natural Products | volume = 72 | issue = 11 | pages = 2009–2013 | year = 2009 | pmid =  19795842| pmc = }}</ref>
+* [[Brydioside|Brydioside A]] from ''Bryonia dioica'' <ref name=ChenRev/>{{rp|'''64'''}}
+* [[Bryoamaride]] and derivatives from ''[[Bryonia dioica]]'' <ref name=ChenRev/>{{rp|'''65''','''66'''}}
+* [[Charantin]] or foetidin, from ''[[Momordica charantia]]''<ref name=loli>M. M. Lolitkar and M. R. Rajarama Rao (1962), "Note on a Hypoglycaemic Principle Isolated from the fruits of ''Momordica charantia''". ''Journal of the University of Bombay'', volume 29, pages 223-224</ref> and ''Momordica foetida''<ref name=olaniyi>{{Cite journal 
+| last1 = Olaniyi | first1 = A. A. 
+| title = A neutral constituent of Momordica foetida 
+| journal = Lloydia 
+| volume = 38 
+| issue = 4 
+| pages = 361–362 
+| year = 1975 
+| pmid = 1186439
+}}</ref>
+* [[Charantoside|Charantosides I-VIII]], from ''Momordica charantia''.<ref name="aki2007">{{Cite journal | last1 = Akihisa | first1 = T. | last2 = Higo | first2 = N. | last3 = Tokuda | first3 = H. | last4 = Ukiya | first4 = M. | last5 = Akazawa | first5 = H. | last6 = Tochigi | first6 = Y. | last7 = Kimura | first7 = Y. | last8 = Suzuki | first8 = T. | last9 = Nishino | first9 = H. | doi = 10.1021/np068075p | title = Cucurbitane-Type Triterpenoids from the Fruits of ''Momordica charantia'' and Their Cancer Chemopreventive Effects| journal = Journal of Natural Products | volume = 70 | issue = 8 | pages = 1233–1239 | year = 2007 | pmid =  17685651| pmc = }}</ref>
+* [[Cucurbalsaminol B]], from ''Momordica balsamina''.<ref name="rama2009"/>
+* [[Cucurbalsaminol A]], from ''Momordica balsamina''.<ref name="rama2009"/>
+* [[Cucurbitacin|Cucurbitacins A-L, O-T]] <ref name=ChenRev/><ref name=DCWang2007>Da-Cheng Wang, Hong-Yu Pan, Xu-Ming Deng, Hua Xiang, Hui-Yuan Gao, Hui Cai, and Li-Jun Wu (2007), "Cucurbitane and hexanorcucurbitane glycosides from the fruits of ''Cucurbita pepo'' cv ''dayangua''". ''Journal of Asian Natural Products Research'', volume 9, issue 6, pages 525–529.</ref><ref name=JCChen2008oc/>{{rp|'''3'''–'''8'''}}
+* [[Datiscoside]]s, from ''[[Datisca glomerata]]'' <ref name=ChenRev/>{{rp|'''16'''–'''19'''}}
+* [[Endecaphyllacin|Endecaphyllacins A and B]], from roots of ''[[Hemsleya endecaphylla]]'' <ref name=JCChen2008oc>{{Cite journal | last1 = Chen | first1 = J. C. | last2 = Zhang | first2 = G. H. | last3 = Zhang | first3 = Z. Q. | last4 = Qiu | first4 = M. H. | last5 = Zheng | first5 = Y. T. | last6 = Yang | first6 = L. M. | last7 = Yu | first7 = K. B. | doi = 10.1021/np0704396 | title = Octanorcucurbitane and Cucurbitane Triterpenoids from the Tubers ofHemsleya endecaphyllawith HIV-1 Inhibitory Activity | journal = Journal of Natural Products | volume = 71 | issue = 1 | pages = 153–155 | year = 2008 | pmid =  18088099| pmc = }}</ref>{{rp|'''1,2'''}}
+* [[Hemslecin|Hemslecins A and B]], from roots of ''H. endecaphylla'' <ref name=JCChen2008oc/>
+* [[Lepidolide]], from the mushroom ''[[Russula lepida]]'' <ref name=JWTan2002>Jian-Wen Tan, Ze-Jun Dong, Zhi-Hui Ding and Ji-Kai Liu (2002), [http://www.znaturforsch.com/ac/v57c/s57c0963.pdf "Lepidolide, a Novel Seco-ring-A Cucurbitane Triterpenoid from ''Russula lepida'' (Basidiomycetes)"]. ''Zeitschrift für Naturforschung'' Series C, volume 57C issue 11/12, pages 963-965.</ref>
+* [[Karavilagenin E]], from ''Momordica balsamina''.<ref name="rama2009"/>
+* [[Khekadaengoside|Khekadaengosides A, B, D and K]], from ''[[Trichosanthes tricuspidata]]'' <ref name=ChenRev/>{{rp|'''57''','''58''','''67''','''68'''}}
+* [[Kuguacin|Kuguacins A-S]], from stems and leaves of ''Momordica charantia''<ref name=ChenJC2008c>{{Cite journal | last1 = Chen | first1 = J. C. | last2 = Liu | first2 = W. Q. | last3 = Lu | first3 = L. | last4 = Qiu | first4 = M. H. | last5 = Zheng | first5 = Y. T. | last6 = Yang | first6 = L. M. | last7 = Zhang | first7 = X. M. | last8 = Zhou | first8 = L. | last9 = Li | first9 = Z. R. | doi = 10.1016/j.phytochem.2008.10.011 | title = Kuguacins F–S, cucurbitane triterpenoids from Momordica charantia | journal = Phytochemistry | volume = 70 | issue = 1 | pages = 133–140 | year = 2009 | pmid =  19041990| pmc = }}</ref><ref name=ChenJC2008a>J. C. Chen, R. R. Tian, M. H. Qiu, L. Lu, Y. T. Zheng, Z. Q. Zhang (2008), "Trinorcucurbitane and cucurbitane triterpenoids from the roots of ''Momordica charantia''." ''Phytochemistry'', volume 69, pages 1043–1048</ref>
+* [[Kuguaglycoside|Kuguaglycosides A-H]], from the root of ''Momordica charantia''<ref name=ChenJC>{{Cite journal | last1 = Chen | first1 = J. C. | last2 = Lu | first2 = L. | last3 = Zhang | first3 = X. M. | last4 = Zhou | first4 = L. | last5 = Li | first5 = Z. R. | last6 = Qiu | first6 = M. H. | doi = 10.1002/hlca.200890097 | title = Eight New Cucurbitane Glycosides, Kuguaglycosides A – H, from the Root ofMomordica charantia L | journal = Helvetica Chimica Acta | volume = 91 | issue = 5 | pages = 920 | year = 2008 | pmid =  | pmc = }}</ref>
+* [[Mogroside|Mogrosides I-V]], from the fruits of ''[[Siraitia grosvenorii]]'' <ref name=takasaki>Midori Takasaki, Takao Konoshima, Yuji Murata, Masaki Sugiura, Hoyoku Nishino, Harukuni Tokuda, Kazuhiro Matsumoto, Ryoji Kasai, and Kazuo Yamasaki (2003) "Anticarcinogenic activity of natural sweeteners, cucurbitane glycosides, from ''Momordica grosvenori''". ''Cancer Letters'', volume 198, pages 37–42</ref>
+* [[Momordicin (disambiguation)|Momordicin I, II and 28]], from ''Momordica charantia''<ref name=begum>Sabira Begum, Mansour Ahmed, Bina S. Siddiqui, Abdullah Khan, Zafar S. Saify, and Mohammed Arif (1997), "Triterpenes, A Sterol and a Monocyclic Alcohol From ''Momordica Charantia''." ''Phytochemistry'', volume 44, issue 7, pages 1313-1320</ref><ref name=fatope>Majekodunmi Fatope, Yoshio Takeda, Hiroyasu Yamashita, Hikaru Okabe, and Tatsuo Yamauchi (1990), "New cucurbitane trirterpenoids from ''Momordica charantia''." ''Journal of Natural Products'', volume 53, issue 6, pages 1491-1497.</ref>
+* [[Momordicine|Momordicines II and IV]], from leaves of ''Momordica charantia'' <ref name=mekuria>Daniel Bisrat Mekuria, Takehiro Kashiwagi, Shin-ichi Tebayashi, and Chul-Sa Kim (2006)"Cucurbitane Glucosides from ''Momordica charantia'' Leaves as Oviposition Deterrents to the Leafminer, ''Liriomyza trifolii''". ''Z. Naturforsch.'', volume 61c, pages 81–86</ref>
+* [[Momordicoside|Momordicosides A-S]], from ''Momordica charantia'' fruits <ref name="aki2007"/><ref name=liu2009>{{Cite journal | last1 = Liu | first1 = J. Q. | last2 = Chen | first2 = J. C. | last3 = Wang | first3 = C. F. | last4 = Qiu | first4 = M. H. | title = New Cucurbitane Triterpenoids and Steroidal Glycoside from Momordica charantia | doi = 10.3390/molecules14124804 | journal = Molecules | volume = 14 | issue = 12 | pages = 4804–4813 | year = 2009 | pmid =  20032860| pmc = }}</ref><ref name=hari2006>{{Cite journal | last1 = Harinantenaina | first1 = L. | last2 = Tanaka | first2 = M. | last3 = Takaoka | first3 = S. | last4 = Oda | first4 = M. | last5 = Mogami | first5 = O. | last6 = Uchida | first6 = M. | last7 = Asakawa | first7 = Y. | doi = 10.1248/cpb.54.1017 | title = Momordica charantia Constituents and Antidiabetic Screening of the Isolated Major Compounds | journal = Chemical & Pharmaceutical Bulletin | volume = 54 | issue = 7 | pages = 1017 | year = 2006 | pmid =  | pmc = }}</ref>
+* [[Neokuguaglucoside]], from ''Momordica charantia'' fruits <ref name=JQLiu2010>{{Cite journal | last1 = Liu | first1 = J. Q. | last2 = Chen | first2 = J. C. | last3 = Wang | first3 = C. F. | last4 = Qiu | first4 = M. H. | title = One new cucurbitane triterpenoid from the fruits of Momordica charantia | doi = 10.5155/eurjchem.1.4.294-296.131 | journal = European Journal of Chemistry | volume = 1 | issue = 4 | pages = 294 | year = 2010 | pmid =  | pmc = }}</ref>
+* [[Neomogroside]], from the fruit of ''[[Siraitia grosvenorii]]''.<ref>Si Jian-yong, Chen Di-hua, Chang Qi and Shen Lian-gang (1996), [http://www.jipb.net/earticle_read.asp?id=11284 ''Isolation and Determination of Cucurbitane-Glycosides from Fresh Fruits of ''Siraitia Grosvenorii''.'']  Journal of Integrative Plant Biology, volume 38, issue 6, pages, 489–494</ref>
+* [[cucurbitacin|Pentanorcucurbitacins A and B]] <ref name=CRChen2010/>{{rp|'''1,2'''}}
+* [[Perseapicroside|Perseapicroside A]], from ''[[Persea mexicana]]'' <ref name=ChenRev/>{{rp|'''44'''}}
+* [[Scandenoside|Scandenoside R9]], from ''[[Hemsleya panacis-scandens]]'' <ref name=ChenRev/>{{rp|'''45'''}}
+* [[Spinoside|Spinosides A and B]], from ''[[Desfontainia spinosa]]'' <ref name=ChenRev/>{{rp|'''61''','''62'''}}
+
+====Unnamed====
+* [[cucurbita-5,24-diene|3β,7β,23ξ-trihydroxycucurbita-5,24-dien-19-al]], soluble in chloroform, melts at 123−125&nbsp;°C, from ''Momordica charantia'', ''[[Momordica foetida]]''.<ref name=mulho>{{Cite journal | last1 = Mulholland | first1 = D. A. | last2 = Sewram | first2 = V. | last3 = Osborne | first3 = R. | last4 = Pegel | first4 = K. H. | last5 = Connolly | first5 = J. D. | title = Cucurbitane triterpenoids from the leaves of Momordica foetida | doi = 10.1016/S0031-9422(96)00814-X | journal = Phytochemistry | volume = 45 | issue = 2 | pages = 391 | year = 1997 | pmid =  | pmc = }}</ref>{{rp|'''1'''}}
+* [[cucurbita-5,23-diene|3β,7β,25-trihydroxycucurbita-5,23-dien-19-al]], soluble in chloroform, melts at 188−191&nbsp;°C, from ''Momordica charantia'', ''Momordica foetida''<ref name=mulho/>{{rp|'''2'''}}
+* [[cucurbita-5,23-diene|3β,7β-dihydroxy-25-methoxycucurbita-5,23-dien-19-al]], soluble in chloroform, from ''Momordica charantia'', ''Momordica foetida''<ref name=mulho/>{{rp|'''3'''}}
+* [[cucurbita-6,23-diene|5β,19-epoxy-25-methoxycucurbita-6,23-dien-3β,19-diol]], soluble in chloroform, melts at 182−184&nbsp;°C, from ''Momordica foetida''<ref name=mulho/>{{rp|'''4'''}}
+* [[cucurbita-6,23-diene|5β,19-epoxycucurbita-6,23-dien-3β,19,25-triol]], soluble in chloroform, from ''Momordica foetida''<ref name=mulho/>{{rp|'''5'''}}
+* [[cucurbita-6,23-diene|5β,19-epoxy-19-methoxycucurbita-6,23-dien-3β,25-diol]], soluble in chloroform, melts at 102−104&nbsp;°C, from ''Momordica charantia'', ''Momordica foetida''<ref name=mulho/>{{rp|'''6'''}}
+* [[cucurbita-6,23-diene|5β,19-epoxy-19,25-dimethoxycucurbita-6,23-dien-3β-ol]], soluble in chloroform, from ''Momordica charantia'', ''Momordica foetida''<ref name=mulho/>{{rp|'''7'''}}
+* [[cucurbita-6,23-diene|5β,19-epoxy-25-methoxycucurbita-6,23-dien-3β-ol]], soluble in chloroform, melts at 139−141&nbsp;°C, from ''Momordica charantia'', ''Momordica foetida''<ref name=mulho/>{{rp|'''8'''}}
+* [[cucurbita-6,23-diene|19(''R'')-''n''-butanoxy-5β,19-epoxycucurbita-6,23-diene-3β,25-diol 3-''O''-β-glucopyranoside]], {{chem|C|40|H|66|O|9}}, white powder soluble in methanol, from ''Momordica charantia'' fruit (8&nbsp;mg/35&nbsp;kg)<ref name="liu2009"/>{{rp|'''1'''}}
+* [[cucurbita-5,24-diene|23-''O''-β-allopyranosylecucurbita-5,24-dien-7α,3β,22(''R''),23(''S'')-tetraol 3-''O''-β-allopyranoside]],{{chem|C|42|H|69|O|14}}, white powder soluble in methanol, from ''Momordica charantia'' fruit (10&nbsp;mg/35&nbsp;kg)<ref name=liu2009/>{{rp|'''2'''}}
+* [[cucurbit-5-ene|23(''R''),24(''S''),25-trihydroxycucurbit-5-ene 3-''O''-{[β-glucopyranosyl(1→6)]-''O''-β-glucopyranosyl}-25-''O''-β-glucopyranoside]], {{chem|C|48|H|82|O|19}}, white powder soluble in methanol, from ''Momordica charantia'' fruit (10&nbsp;mg/35&nbsp;kg)<ref name=liu2009/>{{rp|'''3'''}}
+* [[cucurbit-5-ene|2,16-dihydroxy-22,23,24,25,26,27-hexanorcucurbit-5-en-11,20-dione 2-O-β-D-glucopyranoside]], soluble in ethanol, from ''Cucurbita pepo'' fruits (25&nbsp;mg/15&nbsp;kg)  <ref name=DCWang2007/>{{rp|'''3'''}}
+* [[cucurbit-5-ene|16-hydroxy-22,23,24,25,26,27-hexanorcucurbit-5-en-11,20-dione 3-O-α-L-rhamnopyranosyl-(1→2)-β-D-glucopyranoside]], white powder, soluble in ethanol, from ''Cucurbita pepo'' fruits (12&nbsp;mg/15&nbsp;kg)<ref name=DCWang2007/>{{rp|'''4'''}}
+* [[cucurbita-5,24-diene|7-methoxycucurbita-5,24-diene-3β,23(R)-diol]], from ''Momordica balsamina'' <ref>Gabriella Spengler, Cátia Ramalhete, Marta Martins, Ana Martins, Julianna Serly, Miguel Viveiros, Joseph Molnár, Noélia Duarte, Silva Mulhovos, Maria-José U. Ferreira, Leonard Amaral (2010), "Evaluation of Cucurbitane-type Triterpenoids from ''Momordica balsamina'' on P-Glycoprotein (ABCB1) by Flow Cytometry and Real-time Fluorometry", ''Anticancer Research'', volume 30, pages 4867-4871</ref>
+*[[cucurbit-5-ene|25,26,27-trinorcucurbit-5-ene-3,7,23-trione]] {{chem|C|27|H|40|O|3}},  white powder, soluble in [[methanol]], from stems of ''Momordica charantia'' (6&nbsp;mg/18&nbsp;kg)<ref name=CRChen2010>{{Cite journal | last1 = Chen | first1 = C. R. | last2 = Liao | first2 = Y. W. | last3 = Wang | first3 = L. | last4 = Kuo | first4 = Y. H. | last5 = Liu | first5 = H. J. | last6 = Shih | first6 = W. L. | last7 = Cheng | first7 = H. L. | last8 = Chang | first8 = C. I. | doi = 10.1248/cpb.58.1639 | title = Cucurbitane Triterpenoids from Momordica charantia and Their Cytoprotective Activity in tert-Butyl Hydroperoxide-Induced Hepatotoxicity of HepG2 Cells | journal = Chemical & Pharmaceutical Bulletin | volume = 58 | issue = 12 | pages = 1639 | year = 2010 | pmid =  | pmc = }}</ref>{{rp|'''3'''}}
+
+==See also==
+* [[Goyaglicoside]]
+* [[Karaviloside]]
+* [[Momordenol]], from ''Momordica charantia''<ref name=begum/>
+* [[stigmasta-5-ene|24(''R'')-stigmastan-3β,5α,6β-triol-25-ene 3-''O''-β-glucopyranoside]], {{chem|C|35|H|60|O|8}}, white powder, from ''Momordica charantia'' fruit (15&nbsp;mg/35&nbsp;kg)<ref name=liu2009/>{{rp|'''4'''}}
+
+==References==
+{{reflist|2}}
+
+[[Category:Triterpenes]]

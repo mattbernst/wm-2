@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of pages enqueued before writing
   */
-class PageWriter(db: Storage, queueSize: Int = 65000) extends Logging {
+class PageWriter(db: Storage, queueSize: Int = 32000) extends Logging {
 
   def enableSqliteFastPragmas(): Unit = {
     val pragmas = Seq(
@@ -95,14 +95,14 @@ class PageWriter(db: Storage, queueSize: Int = 65000) extends Logging {
 
       // Write page descriptors and markup
       db.writeDumpPages(pages)
-//      val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.text))
-//      if (markups.nonEmpty) {
-//        db.writeMarkups(markups)
-//      }
-//      val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.text))
-//      if (markupsZ.nonEmpty) {
-//        db.writeMarkups_Z(markupsZ)
-//      }
+      val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.wikitext, e.json))
+      if (markups.nonEmpty) {
+        db.writeMarkups(markups)
+      }
+      val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.wikitext, e.json))
+      if (markupsZ.nonEmpty) {
+        db.writeMarkups_Z(markupsZ)
+      }
       pageCount += unwritten.length
     } else {
       this.synchronized {
