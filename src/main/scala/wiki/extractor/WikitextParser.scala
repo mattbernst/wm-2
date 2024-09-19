@@ -5,7 +5,6 @@ import org.sweble.wikitext.parser.utils.NonExpandingParser
 import wiki.extractor.types.{Link, ParseResult}
 import wiki.extractor.util.Logging
 
-import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -56,7 +55,8 @@ object WikitextParser extends Logging {
         Link(target = textualize(link.getTarget), anchorText = None)
       }
     }
-    val text = nodesToText(input)
+
+    val text = cleanString(nodesToText(input))
     // TODO: use OpenNLP sentence detection.
     // First paragraph is first WtParagraph that renders to multiple sentences.
     // First sentence is the first sentence of the first paragraph as defined above.
@@ -67,7 +67,7 @@ object WikitextParser extends Logging {
     ParseResult(
       firstSentence = firstSentence,
       firstParagraph = firstParagraph,
-      text = cleanSimpleText(text),
+      text = text,
       links = links.toSeq
     )
   }
@@ -101,17 +101,12 @@ object WikitextParser extends Logging {
     nodes.flatMap(collectNodes)
   }
 
-  private[extractor] def cleanSimpleText(input: String): String = {
-    removeDuplicateSpaces(input)
-  }
-
-  @tailrec
-  private def removeDuplicateSpaces(input: String): String = {
-    val replaced = input.replace("  ", " ")
-    if (!replaced.contains("  ")) {
-      replaced
-    } else {
-      removeDuplicateSpaces(replaced)
-    }
+  private[extractor] def cleanString(input: String): String = {
+    input
+      .replaceAll("[ \t]+", " ")              // Replace multiple spaces or tabs with a single space
+      .replaceAll("(?m)^ +| +$", "")          // Remove leading/trailing spaces from each line
+      .replaceAll("\n{3,}", "\n\n")           // Replace 3+ newlines with 2 newlines
+      .replaceAll("(?m)(\n\\s*){3,}", "\n\n") // Replace 3+ lines containing only whitespace with 2 newlines
+      .trim                                   // Remove leading and trailing whitespace from the entire string
   }
 }

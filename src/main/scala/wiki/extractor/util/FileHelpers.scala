@@ -15,6 +15,12 @@ object FileHelpers extends Logging {
     lines.mkString("\n")
   }
 
+  def writeTextFile(fileName: String, input: String): Unit = {
+    val writer = Files.newBufferedWriter(Paths.get(fileName))
+    writer.write(input)
+    writer.close()
+  }
+
   def glob(pattern: String): Seq[String] = {
     val path      = Paths.get(pattern)
     val directory = Option(path.getParent).getOrElse(Paths.get("."))
