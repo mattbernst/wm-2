@@ -15,8 +15,8 @@ import scala.collection.mutable.ListBuffer
   * general use.
   *
   * The caller can choose between markup readability (for debugging and
-  * spelunking) and compact storage by supplying either string PageMarkup
-  * data for the page_markup table or compressed binary PageMarkupZ data
+  * spelunking) and compact storage by supplying either string PageMarkup_U
+  * data for the page_markup table or compressed binary PageMarkup_Z data
   * for the page_markup_z table.
   *
   * @param db        A database storage writer

@@ -39,12 +39,12 @@ object Config extends Logging {
       throw new NoSuchElementException(msg)
     }
 
-    val fragmentWorkers: Int = {
-      val envVar = "N_FRAGMENT_WORKERS"
+    val workerThreads: Int = {
+      val envVar = "N_WORKERS"
       sys.env
         .getOrElse(envVar, {
-          val default = "4"
-          logger.info(s"No $envVar set for fragment worker count -- defaulting to $default")
+          val default = "6"
+          logger.info(s"No $envVar set for worker thread count -- defaulting to $default")
           default
         })
         .toInt
@@ -69,7 +69,7 @@ object Config extends Logging {
 
     ConfiguredProperties(
       language = language,
-      fragmentWorkers = fragmentWorkers,
+      fragmentWorkers = workerThreads,
       compressMarkup = compressMarkup
     )
   }

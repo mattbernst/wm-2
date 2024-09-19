@@ -310,7 +310,7 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
-  val batchInsertSize: Int = 10000
+  val batchInsertSize: Int = 2000
 }
 
 object Storage {
