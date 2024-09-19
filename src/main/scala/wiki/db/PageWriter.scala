@@ -1,6 +1,6 @@
 package wiki.db
 
-import wiki.extractor.types.{DumpPage, Namespace, PageMarkup, PageMarkup_Z}
+import wiki.extractor.types.{DumpPage, Namespace, PageMarkup_U, PageMarkup_Z}
 import wiki.extractor.util.Logging
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
@@ -45,8 +45,8 @@ class PageWriter(db: Storage, queueSize: Int = 32000) extends Logging {
     *
     * @param page A structured DumpPage
     */
-  def addPage(page: DumpPage, markup: Option[PageMarkup], markup_Z: Option[PageMarkup_Z]): Unit =
-    queue.put(QueueEntry(page = page, markup = markup, markup_Z = markup_Z))
+  def addPage(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z]): Unit =
+    queue.put(QueueEntry(page = page, markupU = markupU, markupZ = markupZ))
 
   def stopWriting(): Unit = this.synchronized {
     availableForWriting = false
@@ -95,11 +95,11 @@ class PageWriter(db: Storage, queueSize: Int = 32000) extends Logging {
 
       // Write page descriptors and markup
       db.writeDumpPages(pages)
-      val markups = unwritten.flatMap(_.markup).map(e => (e.pageId, e.wikitext, e.json))
+      val markups = unwritten.flatMap(_.markupU)
       if (markups.nonEmpty) {
         db.writeMarkups(markups)
       }
-      val markupsZ = unwritten.flatMap(_.markup_Z).map(e => (e.pageId, e.wikitext, e.json))
+      val markupsZ = unwritten.flatMap(_.markupZ)
       if (markupsZ.nonEmpty) {
         db.writeMarkups_Z(markupsZ)
       }
@@ -113,7 +113,7 @@ class PageWriter(db: Storage, queueSize: Int = 32000) extends Logging {
     }
   }
 
-  private case class QueueEntry(page: DumpPage, markup: Option[PageMarkup], markup_Z: Option[PageMarkup_Z])
+  private case class QueueEntry(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z])
 
   var pageCount: Int                       = 0
   private var availableForWriting: Boolean = true

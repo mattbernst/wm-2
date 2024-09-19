@@ -1,6 +1,6 @@
 package wiki.extractor
 
-import wiki.db.Redirect
+import wiki.extractor.types.Redirection
 import wiki.extractor.util.Logging
 
 import scala.collection.mutable
@@ -15,7 +15,7 @@ import scala.collection.mutable
   * @param pageMap     A map of page titles to page IDs
   * @param redirects   All redirects from the page table
   */
-class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirect]) extends Logging {
+class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirection]) extends Logging {
 
   /**
     * Resolve a page title to its page ID. If the title belongs to an ordinary
@@ -81,11 +81,11 @@ class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirect]) e
     * the flattened page mapping. These dangling redirects get marked with a
     * special page type DANGLING_REDIRECT in the page table.
     */
-  lazy val danglingRedirects: Seq[Redirect] = {
+  lazy val danglingRedirects: Seq[Redirection] = {
     redirectMap.keysIterator
       .filter(title => getId(title).isEmpty)
       .toSeq
-      .map(title => Redirect(pageId = redirectMap(title)._2, title = title, redirectTarget = redirectMap(title)._1))
+      .map(title => Redirection(pageId = redirectMap(title)._2, title = title, redirectTarget = redirectMap(title)._1))
   }
 
   private val redirectMap = {

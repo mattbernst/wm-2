@@ -2,8 +2,8 @@ package wiki.extractor
 
 import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
-import wiki.db.{PageWriter, Redirect, Storage}
-import wiki.extractor.types.{DANGLING_REDIRECT, SiteInfo}
+import wiki.db.{PageWriter, Storage}
+import wiki.extractor.types.{DANGLING_REDIRECT, Redirection, SiteInfo}
 import wiki.extractor.util.{Config, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
@@ -121,7 +121,7 @@ object WikipediaExtractor extends Logging {
     *
     * @return Dangling redirects that need their page type updated
     */
-  private def storeMappedTitles(): Seq[Redirect] = {
+  private def storeMappedTitles(): Seq[Redirection] = {
     logger.info(s"Getting TitleFinder data")
     val redirects = dbStorage.readRedirects()
     logger.info(s"Loaded ${redirects.length} redirects")
@@ -153,7 +153,7 @@ object WikipediaExtractor extends Logging {
     *
     * @param input Dangling redirect pages that need to be marked
     */
-  private def markDanglingRedirects(input: Seq[Redirect]): Unit = {
+  private def markDanglingRedirects(input: Seq[Redirection]): Unit = {
     input.foreach(r => dbStorage.updatePageType(r.pageId, DANGLING_REDIRECT))
     logger.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
   }

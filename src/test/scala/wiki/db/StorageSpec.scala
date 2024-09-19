@@ -1,9 +1,9 @@
 package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
-import wiki.extractor.{TitleFinder, WikitextParser}
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, UnitSpec, ZString}
+import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   "namespace table" should "write and read back Namespace records" in {
@@ -85,10 +85,12 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{R from CamelCase}}
                    |}}""".stripMargin
     val title  = "Test"
-    val json   = WikitextParser.serializeAsJson(title, markup)
-    val entry  = (randomInt(), Some(markup), json)
+    val parsed = WikitextParser.parseMarkup(title, markup)
+    val native = PageMarkup(randomInt(), Some(markup), parsed)
+    val entry  = PageMarkup.serializeUncompressed(native)
     storage.writeMarkups(Seq(entry))
-    storage.readMarkup(entry._1) shouldBe Some(markup)
+    storage.readMarkup(native.pageId) shouldBe Some(native)
+    storage.readMarkup(0) shouldBe None
   }
 
   "page_markup_z table" should "write and read back markup" in {
@@ -98,10 +100,12 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{R from CamelCase}}
                    |}}""".stripMargin
     val title  = "Test"
-    val json   = WikitextParser.serializeAsJson(title, markup).get
-    val entry  = (randomInt(), Some(ZString.compress(markup)), Some(ZString.compress(json)))
+    val parsed = WikitextParser.parseMarkup(title, markup)
+    val native = PageMarkup(randomInt(), Some(markup), parsed)
+    val entry  = PageMarkup.serializeCompressed(native)
     storage.writeMarkups_Z(Seq(entry))
-    storage.readMarkup_Z(entry._1) shouldBe Some(markup)
+    storage.readMarkup_Z(native.pageId) shouldBe Some(native)
+    storage.readMarkup(0) shouldBe None
   }
 
   override def afterAll(): Unit = {

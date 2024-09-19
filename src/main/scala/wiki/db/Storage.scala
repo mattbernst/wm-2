@@ -2,11 +2,9 @@ package wiki.db
 
 import scalikejdbc.*
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, Logging, ZString}
+import wiki.extractor.util.{FileHelpers, Logging}
 
 import scala.collection.mutable
-
-case class Redirect(pageId: Int, title: String, redirectTarget: String)
 
 /**
   * A SQLite database storage writer and reader for representing and mining
@@ -121,11 +119,11 @@ class Storage(fileName: String) extends Logging {
     *
     * @return All redirects known in the page title
     */
-  def readRedirects(): Seq[Redirect] = {
+  def readRedirects(): Seq[Redirection] = {
     val redirectPageTypeId = PageTypes.bySymbol(REDIRECT)
     DB.autoCommit { implicit session =>
       sql"""SELECT id, title, redirect_target FROM page WHERE page_type=$redirectPageTypeId"""
-        .map(r => Redirect(r.int("id"), r.string("title"), r.string("redirect_target")))
+        .map(r => Redirection(r.int("id"), r.string("title"), r.string("redirect_target")))
         .list()
     }
   }
@@ -182,23 +180,24 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
-    * Write page markup to the page_markup table. The page_markup table only
-    * contains the raw markup for each page. The markup is stored in a separate
-    * table because it is so much larger than the other page data.
+    * Write page markup to the page_markup table. The page_markup table contains
+    * the raw markup for each page along with a parsed derivative. This is
+    * stored in a separate table because it is so much larger than the other
+    * page data.
     *
-    * @param input One or more MarkupU tuples to write
+    * @param input One or more PageMarkup_U entries to write
     */
-  def writeMarkups(input: Seq[Storage.MarkupU]): Unit = {
+  def writeMarkups(input: Seq[PageMarkup_U]): Unit = {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""page_id, markup, json"""
+        val cols: SQLSyntax = sqls"""page_id, markup, parsed"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
-              sqls"${t._1}",
-              sqls"${t._2}",
-              sqls"${t._3}"
+              sqls"${t.pageId}",
+              sqls"${t.wikitext}",
+              sqls"${t.parseResult}"
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
@@ -208,54 +207,57 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
-    * Get the markup for a single page (if it exists) from the page_markup
-    * table.
+    * Get the page markup data for a single page (if it exists) from the
+    * page_markup table.
     *
     * @param pageId The numeric ID for the corresponding page
     * @return       The stored markup, if it exists
     */
-  def readMarkup(pageId: Int): Option[String] = {
+  def readMarkup(pageId: Int): Option[PageMarkup] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT markup FROM page_markup WHERE page_id=$pageId""".map(rs => rs.stringOpt("markup")).single().flatten
+      sql"""SELECT * FROM page_markup WHERE page_id=$pageId""".map { rs =>
+        val pm = PageMarkup_U(rs.int("page_id"), rs.stringOpt("markup"), rs.stringOpt("parsed"))
+        PageMarkup.deserializeUncompressed(pm)
+      }.single()
     }
   }
 
   /**
-    * Get the raw markup for a single page (if it exists) from the
+    * Get the page markup data for a single page (if it exists) from the
     * page_markup_z table.
     *
     * @param pageId The numeric ID for the corresponding page
     * @return       The stored markup, if it exists
     */
-  def readMarkup_Z(pageId: Int): Option[String] = {
+  def readMarkup_Z(pageId: Int): Option[PageMarkup] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT markup FROM page_markup_z WHERE page_id=$pageId"""
-        .map(rs => rs.bytesOpt("markup").map(bin => ZString.decompress(bin)))
-        .single()
-        .flatten
+      sql"""SELECT * FROM page_markup_z WHERE page_id=$pageId""".map { rs =>
+        val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytesOpt("markup"), rs.bytesOpt("parsed"))
+        PageMarkup.deserializeCompressed(pmz)
+      }.single()
     }
   }
 
   /**
-    * Write compressed page markup and JSON to the page_markup_z table. Writing
-    * in compressed form significantly reduces the disk space required for
-    * the database and may be faster than standard uncompressed storage
+    * Write compressed page markup and parsed data the page_markup_z table.
+    * Writing in compressed form significantly reduces the disk space required
+    * for the database and may be faster than standard uncompressed storage
     * on systems with relatively slow disks. The downside is that the
     * page_markup_z data is not human-readable.
     *
-    * @param input One or more MarkupZ tuples to write
+    * @param input One or more PageMarkup_Z entries to write
     */
-  def writeMarkups_Z(input: Seq[Storage.MarkupZ]): Unit = {
+  def writeMarkups_Z(input: Seq[PageMarkup_Z]): Unit = {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""page_id, markup, json"""
+        val cols: SQLSyntax = sqls"""page_id, markup, parsed"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
-              sqls"${t._1}",
-              sqls"${t._2}",
-              sqls"${t._3}"
+              sqls"${t.pageId}",
+              sqls"${t.wikitext}",
+              sqls"${t.parseResult}"
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
@@ -312,8 +314,6 @@ class Storage(fileName: String) extends Logging {
 }
 
 object Storage {
-  type MarkupZ = (Int, Option[Array[Byte]], Option[Array[Byte]])
-  type MarkupU = (Int, Option[String], Option[String])
 
   def execute(sqls: String*)(implicit session: DBSession): Unit = {
     @annotation.tailrec

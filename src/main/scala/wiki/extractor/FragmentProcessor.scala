@@ -38,9 +38,9 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
     val revision = xml \ "revision"
 
-    val text     = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-    val swebleJS = text.flatMap(markup => WikitextParser.serializeAsJson(title, markup))
-    val markup   = PageMarkup(pageId = id, wikitext = text, json = swebleJS)
+    val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+    val parsed = text.flatMap(markup => WikitextParser.parseMarkup(title, markup))
+    val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
 
     val lastEdited = (revision \ "timestamp").headOption
       .map(_.text)
@@ -80,10 +80,11 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
           case Some(article) if article.trim.nonEmpty =>
             val result = extract(article)
             if (compressMarkup) {
-              val compressed = PageMarkup.compress(result.markup)
-              writer.addPage(page = result.page, markup = None, markup_Z = Some(compressed))
+              val compressed = PageMarkup.serializeCompressed(result.markup)
+              writer.addPage(page = result.page, markupU = None, markupZ = Some(compressed))
             } else {
-              writer.addPage(page = result.page, markup = Some(result.markup), markup_Z = None)
+              val uncompressed = PageMarkup.serializeUncompressed(result.markup)
+              writer.addPage(page = result.page, markupU = Some(uncompressed), markupZ = None)
             }
             count += 1
             if (count % progressDotInterval == 0) {
