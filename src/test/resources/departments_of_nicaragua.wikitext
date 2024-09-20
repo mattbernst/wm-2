@@ -1,0 +1,219 @@
+{{Politics of Nicaragua}}
+
+__NOTOC__[[Nicaragua]] is a [[Unitary state|unitary]] [[republic]], divided for administrative purposes into fifteen [[Department (country subdivision)|departments]] (''{{lang|es|departamentos}}'') and two autonomous regions (''{{lang|es|regiónes autónomas}}''):
+
+{| class="wikitable sortable"
+
+<!-- DISCLAIMER !! -->
+<!-- I HAVE SUPPRESSED THE DUBIOUS FIELDS FLAG AND SEAL. -->
+<!-- IT SEAMS THEY WERE RELATED TO THE CAPITAL MUNICIPALITIES -->
+<!-- RATHER THAN THE DEPARTMENTS THEMSELVES -->
+<!-- Usien6, 2015-11-19 -->
+
+!                  + | [[ISO 3166-2:NI|ISO]]
+! class="unsortable" | Map
+<!-- !             + | Flag -->
+<!-- !             + | Coat of arms -->
+!                  + | Department or autonomous region
+!                  + | Capital
+!                  + | Population (2015)
+!                  + | Area (km<sup>2</sup>)
+!                  + | [[Population density|Pop. density]] (km<sup>-2</sup>)
+
+|-
+
+| align="center" | {{mono|NI-BO}} <!-- ISO -->
+| [[File:Boaco Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Boaco|tamaño=45px}} || [[File:Seal of Boaco.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Boaco Department|Boaco]] || [[Boaco]]
+{{td fmtn|178582}} <!-- Population (2015) -->
+{{td fmtn|4176.68}} <!-- Area (km2) -->
+{{td fmtn|41.8}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-CA}} <!-- ISO -->
+| [[File:Carazo Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Carazo|tamaño=45px}} || [[File:Seal of Jinotepe.gif|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Carazo Department|Carazo]] || [[Jinotepe, Carazo|Jinotepe]]
+{{td fmtn|190769}} <!-- Population (2015) -->
+{{td fmtn|1081.40}} <!-- Area (km2) -->
+{{td fmtn|172.8}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-CI}} <!-- ISO -->
+| [[File:Chinandega Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Chinandega|tamaño=45px}} || [[File:Coats of arms of None.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Chinandega Department|Chinandega]] || [[Chinandega]]
+{{td fmtn|429557}} <!-- Population (2015) -->
+{{td fmtn|4822.42}} <!-- Area (km2) -->
+{{td fmtn|87.7}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-CO}} <!-- ISO -->
+| [[File:Chontales Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Chontales|tamaño=45px}} || [[File:Coats of arms of None.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Chontales Department|Chontales]] || [[Juigalpa, Chontales|Juigalpa]]
+{{td fmtn|185866}} <!-- Population (2015) -->
+{{td fmtn|6481.27}} <!-- Area (km2) -->
+{{td fmtn|24}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-ES}} <!-- ISO -->
+| [[File:Esteli Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Estelí|tamaño=45px}} || [[File:Seal of Esteli.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Estelí Department|Estelí]] || [[Estelí]]
+{{td fmtn|224331}} <!-- Population (2015) -->
+{{td fmtn|2229.69}} <!-- Area (km2) -->
+{{td fmtn|90}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-GR}} <!-- ISO -->
+| [[File:Granada Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Granada (Nicaragua)|tamaño=45px}} || [[File:Seal of Granada, Nicaragua.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Granada Department|Granada]] || [[Granada, Nicaragua|Granada]]
+{{td fmtn|206009}} <!-- Population (2015) -->
+{{td fmtn|1039.68}} <!-- Area (km2) -->
+{{td fmtn|162}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-JI}} <!-- ISO -->
+| [[File:Jinotega Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Jinotega|tamaño=45px}} || [[File:Seal of Jinotega.jpg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Jinotega Department|Jinotega]] || [[Jinotega]]
+{{td fmtn|438413}} <!-- Population (2015) -->
+{{td fmtn|9222.40}} <!-- Area (km2) -->
+{{td fmtn|36}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-LE}} <!-- ISO -->
+| [[File:Leon Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera| León (Nicaragua)|tamaño=45px}} || [[File:Seal of Leon, Nicaragua.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[León Department]] || [[León, Nicaragua|León]]
+{{td fmtn|410860}} <!-- Population (2015) -->
+{{td fmtn|5138.03}} <!-- Area (km2) -->
+{{td fmtn|69}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-MD}} <!-- ISO -->
+| [[File:Madriz Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Madriz|tamaño=45px}} || [[File:Seal of Madriz.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Madriz Department|Madriz]] || [[Somoto]]
+{{td fmtn|164146}} <!-- Population (2015) -->
+{{td fmtn|1708.23}} <!-- Area (km2) -->
+{{td fmtn|78}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-MN}} <!-- ISO -->
+| [[File:Managua Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Managua|tamaño=45px}} || [[File:Escudo de Managua.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Managua Department|Managua]] || [[Managua]]
+{{td fmtn|1484462}} <!-- Population (2015) -->
+{{td fmtn|3465.10}} <!-- Area (km2) -->
+{{td fmtn|365}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-MS}} <!-- ISO -->
+| [[File:Masaya Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Masaya|tamaño=45px}} || [[File:Seal of Masaya.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Masaya Department|Masaya]] || [[Masaya]]
+{{td fmtn|364168}} <!-- Population (2015) -->
+{{td fmtn|610.78}} <!-- Area (km2) -->
+{{td fmtn|475}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-MT}} <!-- ISO -->
+| [[File:Matagalpa Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Matagalpa|tamaño=45px}} || [[File:Seal of Matagalpa.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Matagalpa Department|Matagalpa]] || [[Matagalpa, Nicaragua|Matagalpa]]
+{{td fmtn|561282}} <!-- Population (2015) -->
+{{td fmtn|6803.86}} <!-- Area (km2) -->
+{{td fmtn|69}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-NS}} <!-- ISO -->
+| [[File:Nueva Segovia Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Nueva Segovia|tamaño=45px}} || [[File:Seal of Nueva Segovia.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Nueva Segovia Department|Nueva Segovia]] || [[Ocotal]]
+{{td fmtn|253489}} <!-- Population (2015) -->
+{{td fmtn|3491.28}} <!-- Area (km2) -->
+{{td fmtn|60}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-RI}} <!-- ISO -->
+| [[File:Rivas Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|Rivas|tamaño=45px}} || [[File:Seal of Rivas.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Rivas Department|Rivas]] || [[Rivas, Nicaragua|Rivas]]
+{{td fmtn|177668}} <!-- Population (2015) -->
+{{td fmtn|2161.82}} <!-- Area (km2) -->
+{{td fmtn|72}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-SJ}} <!-- ISO -->
+| [[File:Rio San Juan Department, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera| Río San Juan|tamaño=45px}} || [[File:Seal of San Carlos, Nicaragua.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[Río San Juan Department|Río San Juan]] || [[San Carlos, Río San Juan|San Carlos]]
+{{td fmtn|127225}} <!-- Population (2015) -->
+{{td fmtn|7543.30}} <!-- Area (km2) -->
+{{td fmtn|13}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-AN}} <!-- ISO -->
+| [[File:RAAN, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|RAAN|tamaño=45px}} || [[File:Seal of Region Autonoma del Atlantico Norte.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[North Caribbean Coast Autonomous Region]] || [[Puerto Cabezas|Bilwi]]<ref name="NoteOnBilwi" group="note">Regarding the capital of the [[North Caribbean Coast Autonomous Region]]: '''Bilwi''' is the city, [[Puerto Cabezas]] is the [[Municipalities of Nicaragua|municipality]].</ref>
+{{td fmtn|480874}} <!-- Population (2015) -->
+{{td fmtn|33105.98}} <!-- Area (km2) -->
+{{td fmtn|10}} <!-- Pop. density (km-2) -->
+
+|-
+
+| align="center" | {{mono|NI-AS}} <!-- ISO -->
+| [[File:RAAS, Nicaragua.svg|100px]] <!-- Map -->
+<!-- | {{bandera|RAAS|tamaño=45px}} || [[File:Seal of Region Autonoma del Atlantico Sur.svg|45px]] CHECK THE DISCLAIMER ABOVE -->
+| [[South Caribbean Coast Autonomous Region]] || [[Bluefields]]
+{{td fmtn|385102}} <!-- Population (2015) -->
+{{td fmtn|27260.02}} <!-- Area (km2) -->
+{{td fmtn|11}} <!-- Pop. density (km-2) -->
+
+|-
+
+|}
+
+== Autonomous regions ==
+In 1987, the new [[Constitution of Nicaragua|constitution]] established the Charter of Autonomy (limited self-government) for the former [[Zelaya Department|department of Zelaya]], comprising the entire eastern half of the country. The department was divided into two autonomous regions (communities). The Charter of Autonomy is largely based on the model used by Spain. The communities are governed by a Governor and a Regional Council.
+
+== See also ==
+*[[ISO 3166-2:NI]]
+
+== Notes ==
+{{reflist|group=note}}
+
+== Bibliography ==
+* {{lang|es|[[Instituto Nicaragüense de Estudios Territoriales]]}} (INETER). {{lang|es|''[http://www.ineter.gob.ni/Ordenamiento/files/division_politica_administrativa_del_pais_corregid.pdf División Política Administrativa del País]''}}. March, 2000.
+* {{lang|es|[[Instituto Nicaragüense de Fomento Municipal]]}} (INIFOM). {{lang|es|''[http://www.inifom.gob.ni/municipios/municipios.html Municipios &ndash; General]''}}.
+* [[International Organization for Standardization]] (ISO). {{lang|en|''Codes for the representation of names of countries and their subdivisions''}}. ''[https://www.iso.org/obp/ui/#iso:code:3166:NI ISO 3166-2:NI]''.
+
+
+{{Articles on first-level administrative divisions of North American countries}}
+
+[[Category:Departments of Nicaragua| ]]
+[[Category:Subdivisions of Nicaragua|Departments]]
+[[Category:Lists of country subdivisions|Nicaragua, Departments]]
+[[Category:Country subdivisions of the Americas|Nicaragua 1]]
+[[Category:First-level administrative country subdivisions|Departments, Nicaragua]]
+[[Category:Nicaragua-related lists]]

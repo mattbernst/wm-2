@@ -7,24 +7,26 @@ import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
 
 object FileHelpers extends Logging {
+
   def readTextFile(fileName: String): String = {
     val source = Source.fromFile(fileName)(StandardCharsets.UTF_8)
-    val lines = source.getLines().toList
+    val lines  = source.getLines().toList
     source.close()
     lines.mkString("\n")
   }
 
-  def glob(pattern: String): Seq[String] = {
-    val path = Paths.get(pattern)
-    val directory = Option(path.getParent).getOrElse(Paths.get("."))
-    val matcher = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
+  def writeTextFile(fileName: String, input: String): Unit = {
+    val writer = Files.newBufferedWriter(Paths.get(fileName))
+    writer.write(input)
+    writer.close()
+  }
 
-    Files.walk(directory)
-      .filter(p => matcher.matches(p))
-      .map(_.toString)
-      .iterator()
-      .asScala
-      .toSeq
+  def glob(pattern: String): Seq[String] = {
+    val path      = Paths.get(pattern)
+    val directory = Option(path.getParent).getOrElse(Paths.get("."))
+    val matcher   = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
+
+    Files.walk(directory).filter(p => matcher.matches(p)).map(_.toString).iterator().asScala.toSeq
   }
 
   def deleteFileIfExists(fileName: String): Unit = {
@@ -32,7 +34,7 @@ object FileHelpers extends Logging {
 
     if (Files.exists(path)) {
       Try(Files.delete(path)) match {
-        case Success(_) =>
+        case Success(_)         =>
         case Failure(exception) => logger.error(s"Failed to delete file $fileName. Error: ${exception.getMessage}")
       }
     } else {

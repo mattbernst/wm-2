@@ -1,9 +1,10 @@
 package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
-import wiki.extractor.TitleFinder
+import wiki.extractor.language.EnglishSnippetExtractor
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, UnitSpec, ZString}
+import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   "namespace table" should "write and read back Namespace records" in {
@@ -14,7 +15,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   }
 
   "page table redirect logic" should "write page records and resolve redirects" in {
-    val defaultNamespace = Namespace(0, FIRST_LETTER, "")
+    val defaultNamespace  = Namespace(0, FIRST_LETTER, "")
     val categoryNamespace = Namespace(14, FIRST_LETTER, "Category")
     val pages = Seq(
       DumpPage(
@@ -69,10 +70,12 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
     storage.writeDumpPages(pages)
     val tf = new TitleFinder(storage.readTitlePageMap(), storage.readRedirects())
-    storage.writeTitleToPage(tf.getFlattenedPageMapping())
+    storage.writeTitleToPage(tf.getFlattenedPageMapping(Set()))
     tf.getId("This title does not exist") shouldBe None
     tf.getId("AsciiArt") shouldBe tf.getId("ASCII art")
-    tf.getId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.getId("Category:Wikipedians who retain deleted categories on their userpages")
+    tf.getId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.getId(
+      "Category:Wikipedians who retain deleted categories on their userpages"
+    )
     tf.getId("Ann Arbor, Michigan") shouldBe Some(pages.head.id)
   }
 
@@ -82,9 +85,13 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{Redirect category shell|1=
                    |{{R from CamelCase}}
                    |}}""".stripMargin
-    val entry = (randomInt(), Some(markup))
+    val title  = "Test"
+    val parsed = parser.parseMarkup(title, markup)
+    val native = PageMarkup(randomInt(), Some(markup), parsed)
+    val entry  = PageMarkup.serializeUncompressed(native)
     storage.writeMarkups(Seq(entry))
-    storage.readMarkup(entry._1) shouldBe Some(markup)
+    storage.readMarkup(native.pageId) shouldBe Some(native)
+    storage.readMarkup(0) shouldBe None
   }
 
   "page_markup_z table" should "write and read back markup" in {
@@ -93,9 +100,13 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{Redirect category shell|1=
                    |{{R from CamelCase}}
                    |}}""".stripMargin
-    val entry = (randomInt(), Some(ZString.compress(markup)))
+    val title  = "Test"
+    val parsed = parser.parseMarkup(title, markup)
+    val native = PageMarkup(randomInt(), Some(markup), parsed)
+    val entry  = PageMarkup.serializeCompressed(native)
     storage.writeMarkups_Z(Seq(entry))
-    storage.readMarkup_Z(entry._1) shouldBe Some(markup)
+    storage.readMarkup_Z(native.pageId) shouldBe Some(native)
+    storage.readMarkup(0) shouldBe None
   }
 
   override def afterAll(): Unit = {
@@ -110,5 +121,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     db
   }
 
+  private lazy val parser     = new WikitextParser(EnglishSnippetExtractor)
   private lazy val testDbName = s"test_${randomLong()}.db"
 }
