@@ -66,14 +66,19 @@ class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirection]
     *
     * To deal with this edge case, omit "redirects to nowhere."
     *
+    * As a further complication, the Sweble wikitext parser fails to parse a
+    * small number of pages. These bad pages should be excluded from mapping.
+    *
+    * @param badPages IDs of pages that failed to parse, omitted from mapping
     * @return A map of page titles to their resolved page IDs
     */
-  def getFlattenedPageMapping(): Seq[(String, Int)] = {
+  def getFlattenedPageMapping(badPages: Set[Int]): Seq[(String, Int)] = {
     val fromRedirects =
       redirectMap.keysIterator.filterNot(title => getId(title).isEmpty).toSeq.map(title => (title, getId(title).get))
 
     val fromTitles = pageMap.toSeq
     (fromRedirects ++ fromTitles).distinct
+      .filterNot(t => badPages.contains(t._2))
   }
 
   /**

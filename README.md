@@ -19,8 +19,8 @@ for English Wikipedia. As of 2024-09-03 the file is about 21 GB originally compr
 and 97 GB decompressed.
 
 It is possible to run the extraction process directly from the downloaded .bz2 file but this will be slow. The
-code will spend of its time decompressing the data and the worker threads will be If you are going to run the extraction
-process more than once, decompress the file with the command line utility `bunzip2` or a similar tool.
+code will spend much of its time decompressing the data and the worker threads may be starved. If you are going to run
+the extraction process more than once, decompress the file with the command line utility `bunzip2` or a similar tool.
 
 Running extraction from a .zst compressed input is somewhat slower than from uncompressed input but saves a great deal
 of disk space on storage-constrained systems like entry level laptops. It is much faster than reading the input
@@ -39,10 +39,9 @@ sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-
 ```
 
 With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) and the dump file from September
-2024 this takes about 25 minutes to complete. The output SQLite database is about 36 GB on disk (87 GB if running with
-no page markup compression), with most of the space consumed by `page_markup_z` or `page_markup` (table used depends on
-"COMPRESS_MARKUP" environment variable). A significant portion of the wall clock time is spent just creating indexes
-in the SQLite database.
+2024 this takes about 2.5 hours to complete. The output SQLite database is about 56 GB on disk (much larger if running
+without page markup compression), with most of the space consumed by `page_markup_z` or `page_markup` (table used
+depends on "COMPRESS_MARKUP" environment variable).
 
 ### Caveats
 
@@ -51,6 +50,7 @@ testing with other languages.
 
 # Background
 
+## Wikipedia miner
 See [this Google tech talk](https://www.youtube.com/watch?v=NFCZuzA4cFc) "Knowledge-based Information Retrieval with
 Wikipedia" by David Milne from 2008.
 
@@ -71,6 +71,27 @@ used by subsequent versions.
 
 The GitHub [wiki for wikipediaminer](https://github.com/dnmilne/wikipediaminer/wiki) is also a good related source.
 
+## Sweble
+
+The [wikitext](https://en.wikipedia.org/wiki/Help:Wikitext) format used to write Wikipedia entries is complicated and
+difficult to parse correctly. Milne had some ad-hoc approaches to the parsing in the original wikipediaminer code,
+marked by some frustrated comments. It is very difficult for any software outside the Wikimedia ecosystem to parse
+wikitext with full fidelity, but the [Sweble Wikitext Components](https://github.com/sweble/sweble-wikitext) project
+comes close. I chose this parser to enable the extraction of cross-references and the rendering of wikitext into
+simplified plain text. Its increased fidelity comes at a cost: about 2 hours of the initial 2.5 hour runtime to extract
+English Wikipedia is spent in the Sweble parser.
+
+The original [sweble.org](http://sweble.org) domain is defunct now, as is its
+[replacement site](https://osr.cs.fau.de/software/sweble-wikitext/) at the Friedrich-Alexander-Universität Professorship
+for Open-Source Software. Some useful information is still at those domains in the Wayback Machine, including these
+references to these publications:
+
+- [Design and implementation of the sweble wikitext parser: unlocking the structured data of wikipedia](https://opensym.org/ws2011/_media/proceedings%253Ap72-dohrn.pdf)
+- [WOM: An object model for Wikitext](https://dirkriehle.com/wp-content/uploads/2011/07/wom-tr.pdf)
+
+N.B. The [DBPedia parser](https://web.archive.org/web/20160424045430/http://oldwiki.dbpedia.org/DeveloperDocumentation/WikiParser)
+may be worth investigating too (uses Sweble components internally).
+
 # Motivation
 The original wikipediaminer is written in an older dialect of Java (started on 1.5, compiles with warnings on
 1.8) and is tied to Hadoop which is cumbersome to set up. Further, computer power has increased enough since the
@@ -82,14 +103,14 @@ processors and 4 GB of RAM, it processes the latest versions of the full English
 uncompressed markup—in a little over 2.5 hours. The process scales roughly linearly with the size of Wikipedia and the
 number of machines available.*
 
-Now that this much computing power is easily purchased or rented as a single node, Hadoop isn't necessary. 
-Removing the overhead of Hadoop means that even a single contemporary laptop can outdo this old Hadoop cluster. 32 GB
-of heap space on one machine is faster than 120 GB spread across 30 machines.
+Now that this much computing power is easily purchased or rented as a single node, Hadoop isn't necessary.
 
-Reimplementing wikipediaminer in Scala probably limits outside contributions, but I am far more fluent in Scala than
-in Java.
+Reinterpreting wikipediaminer as Scala probably limits outside contributions, but I am far more comfortable in Scala
+than in Java.
 
 ## Licensing
 
 This is under the GPL v2 because the wikipediaminer code is too. Although I've directly copied only a little from the
-old code I have read it a lot, to the extent that this would probably count as a derivative work.
+old code I have read it a lot, to the extent that this would probably count as a derivative work. This licensing may be
+technically incorrect (GPL v2 and Apache 2.0 don't mix, according to the FSF) but Milne's original also included Apache
+2.0 code.

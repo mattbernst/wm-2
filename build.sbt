@@ -11,6 +11,9 @@ libraryDependencies ++= Seq(
   "com.lihaoyi" %% "upickle" % "4.0.0",
   "com.lihaoyi" %% "pprint" % "0.9.0",
   "io.airlift" % "aircompressor" % "0.27",
+  // Later versions of OpenNLP require at least Java 11.
+  // Drop Java 8 compat later?
+  "org.apache.opennlp" % "opennlp-tools" % "1.9.4",
   "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
   "org.scalatest" %% "scalatest-flatspec" % scalaTestVersion % "test",
   "org.scalatest" %% "scalatest-shouldmatchers" % scalaTestVersion % "test",
@@ -18,7 +21,7 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "2.0.16",
   "org.slf4j" % "slf4j-simple" % "2.0.16",
   "org.scalikejdbc" %% "scalikejdbc" % "4.3.1",
-  "org.sweble.wikitext" % "swc-example-serialization" % "3.1.9",
+  "org.sweble.wikitext" % "swc-parser-lazy" % "3.1.9",
   // This is required for Sweble on Java versions above 8
   "javax.xml.bind" % "jaxb-api" % "2.3.1",
   "org.xerial" % "sqlite-jdbc" % "3.46.1.0"

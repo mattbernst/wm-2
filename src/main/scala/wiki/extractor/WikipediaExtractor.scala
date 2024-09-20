@@ -46,7 +46,7 @@ object WikipediaExtractor extends Logging {
     writer.writerThread.join()
     logger.info(s"Wrote ${writer.pageCount} pages to database")
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
-    val danglingRedirects = storeMappedTitles()
+    val danglingRedirects = storeMappedTitles(fragmentProcessor.getUnparseable())
     createIndexes()
     markDanglingRedirects(danglingRedirects)
   }
@@ -119,9 +119,10 @@ object WikipediaExtractor extends Logging {
     * Resolve all title-to-ID mappings (e.g. resolve redirects) and store the
     * flattened data in the title_to_page table.
     *
+    * @param badPages Unparseable pages to exclude from mapping
     * @return Dangling redirects that need their page type updated
     */
-  private def storeMappedTitles(): Seq[Redirection] = {
+  private def storeMappedTitles(badPages: Set[Int]): Seq[Redirection] = {
     logger.info(s"Getting TitleFinder data")
     val redirects = dbStorage.readRedirects()
     logger.info(s"Loaded ${redirects.length} redirects")
@@ -130,7 +131,8 @@ object WikipediaExtractor extends Logging {
     val tf = new TitleFinder(titlePageMap, redirects)
 
     logger.info(s"Started writing title to page ID mappings to db")
-    val fpm = tf.getFlattenedPageMapping()
+    val fpm = tf.getFlattenedPageMapping(badPages)
+    logger.info(s"Excluded ${badPages.size} bad pages")
     dbStorage.writeTitleToPage(fpm)
     logger.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
     tf.danglingRedirects

@@ -1,6 +1,7 @@
 package wiki.extractor
 
 import wiki.db.PageWriter
+import wiki.extractor.language.{EnglishSnippetExtractor, SnippetExtractor}
 import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
@@ -8,6 +9,7 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
 case class FragmentWorker(thread: Thread)
@@ -24,6 +26,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     * and https://www.mediawiki.org/xml/export-0.11.xsd
     *
     * @param pageXML A string of XML as extracted by WikipediaPageSplitter
+    * @param workerId The unique ID for a worker running in a multithreaded context
     * @return        A StructuredPage with data about the page and its markup
     */
   def extract(pageXML: String): StructuredPage = {
@@ -39,8 +42,11 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     val revision = xml \ "revision"
 
     val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-    val parsed = text.flatMap(markup => WikitextParser.parseMarkup(title, markup))
+    val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
     val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
+    if (text.nonEmpty && parsed.isEmpty) {
+      addUnparseable(id)
+    }
 
     val lastEdited = (revision \ "timestamp").headOption
       .map(_.text)
@@ -50,7 +56,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     val pageType = if (redirect.nonEmpty) {
       REDIRECT
     } else {
-      inferPageType(pageText = text.getOrElse(""), namespace = namespace)
+      inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
     }
 
     val dp = DumpPage(
@@ -114,20 +120,30 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     lastTransclusions.toMap
 
   /**
+    * Get IDs of pages with wikitext markup that Sweble could not parse.
+    * These pages will be excluded from title mapping and further analysis.
+    *
+    * @return Set of page IDs for pages that Sweble could not parse
+    */
+  def getUnparseable(): Set[Int] = this.synchronized {
+    unparseablePages.toSet
+  }
+
+  /**
     * Infer the page type from the page text and namespace. We need
     * the page text to determine if the page is a disambiguation. Otherwise,
     * the type can be determined from the namespace or presence of a
     * redirect declaration.
     *
-    * @param pageText  Wikipedia markup for the page content
+    * @param wikiText  Wikipedia markup for the page content
     * @param namespace The namespace that the page belongs to
     */
-  private[extractor] def inferPageType(pageText: String, namespace: Namespace): PageType = {
+  private[extractor] def inferPageType(wikiText: String, namespace: Namespace): PageType = {
     namespace.id match {
       case siteInfo.CATEGORY_KEY => CATEGORY
       case siteInfo.TEMPLATE_KEY => TEMPLATE
       case siteInfo.MAIN_KEY =>
-        val transclusions    = getTransclusions(pageText)
+        val transclusions    = getTransclusions(wikiText)
         val lastTransclusion = transclusions.lastOption
         lastTransclusion.foreach(t => incrementTransclusion(t))
         if (lastTransclusion.exists(t => language.isDisambiguation(t))) {
@@ -147,18 +163,18 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     * {{double braces like this}}.
     * See also https://en.wikipedia.org/wiki/Help:Transclusion
     *
-    * @param pageText Wikipedia markup for the page content
+    * @param wikiText Wikipedia markup for the page content
     * @return         All transclusions from inside double braces
     */
-  private[extractor] def getTransclusions(pageText: String): Seq[String] = {
+  private[extractor] def getTransclusions(wikiText: String): Seq[String] = {
     val transclusions = new ListBuffer[String]
     var startIndex    = -1
 
-    pageText.indices.foreach { i =>
-      if (pageText(i) == '{') {
+    wikiText.indices.foreach { i =>
+      if (wikiText(i) == '{') {
         startIndex = i + 1
-      } else if (pageText(i) == '}' && startIndex != -1) {
-        transclusions.append(pageText.substring(startIndex, i))
+      } else if (wikiText(i) == '}' && startIndex != -1) {
+        transclusions.append(wikiText.substring(startIndex, i))
         startIndex = -1
       }
     }
@@ -171,9 +187,32 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     lastTransclusions.put(transclusion, count + 1): Unit
   }
 
+  private def addUnparseable(pageId: Int): Unit = this.synchronized {
+    unparseablePages.add(pageId): Unit
+  }
+
+  private val parser: WikitextParser = {
+    val snippetExtractors: Map[String, SnippetExtractor] = Map(
+      "en" -> EnglishSnippetExtractor
+    )
+    Try(new WikitextParser(snippetExtractors(language.code))) match {
+      case Success(v) =>
+        v
+      case Failure(ex: NoSuchElementException) =>
+        logger.error(s"No SnippetExtractor defined for language code '${language.code}'")
+        throw ex
+      case Failure(ex) =>
+        throw ex
+    }
+  }
+
   // Counting transclusions that end a page can be useful to find the
   // most common disambiguation transclusions for configuring the
   // disambiguationPrefixes in languages.json. These are written
   // to last_transclusion_count in the db.
   private lazy val lastTransclusions = mutable.Map[String, Int]()
+
+  // These pages failed to parse via Sweble and should be excluded from
+  // the title-to-page mapping.
+  private lazy val unparseablePages = mutable.Set[Int]()
 }

@@ -40,7 +40,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "getTransclusions"
 
   it should "get transclusions (1)" in {
-    val pageText = FileHelpers.readTextFile("src/test/resources/mercury.txt")
+    val wikiText = FileHelpers.readTextFile("src/test/resources/mercury.wikitext")
     val expected = Seq(
       "wiktionary|Mercury|mercury",
       "tocright",
@@ -54,7 +54,7 @@ class FragmentProcessorSpec extends UnitSpec {
       "disambiguation|geo"
     )
 
-    fragmentProcessor.getTransclusions(pageText) shouldBe expected
+    fragmentProcessor.getTransclusions(wikiText) shouldBe expected
   }
 
   it should "get transclusions (2)" in {
@@ -76,8 +76,8 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "inferPageType"
 
   it should "detect a DISAMBIGUATION page from page text" in {
-    val pageText = FileHelpers.readTextFile("src/test/resources/mercury.txt")
-    fragmentProcessor.inferPageType(pageText, siteInfo.defaultNamespace) shouldBe DISAMBIGUATION
+    val wikiText = FileHelpers.readTextFile("src/test/resources/mercury.wikitext")
+    fragmentProcessor.inferPageType(wikiText, siteInfo.defaultNamespace) shouldBe DISAMBIGUATION
   }
 
   it should "detect a CATEGORY page from namespace" in {

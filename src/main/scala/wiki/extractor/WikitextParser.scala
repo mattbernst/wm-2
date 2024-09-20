@@ -2,6 +2,7 @@ package wiki.extractor
 
 import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
+import wiki.extractor.language.SnippetExtractor
 import wiki.extractor.types.{Link, ParseResult}
 import wiki.extractor.util.Logging
 
@@ -9,7 +10,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-object WikitextParser extends Logging {
+class WikitextParser(snippetExtractor: SnippetExtractor) extends Logging {
 
   /**
     * Parse wikitext markup for an article using Sweble and retain selected
@@ -56,17 +57,10 @@ object WikitextParser extends Logging {
       }
     }
 
-    val text = cleanString(nodesToText(input))
-    // TODO: use OpenNLP sentence detection.
-    // First paragraph is first WtParagraph that renders to multiple sentences.
-    // First sentence is the first sentence of the first paragraph as defined above.
-    // If no multi-sentence paragraphs found, first sentence and first paragraph alike are
-    // the first detected sentence (may be empty).
-    val firstParagraph = "???"
-    val firstSentence  = "???"
+    val text    = cleanString(nodesToText(input))
+    val snippet = snippetExtractor.getSnippet(text)
     ParseResult(
-      firstSentence = firstSentence,
-      firstParagraph = firstParagraph,
+      snippet = snippet,
       text = text,
       links = links.toSeq
     )

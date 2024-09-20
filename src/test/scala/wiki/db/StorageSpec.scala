@@ -1,6 +1,7 @@
 package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
+import wiki.extractor.language.EnglishSnippetExtractor
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
@@ -69,7 +70,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
     storage.writeDumpPages(pages)
     val tf = new TitleFinder(storage.readTitlePageMap(), storage.readRedirects())
-    storage.writeTitleToPage(tf.getFlattenedPageMapping())
+    storage.writeTitleToPage(tf.getFlattenedPageMapping(Set()))
     tf.getId("This title does not exist") shouldBe None
     tf.getId("AsciiArt") shouldBe tf.getId("ASCII art")
     tf.getId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.getId(
@@ -85,7 +86,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{R from CamelCase}}
                    |}}""".stripMargin
     val title  = "Test"
-    val parsed = WikitextParser.parseMarkup(title, markup)
+    val parsed = parser.parseMarkup(title, markup)
     val native = PageMarkup(randomInt(), Some(markup), parsed)
     val entry  = PageMarkup.serializeUncompressed(native)
     storage.writeMarkups(Seq(entry))
@@ -100,7 +101,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                    |{{R from CamelCase}}
                    |}}""".stripMargin
     val title  = "Test"
-    val parsed = WikitextParser.parseMarkup(title, markup)
+    val parsed = parser.parseMarkup(title, markup)
     val native = PageMarkup(randomInt(), Some(markup), parsed)
     val entry  = PageMarkup.serializeCompressed(native)
     storage.writeMarkups_Z(Seq(entry))
@@ -120,5 +121,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     db
   }
 
+  private lazy val parser     = new WikitextParser(EnglishSnippetExtractor)
   private lazy val testDbName = s"test_${randomLong()}.db"
 }

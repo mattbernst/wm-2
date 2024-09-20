@@ -1,6 +1,7 @@
 package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
+import wiki.extractor.language.EnglishSnippetExtractor
 import wiki.extractor.types.Link
 import wiki.extractor.util.{FileHelpers, UnitSpec}
 
@@ -11,7 +12,7 @@ class WikitextParserSpec extends UnitSpec {
     // This is a simple article without images or tables
     val title  = "Anthophyta"
     val markup = FileHelpers.readTextFile("src/test/resources/anthophyta.wikitext")
-    val parsed = WikitextParser.parseMarkup(title, markup).get
+    val parsed = parser.parseMarkup(title, markup).get
 
     val expectedLinks = Seq(
       Link(target = "paraphyletic", anchorText = None),
@@ -43,7 +44,7 @@ class WikitextParserSpec extends UnitSpec {
     // This article contains an image and table
     val title  = "Mafic"
     val markup = FileHelpers.readTextFile("src/test/resources/mafic.wikitext")
-    val parsed = WikitextParser.parseMarkup(title, markup).get
+    val parsed = parser.parseMarkup(title, markup).get
 
     val expectedLinks = Seq(
       Link(target = "silicate mineral", anchorText = None),
@@ -101,12 +102,12 @@ class WikitextParserSpec extends UnitSpec {
     // The original markup for this sentence was
     // "Most mafic-lava volcanoes are [[shield volcano]]es, like those in [[Hawaii]]."
     // Appears to be Sweble error (node list from raw parse loses "es" also)
-    val error1 = "Most mafic-lava volcanoes are shield volcano, like those in Hawaii."
+    val error1   = "Most mafic-lava volcanoes are shield volcano, like those in Hawaii."
     val correct1 = "Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii."
     parsed.text.contains(error1) shouldBe true
     parsed.text.contains(correct1) shouldBe false
 
-    // This is a me-error. It's hard to deal with in the current stateless approach.
+    // This is my problem. It's hard to deal with in the current stateless approach.
     // Adding extra space when rendering links messes up the text in different ways.
     // Maybe use a placeholder character from outside the basic multilingual plane to
     // make post-processing work? That's a later todo.
@@ -118,7 +119,9 @@ class WikitextParserSpec extends UnitSpec {
     val title  = "Departments of Nicaragua"
     val markup = FileHelpers.readTextFile("src/test/resources/departments_of_nicaragua.wikitext")
     assertThrows[VisitingException] {
-      WikitextParser.parse(title, markup)
+      parser.parse(title, markup)
     }
   }
+
+  private lazy val parser = new WikitextParser(EnglishSnippetExtractor)
 }
