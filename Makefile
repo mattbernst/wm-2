@@ -1,4 +1,4 @@
-.PHONY: clean build extract extract-with-profiling format
+.PHONY: clean build extract extract-with-profiling format extract-graal
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
@@ -13,6 +13,12 @@ build:
 
 extract: build
 	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(dumpfile)
+
+# This only works with Oracle Java 21 or later. On my machine it reduces the
+# 2 hour and 25 minute extraction time to 2 hours and 10 minutes.
+GRAAL_JAVA_OPTS := $(JAVA_OPTS) -XX:+UnlockExperimentalVMOptions -XX:+UseGraalJIT
+extract-graal: build
+	java $(GRAAL_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(dumpfile)
 
 format:
 	sbt scalafmtAll

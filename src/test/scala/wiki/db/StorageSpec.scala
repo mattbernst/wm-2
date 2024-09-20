@@ -106,7 +106,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val entry  = PageMarkup.serializeCompressed(native)
     storage.writeMarkups_Z(Seq(entry))
     storage.readMarkup_Z(native.pageId) shouldBe Some(native)
-    storage.readMarkup(0) shouldBe None
+    storage.readMarkup_Z(0) shouldBe None
   }
 
   override def afterAll(): Unit = {
