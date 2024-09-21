@@ -107,10 +107,3 @@ Now that this much computing power is easily purchased or rented as a single nod
 
 Reinterpreting wikipediaminer as Scala probably limits outside contributions, but I am far more comfortable in Scala
 than in Java.
-
-## Licensing
-
-This is under the GPL v2 because the wikipediaminer code is too. Although I've directly copied only a little from the
-old code I have read it a lot, to the extent that this would probably count as a derivative work. This licensing may be
-technically incorrect (GPL v2 and Apache 2.0 don't mix, according to the FSF) but Milne's original also included Apache
-2.0 code.

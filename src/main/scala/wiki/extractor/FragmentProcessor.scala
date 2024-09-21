@@ -193,7 +193,8 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
 
   private val parser: WikitextParser = {
     val snippetExtractors: Map[String, SnippetExtractor] = Map(
-      "en" -> EnglishSnippetExtractor
+      "en" -> EnglishSnippetExtractor,
+      "en_simple" -> EnglishSnippetExtractor
     )
     Try(new WikitextParser(snippetExtractors(language.code))) match {
       case Success(v) =>
