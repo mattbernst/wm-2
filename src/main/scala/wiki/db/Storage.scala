@@ -232,7 +232,7 @@ class Storage(fileName: String) extends Logging {
   def readMarkup_Z(pageId: Int): Option[PageMarkup] = {
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM page_markup_z WHERE page_id=$pageId""".map { rs =>
-        val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytesOpt("markup"), rs.bytesOpt("parsed"))
+        val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytes("data"))
         PageMarkup.deserializeCompressed(pmz)
       }.single()
     }
@@ -251,13 +251,12 @@ class Storage(fileName: String) extends Logging {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""page_id, markup, parsed"""
+        val cols: SQLSyntax = sqls"""page_id, data"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
               sqls"${t.pageId}",
-              sqls"${t.wikitext}",
-              sqls"${t.parseResult}"
+              sqls"${t.data}"
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)

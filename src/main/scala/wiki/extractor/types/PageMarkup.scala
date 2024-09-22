@@ -11,8 +11,12 @@ case class PageMarkup(pageId: Int, wikitext: Option[String], parseResult: Option
 
 // Uncompressed-storage version of PageMarkup, with parseResult stored as JSON
 case class PageMarkup_U(pageId: Int, wikitext: Option[String], parseResult: Option[String])
-// Compressed-storage version of PageMarkup, with parseResult stored as compressed messagepack
-case class PageMarkup_Z(pageId: Int, wikitext: Option[Array[Byte]], parseResult: Option[Array[Byte]])
+// Compressed-storage version of PageMarkup, with data stored as compressed messagepack
+case class Data_Z(wikitext: Option[String], parseResult: Option[ParseResult])
+object Data_Z {
+  implicit val rw: ReadWriter[Data_Z] = macroRW
+}
+case class PageMarkup_Z(pageId: Int, data: Array[Byte])
 
 object PageMarkup {
 
@@ -33,18 +37,23 @@ object PageMarkup {
   }
 
   def serializeCompressed(input: PageMarkup): PageMarkup_Z = {
+    // Put the raw wikitext and parseResult into one structure together before
+    // compressing to achieve better compression
+    val dz = Data_Z(input.wikitext, input.parseResult)
+    val data = Compressor.compress(writeBinary(dz))
     PageMarkup_Z(
       pageId = input.pageId,
-      wikitext = input.wikitext.map(e => Compressor.compress(e)),
-      parseResult = input.parseResult.map(e => Compressor.compress(writeBinary(e)))
+      data = data
     )
   }
 
   def deserializeCompressed(input: PageMarkup_Z): PageMarkup = {
+    val decompressed = Compressor.decompress(input.data)
+    val data = readBinary[Data_Z](decompressed)
     PageMarkup(
       pageId = input.pageId,
-      wikitext = input.wikitext.map(e => Compressor.decompressToString(e)),
-      parseResult = input.parseResult.map(r => readBinary[ParseResult](Compressor.decompress(r)))
+      wikitext = data.wikitext,
+      parseResult = data.parseResult
     )
   }
 }

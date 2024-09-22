@@ -4,7 +4,7 @@ import wiki.extractor.util.Text
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 
-class WikipediaPageSplitter(source: Iterator[String], queueSize: Int = Short.MaxValue) {
+class WikipediaPageSplitter(source: Iterator[String], queueSize: Int = 8000) {
   var pageCount = 0
 
   /**

@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of pages enqueued before writing
   */
-class PageWriter(db: Storage, queueSize: Int = 32000) extends Logging {
+class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
 
   def enableSqliteFastPragmas(): Unit = {
     val pragmas = Seq(
