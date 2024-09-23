@@ -1,7 +1,8 @@
 package wiki.extractor.util
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{FileSystems, Files, Paths}
+import java.nio.file.{FileSystems, Files, Path, Paths}
+import java.util.stream
 import scala.io.Source
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
@@ -25,8 +26,14 @@ object FileHelpers extends Logging {
     val path      = Paths.get(pattern)
     val directory = Option(path.getParent).getOrElse(Paths.get("."))
     val matcher   = FileSystems.getDefault.getPathMatcher("glob:" + pattern)
-
-    Files.walk(directory).filter(p => matcher.matches(p)).map(_.toString).iterator().asScala.toSeq
+    val streams: stream.Stream[Path] = Try(Files.walk(directory)) match {
+      case Success(v) =>
+        v
+      case Failure(ex) =>
+        logger.warn(s"Glob failed on $pattern: ${ex.getClass.getName}")
+        stream.Stream.empty()
+    }
+    streams.filter(p => matcher.matches(p)).map(_.toString).iterator().asScala.toSeq
   }
 
   def deleteFileIfExists(fileName: String): Unit = {

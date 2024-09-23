@@ -35,7 +35,7 @@ object WikipediaExtractor extends Logging {
       language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    dbStorage.createTableDefinitions()
+    dbStorage.createTableDefinitions(1)
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
     splitter.extractPages()
@@ -143,8 +143,9 @@ object WikipediaExtractor extends Logging {
     * inserts are slower if the indexes already exist.
     */
   private def createIndexes(): Unit = {
+    // TODO: move this into phase01
     logger.info(s"Starting to create indexes on db")
-    dbStorage.createIndexes()
+    dbStorage.createIndexes(1)
     logger.info(s"Finished creating indexes on db")
   }
 

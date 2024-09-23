@@ -265,13 +265,20 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  // Create tables for multiple phases at once
+  def createTableDefinitions(phases: Seq[Int]): Unit =
+    phases.foreach(phase => createTableDefinitions(phase))
+
   /**
-    *  Create all tables from the .sql files in sql/tables/
+    *  Create all tables from the .sql files in sql/tables/phaseXX
     */
-  def createTableDefinitions(): Unit = {
-    val pattern          = "sql/tables/*.sql"
+  def createTableDefinitions(phase: Int): Unit = {
+    val paddedPhase      = String.format("%02d", phase)
+    val pattern          = s"sql/tables/phase$paddedPhase/*.sql"
     val tableDefinitions = FileHelpers.glob(pattern).sorted
-    require(tableDefinitions.nonEmpty, s"No SQL files for tables found in $pattern")
+    if (tableDefinitions.isEmpty) {
+      logger.warn(s"No SQL files for tables found in $pattern")
+    }
     tableDefinitions.foreach { fileName =>
       val sql = FileHelpers.readTextFile(fileName)
       logger.info(s"Creating table from $fileName")
@@ -279,17 +286,24 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  // Create indexes for multiple phases at once
+  def createIndexes(phases: Seq[Int]): Unit =
+    phases.foreach(phase => createIndexes(phase))
+
   /**
-    * Create all indexes from the .sql files in sql/indexes/
-    * This should be run after initial bulk-loading of rows into tables,
-    * because adding an index after rows are created is faster than
-    * having the index in place while rows are being created.
+    * Create all indexes from the .sql files in sql/indexes/phaseXX
+    *  Separating index-creation from table-creation can improve performance
+    *  for bulk data inserts, because adding an index after rows are created
+    *  is faster than having the index in place while rows are being created.
     */
-  def createIndexes(): Unit = {
-    val pattern          = "sql/indexes/*.sql"
-    val tableDefinitions = FileHelpers.glob(pattern).sorted
-    require(tableDefinitions.nonEmpty, s"No SQL files for indexes found in $pattern")
-    tableDefinitions.foreach { fileName =>
+  def createIndexes(phase: Int): Unit = {
+    val paddedPhase      = String.format("%02d", phase)
+    val pattern          = s"sql/indexes/phase$paddedPhase/*.sql"
+    val indexDefinitions = FileHelpers.glob(pattern).sorted
+    if (indexDefinitions.isEmpty) {
+      logger.warn(s"No SQL files for indexes found in $pattern")
+    }
+    indexDefinitions.foreach { fileName =>
       val sql = FileHelpers.readTextFile(fileName)
       logger.info(s"Creating index from $fileName")
       executeUnsafely(sql)
@@ -333,4 +347,6 @@ object Storage {
     }
     loop(sqls.toList, Nil)
   }
+
+  val lastPhase: Int = 2
 }
