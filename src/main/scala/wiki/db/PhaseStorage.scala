@@ -47,3 +47,7 @@ trait PhaseStorage {
     }
   }
 }
+
+object PhaseStorage {
+  val lastPhase: Int = 2
+}

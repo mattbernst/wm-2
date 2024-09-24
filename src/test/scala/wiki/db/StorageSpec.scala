@@ -136,8 +136,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
   private lazy val storage = {
     val db = new Storage(testDbName)
-    db.createTableDefinitions(1.to(Storage.lastPhase))
-    db.createIndexes(1.to(Storage.lastPhase))
+    db.createTableDefinitions(1.to(PhaseStorage.lastPhase))
+    db.createIndexes(1.to(PhaseStorage.lastPhase))
     db
   }
 
