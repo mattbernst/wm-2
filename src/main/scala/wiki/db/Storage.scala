@@ -12,7 +12,7 @@ import scala.collection.mutable
   *
   * @param fileName The name of the on-disk file containing the SQLite db
   */
-class Storage(fileName: String) extends Logging {
+class Storage(fileName: String) extends Logging with PhaseStorage {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
 
   /**

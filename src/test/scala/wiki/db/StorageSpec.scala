@@ -109,6 +109,26 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.readMarkup_Z(0) shouldBe None
   }
 
+  behavior of "PhaseStorage"
+
+  it should "get None for phase state of unknown phase" in {
+    storage.getPhaseState(-1) shouldBe None
+  }
+
+  it should "get CREATED for phase state of created phase" in {
+    val id = randomInt()
+    storage.createPhase(id, s"test $id")
+    storage.getPhaseState(id) shouldBe Some(CREATED)
+  }
+
+  it should "update CREATED phase to COMPLETED" in {
+    val id = randomInt()
+    storage.createPhase(id, s"test $id")
+    storage.getPhaseState(id) shouldBe Some(CREATED)
+    storage.completePhase(id)
+    storage.getPhaseState(id) shouldBe Some(COMPLETED)
+  }
+
   override def afterAll(): Unit = {
     super.afterAll()
     FileHelpers.deleteFileIfExists(testDbName)

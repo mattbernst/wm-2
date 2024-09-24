@@ -13,6 +13,17 @@ import scala.io.{BufferedSource, Source}
 object WikipediaExtractor extends Logging {
 
   def main(args: Array[String]): Unit = {
+    phase02(args)
+  }
+
+  /**
+    * Extract a Wikipedia dump into structured data (first pass). This phase
+    * gets page descriptors, page wikitext, links, excerpts, and pages rendered
+    * as plain text.
+    *
+    * @param args Command line arguments: the path to a Wikipedia dump file
+    */
+  private def phase02(args: Array[String]): Unit = {
     val usage = "Usage: WikipediaExtractor <path-to-xml-dump>"
     if (args.length == 0) {
       System.err.println(usage)
@@ -35,7 +46,11 @@ object WikipediaExtractor extends Logging {
       language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    dbStorage.createTableDefinitions(1)
+    dbStorage.createTableDefinitions(2)
+    logger.info(s"Starting to create indexes on db")
+    dbStorage.createIndexes(2)
+    logger.info(s"Finished creating indexes on db")
+
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
     splitter.extractPages()
@@ -47,7 +62,6 @@ object WikipediaExtractor extends Logging {
     logger.info(s"Wrote ${writer.pageCount} pages to database")
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
     val danglingRedirects = storeMappedTitles(fragmentProcessor.getUnparseable())
-    createIndexes()
     markDanglingRedirects(danglingRedirects)
   }
 
@@ -136,17 +150,6 @@ object WikipediaExtractor extends Logging {
     dbStorage.writeTitleToPage(fpm)
     logger.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
     tf.danglingRedirects
-  }
-
-  /**
-    * This adds indexes to the db tables. It runs after all bulk inserts because
-    * inserts are slower if the indexes already exist.
-    */
-  private def createIndexes(): Unit = {
-    // TODO: move this into phase01
-    logger.info(s"Starting to create indexes on db")
-    dbStorage.createIndexes(1)
-    logger.info(s"Finished creating indexes on db")
   }
 
   /**

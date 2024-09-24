@@ -24,12 +24,11 @@ import scala.collection.mutable.ListBuffer
   */
 class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
 
-  def enableSqliteFastPragmas(): Unit = {
+  def enableSqlitePragmas(): Unit = {
     val pragmas = Seq(
       "pragma cache_size=1048576;",
-      "pragma threads=4;",
-      "pragma journal_mode=off;",
-      "pragma synchronous=off;"
+      "pragma journal_mode=wal;",
+      "pragma synchronous=normal;"
     )
 
     pragmas.foreach { pragma =>
@@ -53,7 +52,7 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
   }
 
   val writerThread: Thread = {
-    enableSqliteFastPragmas()
+    enableSqlitePragmas()
     val thread = new Thread(() => {
       while (!finished) {
         write()
