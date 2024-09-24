@@ -35,6 +35,18 @@ trait PhaseStorage {
     }
   }
 
+  /**
+    * Delete the phase entry so it can be written again.
+    *
+    * @param id Numeric ID for the phase
+    */
+  def deletePhase(id: Int): Unit = {
+    DB.autoCommit { implicit session =>
+      sql"""DELETE FROM phase WHERE id=$id"""
+        .update()
+    }
+  }
+
   def getPhaseState(id: Int): Option[PHASE_STATE] = {
     val name = DB.autoCommit { implicit session =>
       sql"""SELECT state FROM phase WHERE id=$id"""

@@ -2,7 +2,7 @@ package wiki.extractor
 
 import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
-import wiki.db.{PageWriter, Storage}
+import wiki.db.{COMPLETED, CREATED, PageWriter, Storage}
 import wiki.extractor.types.{DANGLING_REDIRECT, Redirection, SiteInfo}
 import wiki.extractor.util.{Config, Logging}
 
@@ -13,7 +13,26 @@ import scala.io.{BufferedSource, Source}
 object WikipediaExtractor extends Logging {
 
   def main(args: Array[String]): Unit = {
-    phase02(args)
+    phase01()
+    dbStorage.getPhaseState(2) match {
+      case Some(COMPLETED) =>
+        logger.info("Already completed phase 2")
+      case Some(CREATED) =>
+        // Originally planned to add logic for partial completion, interruption,
+        // and resumption here. But supporting resumption requires a lot of
+        // code complexity or adding indexes before performing inserts, which
+        // is noticeably slower.
+        logger.warn("Phase 2 incomplete -- redoing")
+        dbStorage.clearPhase02()
+        phase02(args)
+      case None =>
+        phase02(args)
+    }
+  }
+
+  // Initialize system tables before running any extraction
+  private def phase01(): Unit = {
+    dbStorage.createTableDefinitions(1)
   }
 
   /**
@@ -24,6 +43,7 @@ object WikipediaExtractor extends Logging {
     * @param args Command line arguments: the path to a Wikipedia dump file
     */
   private def phase02(args: Array[String]): Unit = {
+    val phase = 2
     val usage = "Usage: WikipediaExtractor <path-to-xml-dump>"
     if (args.length == 0) {
       System.err.println(usage)
@@ -46,10 +66,9 @@ object WikipediaExtractor extends Logging {
       language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    dbStorage.createTableDefinitions(2)
-    logger.info(s"Starting to create indexes on db")
-    dbStorage.createIndexes(2)
-    logger.info(s"Finished creating indexes on db")
+    dbStorage.deletePhase(2)
+    dbStorage.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
+    dbStorage.createTableDefinitions(phase)
 
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
@@ -63,6 +82,10 @@ object WikipediaExtractor extends Logging {
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
     val danglingRedirects = storeMappedTitles(fragmentProcessor.getUnparseable())
     markDanglingRedirects(danglingRedirects)
+    logger.info(s"Starting to create indexes on db")
+    dbStorage.createIndexes(phase)
+    logger.info(s"Finished creating indexes on db")
+    dbStorage.completePhase(phase)
   }
 
   /**

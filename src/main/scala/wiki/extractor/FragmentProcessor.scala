@@ -94,8 +94,8 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
             }
             count += 1
             if (count % progressDotInterval == 0) {
-              System.err.print(".")
-              System.err.flush()
+              System.out.print(".")
+              System.out.flush()
             }
           case _ =>
             completed = true

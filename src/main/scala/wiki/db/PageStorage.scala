@@ -17,6 +17,28 @@ import scala.collection.mutable
 trait PageStorage {
 
   /**
+    * Clear out all stored data from phase 2. This is used if the
+    * extraction stage needs to run again (e.g. it was interrupted before
+    * completion.)
+    */
+  def clearPhase02(): Unit = {
+    DB.autoCommit { implicit session =>
+      sql"""DELETE FROM last_transclusion_count"""
+        .update()
+      sql"""DELETE FROM page"""
+        .update()
+      sql"""DELETE FROM namespace"""
+        .update()
+      sql"""DELETE FROM page_markup"""
+        .update()
+      sql"""DELETE FROM page_markup_z"""
+        .update()
+      sql"""DELETE FROM title_to_page"""
+        .update()
+    }
+  }
+
+  /**
     * Write dump pages to the page table. The page table contains all the DumpPage
     * data except the raw markup.
     *
