@@ -44,8 +44,14 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
     *
     * @param page A structured DumpPage
     */
-  def addPage(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z]): Unit =
+  def addPage(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z]): Unit = {
     queue.put(QueueEntry(page = page, markupU = markupU, markupZ = markupZ))
+    pageCount += 1
+    if (pageCount % progressDotInterval == 0) {
+      System.out.print(".")
+      System.out.flush()
+    }
+  }
 
   def stopWriting(): Unit = this.synchronized {
     availableForWriting = false
@@ -102,7 +108,6 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
       if (markupsZ.nonEmpty) {
         db.writeMarkups_Z(markupsZ)
       }
-      pageCount += unwritten.length
     } else {
       this.synchronized {
         if (!availableForWriting) {
@@ -114,6 +119,7 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
 
   private case class QueueEntry(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z])
 
+  private val progressDotInterval          = 10000
   var pageCount: Int                       = 0
   private var availableForWriting: Boolean = true
   private var finished: Boolean            = false

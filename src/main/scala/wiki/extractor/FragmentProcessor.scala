@@ -77,9 +77,7 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     writer: PageWriter,
     compressMarkup: Boolean
   ): FragmentWorker = {
-    val progressDotInterval = 10000
     val thread = new Thread(() => {
-      var count     = 0
       var completed = false
       while (!completed) {
         source() match {
@@ -91,11 +89,6 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
             } else {
               val uncompressed = PageMarkup.serializeUncompressed(result.markup)
               writer.addPage(page = result.page, markupU = Some(uncompressed), markupZ = None)
-            }
-            count += 1
-            if (count % progressDotInterval == 0) {
-              System.out.print(".")
-              System.out.flush()
             }
           case _ =>
             completed = true
