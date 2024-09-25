@@ -17,11 +17,11 @@ import scala.collection.mutable
 trait PageStorage {
 
   /**
-    * Clear out all stored data from phase 2. This is used if the
+    * Clear out all stored data from phase 1. This is used if the
     * extraction stage needs to run again (e.g. it was interrupted before
     * completion.)
     */
-  def clearPhase02(): Unit = {
+  def clearPhase01(): Unit = {
     DB.autoCommit { implicit session =>
       sql"""DELETE FROM last_transclusion_count"""
         .update()

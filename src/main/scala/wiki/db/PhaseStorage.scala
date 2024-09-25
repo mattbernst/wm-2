@@ -43,7 +43,7 @@ trait PhaseStorage {
   def deletePhase(id: Int): Unit = {
     DB.autoCommit { implicit session =>
       sql"""DELETE FROM phase WHERE id=$id"""
-        .update()
+        .update(): Unit
     }
   }
 
@@ -61,5 +61,5 @@ trait PhaseStorage {
 }
 
 object PhaseStorage {
-  val lastPhase: Int = 2
+  val lastPhase: Int = 1
 }
