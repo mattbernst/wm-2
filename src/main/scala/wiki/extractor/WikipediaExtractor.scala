@@ -70,6 +70,7 @@ object WikipediaExtractor extends Logging {
     dbStorage.deletePhase(2)
     dbStorage.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
     dbStorage.createTableDefinitions(phase)
+    dbStorage.createIndexes(phase)
 
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
@@ -83,9 +84,6 @@ object WikipediaExtractor extends Logging {
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
     val danglingRedirects = storeMappedTitles(fragmentProcessor.getUnparseable())
     markDanglingRedirects(danglingRedirects)
-    logger.info(s"Starting to create indexes on db")
-    dbStorage.createIndexes(phase)
-    logger.info(s"Finished creating indexes on db")
     dbStorage.completePhase(phase)
   }
 

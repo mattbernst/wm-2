@@ -44,11 +44,8 @@ object Config extends Logging {
       val n = sys.env
         .getOrElse(
           envVar, {
-            // By default, use all availableProcessors - 2.
-            // The -2 is to leave one reserved for reading input and writing to DB.
-            // The minimum is 1.
-            val available = Runtime.getRuntime.availableProcessors()
-            val default   = Math.max(available - 2, 1).toString
+            // By default, use all available processors.
+            val default = Runtime.getRuntime.availableProcessors().toString
             logger.info(s"No $envVar set for worker thread count -- defaulting to $default")
             default
           }
