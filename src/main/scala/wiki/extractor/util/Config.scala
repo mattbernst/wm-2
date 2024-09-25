@@ -41,13 +41,21 @@ object Config extends Logging {
 
     val workerThreads: Int = {
       val envVar = "N_WORKERS"
-      sys.env
-        .getOrElse(envVar, {
-          val default = "6"
-          logger.info(s"No $envVar set for worker thread count -- defaulting to $default")
-          default
-        })
+      val n = sys.env
+        .getOrElse(
+          envVar, {
+            // By default, use all availableProcessors - 2.
+            // The -2 is to leave one reserved for reading input and writing to DB.
+            // The minimum is 1.
+            val available = Runtime.getRuntime.availableProcessors()
+            val default   = Math.max(available - 2, 1).toString
+            logger.info(s"No $envVar set for worker thread count -- defaulting to $default")
+            default
+          }
+        )
         .toInt
+      require(n > 0, s"$envVar must be at least 1 (given: $n)")
+      n
     }
 
     val compressMarkup: Boolean = {
