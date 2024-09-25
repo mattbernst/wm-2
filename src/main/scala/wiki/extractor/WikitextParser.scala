@@ -4,7 +4,7 @@ import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
 import wiki.extractor.language.SnippetExtractor
 import wiki.extractor.types.{Link, ParseResult}
-import wiki.extractor.util.Logging
+import wiki.extractor.util.{DBLogging, Logging}
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.ClassTag
@@ -33,18 +33,12 @@ class WikitextParser(snippetExtractor: SnippetExtractor) extends Logging {
       case Success(nodes) =>
         Some(processNodes(nodes))
       case Failure(ex) =>
-        logger.warn(s"""Could not parse "$title" wikitext markup: ${ex.getClass.getSimpleName}""")
+        DBLogging.warn(s"""Could not parse "$title" wikitext markup: ${ex.getClass.getSimpleName}""")
         None
     }
   }
 
   private[extractor] def parse(title: String, markup: String): Array[WtNode] = {
-    val parser = new NonExpandingParser(
-      true,  // warningsEnabled
-      false, // gather round trip data
-      false  // autoCorrect
-    )
-
     parser.parseArticle(markup, title).iterator().asScala.toArray
   }
 
@@ -103,4 +97,10 @@ class WikitextParser(snippetExtractor: SnippetExtractor) extends Logging {
       .replaceAll("(?m)(\n\\s*){3,}", "\n\n") // Replace 3+ lines containing only whitespace with 2 newlines
       .trim                                   // Remove leading and trailing whitespace from the entire string
   }
+
+  private val parser = new NonExpandingParser(
+    true,  // warningsEnabled
+    false, // gather round trip data
+    false  // autoCorrect
+  )
 }

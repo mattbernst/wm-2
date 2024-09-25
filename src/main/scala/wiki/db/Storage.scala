@@ -14,7 +14,8 @@ class Storage(fileName: String)
     with PhaseStorage
     with PageStorage
     with TransclusionStorage
-    with NamespaceStorage {
+    with NamespaceStorage
+    with LogStorage {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
 
   // Create tables for multiple phases at once

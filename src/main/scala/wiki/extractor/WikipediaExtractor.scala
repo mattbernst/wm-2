@@ -4,7 +4,7 @@ import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
 import wiki.db.{COMPLETED, CREATED, PageWriter, Storage}
 import wiki.extractor.types.{DANGLING_REDIRECT, Redirection, SiteInfo}
-import wiki.extractor.util.{Config, Logging}
+import wiki.extractor.util.{Config, DBLogging, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
@@ -13,6 +13,7 @@ import scala.io.{BufferedSource, Source}
 object WikipediaExtractor extends Logging {
 
   def main(args: Array[String]): Unit = {
+    DBLogging.initDb(dbStorage)
     phase00()
     dbStorage.getPhaseState(1) match {
       case Some(COMPLETED) =>

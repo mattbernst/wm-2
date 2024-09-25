@@ -1,6 +1,7 @@
 package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
+import org.slf4j.event.Level
 import wiki.extractor.language.EnglishSnippetExtractor
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, UnitSpec}
@@ -127,6 +128,26 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.getPhaseState(id) shouldBe Some(CREATED)
     storage.completePhase(id)
     storage.getPhaseState(id) shouldBe Some(COMPLETED)
+  }
+
+  behavior of "LogStorage"
+
+  it should "read empty seq for unknown timestamp" in {
+    storage.readLogs(randomLong()) shouldBe Seq()
+  }
+
+  it should "write and read logs" in {
+    val ts = randomLong()
+    storage.writeLog(Level.INFO, "Info test", ts)
+    storage.writeLog(Level.WARN, "Warn test", ts)
+
+    val expected = Seq(
+      StoredLog(level = Level.INFO, message = "Info test", timestamp = ts),
+      StoredLog(level = Level.WARN, message = "Warn test", timestamp = ts)
+    )
+
+    val result = storage.readLogs(ts)
+    result shouldBe expected
   }
 
   override def afterAll(): Unit = {
