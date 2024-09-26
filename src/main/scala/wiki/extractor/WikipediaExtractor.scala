@@ -13,9 +13,9 @@ import scala.io.{BufferedSource, Source}
 object WikipediaExtractor extends Logging {
 
   def main(args: Array[String]): Unit = {
-    DBLogging.initDb(dbStorage)
+    DBLogging.initDb(db)
     phase00()
-    dbStorage.getPhaseState(1) match {
+    db.phase.getPhaseState(1) match {
       case Some(COMPLETED) =>
         logger.info("Already completed phase 1")
       case Some(CREATED) =>
@@ -24,12 +24,12 @@ object WikipediaExtractor extends Logging {
         // code complexity or adding indexes before performing inserts, which
         // is noticeably slower.
         logger.warn("Phase 1 incomplete -- redoing")
-        dbStorage.clearPhase01()
+        db.page.clearPhase01()
         phase01(args)
       case None =>
         phase01(args)
     }
-    dbStorage.getPhaseState(2) match {
+    db.phase.getPhaseState(2) match {
       case Some(COMPLETED) =>
         logger.info("Already completed phase 2")
       case Some(CREATED) =>
@@ -42,7 +42,7 @@ object WikipediaExtractor extends Logging {
 
   // Initialize system tables before running any extraction
   private def phase00(): Unit = {
-    dbStorage.createTableDefinitions(0)
+    db.createTableDefinitions(0)
   }
 
   /**
@@ -76,10 +76,10 @@ object WikipediaExtractor extends Logging {
       language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    dbStorage.deletePhase(phase)
-    dbStorage.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
-    dbStorage.createTableDefinitions(phase)
-    dbStorage.createIndexes(phase)
+    db.phase.deletePhase(phase)
+    db.phase.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
+    db.createTableDefinitions(phase)
+    db.createIndexes(phase)
 
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 
@@ -91,7 +91,7 @@ object WikipediaExtractor extends Logging {
     writer.writerThread.join()
     logger.info(s"Wrote ${writer.pageCount} pages to database")
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
-    dbStorage.completePhase(phase)
+    db.phase.completePhase(phase)
   }
 
   /**
@@ -101,13 +101,13 @@ object WikipediaExtractor extends Logging {
   private def phase02(): Unit = {
     val phase = 2
     // TODO: recover if interrupted (remove rows before redo)
-    dbStorage.deletePhase(phase)
-    dbStorage.createPhase(phase, s"Building title_to_page map")
-    dbStorage.createTableDefinitions(phase)
+    db.phase.deletePhase(phase)
+    db.phase.createPhase(phase, s"Building title_to_page map")
+    db.createTableDefinitions(phase)
     val danglingRedirects = storeMappedTitles()
     markDanglingRedirects(danglingRedirects)
-    dbStorage.createIndexes(phase)
-    dbStorage.completePhase(phase)
+    db.createIndexes(phase)
+    db.phase.completePhase(phase)
   }
 
   /**
@@ -170,7 +170,7 @@ object WikipediaExtractor extends Logging {
       case (_, n) => n > average
     }
     logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
-    dbStorage.writeLastTransclusionCounts(aboveAverage)
+    db.transclusion.writeLastTransclusionCounts(aboveAverage)
     logger.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
   }
 
@@ -182,14 +182,14 @@ object WikipediaExtractor extends Logging {
     */
   private def storeMappedTitles(): Seq[Redirection] = {
     logger.info(s"Getting TitleFinder data")
-    val redirects = dbStorage.readRedirects()
+    val redirects = db.page.readRedirects()
     logger.info(s"Loaded ${redirects.length} redirects")
-    val titlePageMap = dbStorage.readTitlePageMap()
+    val titlePageMap = db.page.readTitlePageMap()
     logger.info(s"Loaded ${titlePageMap.size} title-to-ID map entries")
     val tf = new TitleFinder(titlePageMap, redirects)
     logger.info(s"Started writing title to page ID mappings to db")
     val fpm = tf.getFlattenedPageMapping()
-    dbStorage.writeTitleToPage(fpm)
+    db.page.writeTitleToPage(fpm)
     logger.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
     tf.danglingRedirects
   }
@@ -202,15 +202,15 @@ object WikipediaExtractor extends Logging {
     * @param input Dangling redirect pages that need to be marked
     */
   private def markDanglingRedirects(input: Seq[Redirection]): Unit = {
-    input.foreach(r => dbStorage.updatePageType(r.pageId, DANGLING_REDIRECT))
+    input.foreach(r => db.page.updatePageType(r.pageId, DANGLING_REDIRECT))
     logger.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
   }
 
-  private val dbStorage: Storage =
+  private val db: Storage =
     new Storage(fileName = Config.props.language.code + "_wiki.db")
 
   private val writer: PageWriter =
-    new PageWriter(dbStorage)
+    new PageWriter(db)
 
   private def assignWorkers(
     n: Int,

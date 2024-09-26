@@ -1,6 +1,6 @@
 package wiki.db
 
-import wiki.extractor.types.{DumpPage, Namespace, PageMarkup_U, PageMarkup_Z, UNPARSEABLE}
+import wiki.extractor.types.*
 import wiki.extractor.util.Logging
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
@@ -72,7 +72,7 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
 
   // Mark page as UNPARSEABLE when Sweble fails to parse wikitext
   def markUnparseable(pageId: Int): Unit = {
-    db.updatePageType(pageId, UNPARSEABLE)
+    db.page.updatePageType(pageId, UNPARSEABLE)
   }
 
   /**
@@ -85,7 +85,7 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
     val unwritten: Seq[QueueEntry] = {
       var emptied = false
       val buffer  = new ListBuffer[QueueEntry]
-      while (!emptied && buffer.size < db.batchInsertSize) {
+      while (!emptied && buffer.size < db.page.batchInsertSize) {
         Option(queue.poll(1, TimeUnit.SECONDS)) match {
           case Some(entry) => buffer.append(entry)
           case None        => emptied = true
@@ -99,19 +99,19 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
     if (pages.nonEmpty) {
       // Write any unknown namespaces as they are encountered
       unwritten.map(_.page).map(_.namespace).toSet.diff(seenNamespaces).foreach { namespace =>
-        db.writeNamespace(namespace)
+        db.namespace.write(namespace)
         seenNamespaces.add(namespace)
       }
 
       // Write page descriptors and markup
-      db.writeDumpPages(pages)
+      db.page.writeDumpPages(pages)
       val markups = unwritten.flatMap(_.markupU)
       if (markups.nonEmpty) {
-        db.writeMarkups(markups)
+        db.page.writeMarkups(markups)
       }
       val markupsZ = unwritten.flatMap(_.markupZ)
       if (markupsZ.nonEmpty) {
-        db.writeMarkups_Z(markupsZ)
+        db.page.writeMarkups_Z(markupsZ)
       }
     } else {
       this.synchronized {

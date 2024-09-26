@@ -9,13 +9,7 @@ import wiki.extractor.util.{FileHelpers, Logging}
   *
   * @param fileName The name of the on-disk file containing the SQLite db
   */
-class Storage(fileName: String)
-    extends Logging
-    with PhaseStorage
-    with PageStorage
-    with TransclusionStorage
-    with NamespaceStorage
-    with LogStorage {
+class Storage(fileName: String) extends Logging {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
 
   // Create tables for multiple phases at once
@@ -75,6 +69,12 @@ class Storage(fileName: String)
       Storage.execute(command)
     }
   }
+
+  val log: LogStorage.type = LogStorage
+  val namespace: NamespaceStorage.type = NamespaceStorage
+  val page: PageStorage.type = PageStorage
+  val phase: PhaseStorage.type = PhaseStorage
+  val transclusion: TransclusionStorage.type = TransclusionStorage
 }
 
 object Storage {

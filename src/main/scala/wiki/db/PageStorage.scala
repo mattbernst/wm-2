@@ -5,7 +5,7 @@ import wiki.extractor.types.*
 
 import scala.collection.mutable
 
-trait PageStorage {
+object PageStorage {
 
   /**
     * Clear out all stored data from phase 1. This is used if the

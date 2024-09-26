@@ -2,7 +2,7 @@ package wiki.db
 
 import scalikejdbc.*
 
-trait TransclusionStorage {
+object TransclusionStorage {
 
   /**
     * These counts give the number of times each named transclusion appears as

@@ -3,7 +3,7 @@ package wiki.db
 import scalikejdbc.*
 import wiki.extractor.types.{CASE_SENSITIVE, Casing, FIRST_LETTER, Namespace}
 
-trait NamespaceStorage {
+object NamespaceStorage {
 
   /**
     * Write a namespace to the namespace table. This table provides a permanent
@@ -12,7 +12,7 @@ trait NamespaceStorage {
     *
     * @param input A Namespace to persist
     */
-  def writeNamespace(input: Namespace): Unit = {
+  def write(input: Namespace): Unit = {
     DB.autoCommit { implicit session =>
       sql"""INSERT INTO namespace
            (id, casing, name) VALUES (${input.id}, ${input.casing}, ${input.name})""".update(): Unit
@@ -28,7 +28,7 @@ trait NamespaceStorage {
     * @param id The numeric ID of the namespace to read
     * @return   A namespace, if found in the table
     */
-  def readNamespace(id: Int): Option[Namespace] = {
+  def read(id: Int): Option[Namespace] = {
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM namespace WHERE id=$id""".map { rs =>
         val casing: Casing = rs.string("casing") match {

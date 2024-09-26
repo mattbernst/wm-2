@@ -32,7 +32,7 @@ object DBLogging extends Logging {
 
   private def write(level: Level, message: String): Unit = {
     val now = System.currentTimeMillis()
-    db.foreach(_.writeLog(level = level, message = message, timestamp = now))
+    db.foreach(_.log.write(level = level, message = message, timestamp = now))
   }
 
   private var db: Option[Storage] = None

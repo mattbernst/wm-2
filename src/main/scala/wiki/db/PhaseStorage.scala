@@ -6,7 +6,7 @@ sealed trait PHASE_STATE
 case object CREATED   extends PHASE_STATE
 case object COMPLETED extends PHASE_STATE
 
-trait PhaseStorage {
+object PhaseStorage {
 
   /**
     * Create a new phase entry in the STARTED state.
@@ -58,8 +58,6 @@ trait PhaseStorage {
       case "COMPLETED" => COMPLETED
     }
   }
-}
 
-object PhaseStorage {
-  val lastPhase: Int = 1
+  val lastPhase: Int = 2
 }

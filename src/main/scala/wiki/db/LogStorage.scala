@@ -4,7 +4,7 @@ import scalikejdbc.*
 
 case class StoredLog(level: Level, message: String, timestamp: Long)
 
-trait LogStorage {
+object LogStorage {
 
   /**
     * Write a message to the log table.
@@ -13,7 +13,7 @@ trait LogStorage {
     * @param message   The actual message
     * @param timestamp When the message was originally generated
     */
-  def writeLog(level: Level, message: String, timestamp: Long = System.currentTimeMillis()): Unit = {
+  def write(level: Level, message: String, timestamp: Long = System.currentTimeMillis()): Unit = {
     DB.autoCommit { implicit session =>
       sql"""INSERT INTO log VALUES ($level, $timestamp, $message)"""
         .update(): Unit
@@ -26,7 +26,7 @@ trait LogStorage {
     * @param timestamp The numeric timestamp of logs to retrieve
     * @return All matching logs
     */
-  def readLogs(timestamp: Long): Seq[StoredLog] = {
+  def readAll(timestamp: Long): Seq[StoredLog] = {
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM log WHERE ts=$timestamp""".map { rs =>
         val level = Level.valueOf(rs.string("log_level"))

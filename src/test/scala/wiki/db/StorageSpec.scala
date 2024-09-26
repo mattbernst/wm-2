@@ -10,9 +10,9 @@ import wiki.extractor.{TitleFinder, WikitextParser}
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   "namespace table" should "write and read back Namespace records" in {
     val ns = Namespace(14, FIRST_LETTER, "Category")
-    storage.readNamespace(ns.id) shouldBe None
-    storage.writeNamespace(ns)
-    storage.readNamespace(ns.id) shouldBe Some(ns)
+    storage.namespace.read(ns.id) shouldBe None
+    storage.namespace.write(ns)
+    storage.namespace.read(ns.id) shouldBe Some(ns)
   }
 
   "page table redirect logic" should "write page records and resolve redirects" in {
@@ -69,9 +69,9 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       )
     )
 
-    storage.writeDumpPages(pages)
-    val tf = new TitleFinder(storage.readTitlePageMap(), storage.readRedirects())
-    storage.writeTitleToPage(tf.getFlattenedPageMapping())
+    storage.page.writeDumpPages(pages)
+    val tf = new TitleFinder(storage.page.readTitlePageMap(), storage.page.readRedirects())
+    storage.page.writeTitleToPage(tf.getFlattenedPageMapping())
     tf.getId("This title does not exist") shouldBe None
     tf.getId("AsciiArt") shouldBe tf.getId("ASCII art")
     tf.getId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.getId(
@@ -90,9 +90,9 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val parsed = parser.parseMarkup(title, markup)
     val native = PageMarkup(randomInt(), Some(markup), parsed)
     val entry  = PageMarkup.serializeUncompressed(native)
-    storage.writeMarkups(Seq(entry))
-    storage.readMarkup(native.pageId) shouldBe Some(native)
-    storage.readMarkup(0) shouldBe None
+    storage.page.writeMarkups(Seq(entry))
+    storage.page.readMarkup(native.pageId) shouldBe Some(native)
+    storage.page.readMarkup(0) shouldBe None
   }
 
   "page_markup_z table" should "write and read back markup" in {
@@ -105,48 +105,48 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val parsed = parser.parseMarkup(title, markup)
     val native = PageMarkup(randomInt(), Some(markup), parsed)
     val entry  = PageMarkup.serializeCompressed(native)
-    storage.writeMarkups_Z(Seq(entry))
-    storage.readMarkup_Z(native.pageId) shouldBe Some(native)
-    storage.readMarkup_Z(0) shouldBe None
+    storage.page.writeMarkups_Z(Seq(entry))
+    storage.page.readMarkup_Z(native.pageId) shouldBe Some(native)
+    storage.page.readMarkup_Z(0) shouldBe None
   }
 
   behavior of "PhaseStorage"
 
   it should "get None for phase state of unknown phase" in {
-    storage.getPhaseState(-1) shouldBe None
+    storage.phase.getPhaseState(-1) shouldBe None
   }
 
   it should "get CREATED for phase state of created phase" in {
     val id = randomInt()
-    storage.createPhase(id, s"test $id")
-    storage.getPhaseState(id) shouldBe Some(CREATED)
+    storage.phase.createPhase(id, s"test $id")
+    storage.phase.getPhaseState(id) shouldBe Some(CREATED)
   }
 
   it should "update CREATED phase to COMPLETED" in {
     val id = randomInt()
-    storage.createPhase(id, s"test $id")
-    storage.getPhaseState(id) shouldBe Some(CREATED)
-    storage.completePhase(id)
-    storage.getPhaseState(id) shouldBe Some(COMPLETED)
+    storage.phase.createPhase(id, s"test $id")
+    storage.phase.getPhaseState(id) shouldBe Some(CREATED)
+    storage.phase.completePhase(id)
+    storage.phase.getPhaseState(id) shouldBe Some(COMPLETED)
   }
 
   behavior of "LogStorage"
 
   it should "read empty seq for unknown timestamp" in {
-    storage.readLogs(randomLong()) shouldBe Seq()
+    storage.log.readAll(randomLong()) shouldBe Seq()
   }
 
   it should "write and read logs" in {
     val ts = randomLong()
-    storage.writeLog(Level.INFO, "Info test", ts)
-    storage.writeLog(Level.WARN, "Warn test", ts)
+    storage.log.write(Level.INFO, "Info test", ts)
+    storage.log.write(Level.WARN, "Warn test", ts)
 
     val expected = Seq(
       StoredLog(level = Level.INFO, message = "Info test", timestamp = ts),
       StoredLog(level = Level.WARN, message = "Warn test", timestamp = ts)
     )
 
-    val result = storage.readLogs(ts)
+    val result = storage.log.readAll(ts)
     result shouldBe expected
   }
 
