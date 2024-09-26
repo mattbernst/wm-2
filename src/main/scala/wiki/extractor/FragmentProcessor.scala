@@ -3,7 +3,7 @@ package wiki.extractor
 import wiki.db.PageWriter
 import wiki.extractor.language.{EnglishSnippetExtractor, SnippetExtractor}
 import wiki.extractor.types.*
-import wiki.extractor.util.Logging
+import wiki.extractor.util.{Logging, Progress}
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -15,7 +15,8 @@ import scala.xml.XML
 case class FragmentWorker(thread: Thread)
 case class StructuredPage(page: DumpPage, markup: PageMarkup)
 
-class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging {
+class FragmentProcessor(siteInfo: SiteInfo, language: Language, completedPages: mutable.Set[Int] = mutable.Set())
+    extends Logging {
 
   /**
     * Convert a single Wikipedia page of XML to structured output for further
@@ -26,46 +27,50 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     * and https://www.mediawiki.org/xml/export-0.11.xsd
     *
     * @param pageXML A string of XML as extracted by WikipediaPageSplitter
-    * @param workerId The unique ID for a worker running in a multithreaded context
-    * @return        A StructuredPage with data about the page and its markup
+    * @return        A StructuredPage with data about the page and its markup,
+    *                or None if the page was already completed
     */
-  def extract(pageXML: String): StructuredPage = {
-    val xml   = XML.loadString(pageXML)
-    val title = (xml \ "title").text
-    // e.g. <redirect title="History of Afghanistan" />
-    val redirect    = (xml \ "redirect" \ "@title").headOption.map(_.text)
-    val namespaceId = (xml \ "ns").text.toInt
-    val namespace   = siteInfo.namespaceById(namespaceId)
-    val id          = (xml \ "id").text.toInt
-    assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
-    assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
-    val revision = xml \ "revision"
-
-    val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-    val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
-    val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
-
-    val lastEdited = (revision \ "timestamp").headOption
-      .map(_.text)
-      .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
-      .map(_.toInstant.toEpochMilli)
-
-    val pageType = if (redirect.nonEmpty) {
-      REDIRECT
+  def extract(pageXML: String): Option[StructuredPage] = {
+    val xml = XML.loadString(pageXML)
+    val id  = (xml \ "id").text.toInt
+    if (completedPages.contains(id)) {
+      None
     } else {
-      inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
+      val title = (xml \ "title").text
+      // e.g. <redirect title="History of Afghanistan" />
+      val redirect    = (xml \ "redirect" \ "@title").headOption.map(_.text)
+      val namespaceId = (xml \ "ns").text.toInt
+      val namespace   = siteInfo.namespaceById(namespaceId)
+      assert(id > 0, s"Expected id > 0. Input was:\n $pageXML")
+      assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
+      val revision = xml \ "revision"
+
+      val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+      val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
+      val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
+
+      val lastEdited = (revision \ "timestamp").headOption
+        .map(_.text)
+        .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
+        .map(_.toInstant.toEpochMilli)
+
+      val pageType = if (redirect.nonEmpty) {
+        REDIRECT
+      } else {
+        inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
+      }
+
+      val dp = DumpPage(
+        id = id,
+        namespace = namespace,
+        pageType = pageType,
+        title = title,
+        redirectTarget = redirect,
+        lastEdited = lastEdited
+      )
+
+      Some(StructuredPage(page = dp, markup = markup))
     }
-
-    val dp = DumpPage(
-      id = id,
-      namespace = namespace,
-      pageType = pageType,
-      title = title,
-      redirectTarget = redirect,
-      lastEdited = lastEdited
-    )
-
-    StructuredPage(page = dp, markup = markup)
   }
 
   def fragmentWorker(
@@ -75,20 +80,26 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     compressMarkup: Boolean
   ): FragmentWorker = {
     val thread = new Thread(() => {
-      var completed = false
+      var skippedPages = 0
+      var completed    = false
       while (!completed) {
         source() match {
           case Some(article) if article.trim.nonEmpty =>
-            val result = extract(article)
-            if (result.markup.wikitext.nonEmpty && result.markup.parseResult.isEmpty) {
-              writer.markUnparseable(result.page.id)
-            }
-            if (compressMarkup) {
-              val compressed = PageMarkup.serializeCompressed(result.markup)
-              writer.addPage(page = result.page, markupU = None, markupZ = Some(compressed))
-            } else {
-              val uncompressed = PageMarkup.serializeUncompressed(result.markup)
-              writer.addPage(page = result.page, markupU = Some(uncompressed), markupZ = None)
+            extract(article) match {
+              case Some(result) =>
+                if (result.markup.wikitext.nonEmpty && result.markup.parseResult.isEmpty) {
+                  writer.markUnparseable(result.page.id)
+                }
+                if (compressMarkup) {
+                  val compressed = PageMarkup.serializeCompressed(result.markup)
+                  writer.addPage(page = result.page, markupU = None, markupZ = Some(compressed))
+                } else {
+                  val uncompressed = PageMarkup.serializeUncompressed(result.markup)
+                  writer.addPage(page = result.page, markupU = Some(uncompressed), markupZ = None)
+                }
+              case None =>
+                skippedPages += 1
+                Progress.tick(skippedPages, ".")
             }
           case _ =>
             completed = true

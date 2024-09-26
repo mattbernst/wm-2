@@ -7,7 +7,7 @@ class FragmentProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
   it should "extract standard page fields from a basic article" in {
-    val page = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/animalia.xml")).page
+    val page = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/animalia.xml")).get.page
     page.id shouldBe 332
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
@@ -16,7 +16,8 @@ class FragmentProcessorSpec extends UnitSpec {
   }
 
   it should "detect a redirect page" in {
-    val page = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).page
+    val page =
+      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get.page
     page.id shouldBe 10
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
@@ -33,7 +34,7 @@ class FragmentProcessorSpec extends UnitSpec {
       redirectTarget = None,
       lastEdited = Some(1219519229000L)
     )
-    val result = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/missing-text.xml")).page
+    val result = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/missing-text.xml")).get.page
     result shouldBe expected
   }
 
@@ -59,7 +60,7 @@ class FragmentProcessorSpec extends UnitSpec {
 
   it should "get transclusions (2)" in {
     val markup =
-      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
+      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get.markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(markup.wikitext.get) shouldBe expected
@@ -67,7 +68,7 @@ class FragmentProcessorSpec extends UnitSpec {
 
   it should "get transclusions (3)" in {
     val markup =
-      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).markup
+      fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/accessiblecomputing.xml")).get.markup
     val expected = Seq("Redr|move|from CamelCase|up")
 
     fragmentProcessor.getTransclusions(markup.wikitext.get) shouldBe expected

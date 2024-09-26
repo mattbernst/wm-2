@@ -70,10 +70,10 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
-  val log: LogStorage.type = LogStorage
-  val namespace: NamespaceStorage.type = NamespaceStorage
-  val page: PageStorage.type = PageStorage
-  val phase: PhaseStorage.type = PhaseStorage
+  val log: LogStorage.type                   = LogStorage
+  val namespace: NamespaceStorage.type       = NamespaceStorage
+  val page: PageStorage.type                 = PageStorage
+  val phase: PhaseStorage.type               = PhaseStorage
   val transclusion: TransclusionStorage.type = TransclusionStorage
 }
 

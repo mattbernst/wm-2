@@ -14,7 +14,7 @@ object NamespaceStorage {
     */
   def write(input: Namespace): Unit = {
     DB.autoCommit { implicit session =>
-      sql"""INSERT INTO namespace
+      sql"""INSERT OR IGNORE INTO namespace
            (id, casing, name) VALUES (${input.id}, ${input.casing}, ${input.name})""".update(): Unit
     }
   }

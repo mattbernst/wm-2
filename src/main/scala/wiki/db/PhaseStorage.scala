@@ -17,7 +17,7 @@ object PhaseStorage {
   def createPhase(id: Int, description: String): Unit = {
     val startTs = System.currentTimeMillis()
     DB.autoCommit { implicit session =>
-      sql"""INSERT INTO phase VALUES ($id, $description, $startTs, null, $CREATED)"""
+      sql"""INSERT OR IGNORE INTO phase VALUES ($id, $description, $startTs, null, $CREATED)"""
         .update(): Unit
     }
   }

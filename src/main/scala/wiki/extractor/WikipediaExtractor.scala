@@ -19,12 +19,7 @@ object WikipediaExtractor extends Logging {
       case Some(COMPLETED) =>
         logger.info("Already completed phase 1")
       case Some(CREATED) =>
-        // Originally planned to add logic for partial completion, interruption,
-        // and resumption here. But supporting resumption requires a lot of
-        // code complexity or adding indexes before performing inserts, which
-        // is noticeably slower.
-        logger.warn("Phase 1 incomplete -- redoing")
-        db.page.clearPhase01()
+        logger.warn("Phase 1 incomplete -- resuming")
         phase01(args)
       case None =>
         phase01(args)
@@ -71,15 +66,19 @@ object WikipediaExtractor extends Logging {
     val head        = dumpStrings.take(128).toSeq
     val siteInfo    = SiteInfo(head.mkString("\n"))
 
-    val fragmentProcessor = new FragmentProcessor(
-      siteInfo = siteInfo,
-      language = Config.props.language
-    )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    db.phase.deletePhase(phase)
     db.phase.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
     db.createTableDefinitions(phase)
     db.createIndexes(phase)
+    val completedPages = db.page.getCompletedPageIds()
+    if (completedPages.nonEmpty) {
+      logger.info(s"Resuming page extraction with ${completedPages.size} pages already completed")
+    }
+    val fragmentProcessor = new FragmentProcessor(
+      siteInfo = siteInfo,
+      language = Config.props.language,
+      completedPages = completedPages
+    )
 
     val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
 

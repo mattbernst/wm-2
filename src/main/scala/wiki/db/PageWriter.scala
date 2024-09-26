@@ -1,7 +1,7 @@
 package wiki.db
 
 import wiki.extractor.types.*
-import wiki.extractor.util.Logging
+import wiki.extractor.util.{Logging, Progress}
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 import scala.collection.mutable
@@ -47,10 +47,7 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
   def addPage(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z]): Unit = {
     queue.put(QueueEntry(page = page, markupU = markupU, markupZ = markupZ))
     pageCount += 1
-    if (pageCount % progressDotInterval == 0) {
-      System.out.print(".")
-      System.out.flush()
-    }
+    Progress.tick(pageCount, "+")
   }
 
   def stopWriting(): Unit = this.synchronized {
@@ -124,7 +121,6 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
 
   private case class QueueEntry(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z])
 
-  private val progressDotInterval          = 10000
   var pageCount: Int                       = 0
   private var availableForWriting: Boolean = true
   private var finished: Boolean            = false

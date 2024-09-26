@@ -18,7 +18,7 @@ object TransclusionStorage {
         val params: Seq[Seq[SQLSyntax]] = batch.map(t => Seq(sqls"${t._1}", sqls"${t._2}"))
         val cols: SQLSyntax             = sqls"""name, n"""
         val values: SQLSyntax           = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO last_transclusion_count ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO last_transclusion_count ($cols) VALUES $values""".update()
       }
     }
   }

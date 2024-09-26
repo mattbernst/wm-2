@@ -8,28 +8,6 @@ import scala.collection.mutable
 object PageStorage {
 
   /**
-    * Clear out all stored data from phase 1. This is used if the
-    * extraction stage needs to run again (e.g. it was interrupted before
-    * completion.)
-    */
-  def clearPhase01(): Unit = {
-    DB.autoCommit { implicit session =>
-      sql"""DELETE FROM last_transclusion_count"""
-        .update()
-      sql"""DELETE FROM page"""
-        .update()
-      sql"""DELETE FROM namespace"""
-        .update()
-      sql"""DELETE FROM page_markup"""
-        .update()
-      sql"""DELETE FROM page_markup_z"""
-        .update()
-      sql"""DELETE FROM title_to_page"""
-        .update()
-    }
-  }
-
-  /**
     * Write dump pages to the page table. The page table contains all the DumpPage
     * data except the raw markup.
     *
@@ -52,15 +30,30 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO page ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO page ($cols) VALUES $values""".update()
       }
     }
   }
 
   /**
+    * Get already-processed page IDs to accelerate partially completed stage01
+    * page extraction. Any known ID can be skipped as soon as the page ID has
+    * been extracted from its page fragment.
+    *
+    * @return The set of all completed page IDs
+    */
+  def getCompletedPageIds(): mutable.Set[Int] = {
+    val result = mutable.Set[Int]()
+    DB.autoCommit { implicit session =>
+      sql"""SELECT page_id FROM page_markup""".foreach(rs => result.add(rs.int("page_id")): Unit)
+      sql"""SELECT page_id FROM page_markup_z""".foreach(rs => result.add(rs.int("page_id")): Unit)
+    }
+    result
+  }
+
+  /**
     * Update a page's type in the page table to a new page type. This is used
-    * to mark DANGLING_REDIRECT pages identified by the TitleFinder after all
-    * page data has been initially written.
+    * to mark DANGLING_REDIRECT and UNPARSEABLE pages after they are detected.
     *
     * @param id       The numeric page identifier
     * @param pageType The new page type to assign
@@ -135,7 +128,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO title_to_page ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO title_to_page ($cols) VALUES $values""".update()
       }
     }
   }
@@ -162,7 +155,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO page_markup ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO page_markup ($cols) VALUES $values""".update()
       }
     }
   }
@@ -221,7 +214,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO page_markup_z ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO page_markup_z ($cols) VALUES $values""".update()
       }
     }
   }
