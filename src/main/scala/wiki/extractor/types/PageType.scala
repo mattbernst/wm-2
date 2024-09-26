@@ -15,6 +15,8 @@ case object TEMPLATE extends PageType
 // A redirect page that points to a missing page. See discussion of
 // "Roger Broughton" in TitleFinder.scala
 case object DANGLING_REDIRECT extends PageType
+// A page that could not be parsed
+case object UNPARSEABLE extends PageType
 // A type of page that we don't currently deal with
 case object UNHANDLED extends PageType
 
@@ -33,6 +35,7 @@ object PageTypes {
     (DISAMBIGUATION, 4),
     (TEMPLATE, 5),
     (DANGLING_REDIRECT, 6),
-    (UNHANDLED, 7)
+    (UNPARSEABLE, 7),
+    (UNHANDLED, 8)
   )
 }

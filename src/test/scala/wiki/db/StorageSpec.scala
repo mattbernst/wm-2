@@ -71,7 +71,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
     storage.writeDumpPages(pages)
     val tf = new TitleFinder(storage.readTitlePageMap(), storage.readRedirects())
-    storage.writeTitleToPage(tf.getFlattenedPageMapping(Set()))
+    storage.writeTitleToPage(tf.getFlattenedPageMapping())
     tf.getId("This title does not exist") shouldBe None
     tf.getId("AsciiArt") shouldBe tf.getId("ASCII art")
     tf.getId("Category:Wikipedians who are not a Wikipedian") shouldBe tf.getId(

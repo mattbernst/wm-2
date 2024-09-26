@@ -44,9 +44,6 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
     val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
     val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
-    if (text.nonEmpty && parsed.isEmpty) {
-      addUnparseable(id)
-    }
 
     val lastEdited = (revision \ "timestamp").headOption
       .map(_.text)
@@ -83,6 +80,9 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
         source() match {
           case Some(article) if article.trim.nonEmpty =>
             val result = extract(article)
+            if (result.markup.wikitext.nonEmpty && result.markup.parseResult.isEmpty) {
+              writer.markUnparseable(result.page.id)
+            }
             if (compressMarkup) {
               val compressed = PageMarkup.serializeCompressed(result.markup)
               writer.addPage(page = result.page, markupU = None, markupZ = Some(compressed))
@@ -111,16 +111,6 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     */
   def getLastTransclusionCounts(): Map[String, Int] =
     lastTransclusions.toMap
-
-  /**
-    * Get IDs of pages with wikitext markup that Sweble could not parse.
-    * These pages will be excluded from title mapping and further analysis.
-    *
-    * @return Set of page IDs for pages that Sweble could not parse
-    */
-  def getUnparseable(): Set[Int] = this.synchronized {
-    unparseablePages.toSet
-  }
 
   /**
     * Infer the page type from the page text and namespace. We need
@@ -180,10 +170,6 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
     lastTransclusions.put(transclusion, count + 1): Unit
   }
 
-  private def addUnparseable(pageId: Int): Unit = this.synchronized {
-    unparseablePages.add(pageId): Unit
-  }
-
   private val parser: WikitextParser = {
     val snippetExtractors: Map[String, SnippetExtractor] = Map(
       "en"        -> EnglishSnippetExtractor,
@@ -205,8 +191,4 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language) extends Logging 
   // disambiguationPrefixes in languages.json. These are written
   // to last_transclusion_count in the db.
   private lazy val lastTransclusions = mutable.Map[String, Int]()
-
-  // These pages failed to parse via Sweble and should be excluded from
-  // the title-to-page mapping.
-  private lazy val unparseablePages = mutable.Set[Int]()
 }

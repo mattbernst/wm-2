@@ -1,16 +1,7 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.extractor.types.{
-  DumpPage,
-  PageMarkup,
-  PageMarkup_U,
-  PageMarkup_Z,
-  PageType,
-  PageTypes,
-  REDIRECT,
-  Redirection
-}
+import wiki.extractor.types.*
 
 import scala.collection.mutable
 
@@ -109,10 +100,10 @@ trait PageStorage {
     * @return A map of titles to page IDs for non-redirecting pages
     */
   def readTitlePageMap(): mutable.Map[String, Int] = {
-    val result             = mutable.Map[String, Int]()
-    val redirectPageTypeId = PageTypes.bySymbol(REDIRECT)
+    val result   = mutable.Map[String, Int]()
+    val excluded = Seq(PageTypes.bySymbol(REDIRECT), PageTypes.bySymbol(UNPARSEABLE))
     val rows = DB.autoCommit { implicit session =>
-      sql"""SELECT id, title FROM page WHERE page_type != $redirectPageTypeId"""
+      sql"""SELECT id, title FROM page WHERE page_type NOT IN ($excluded)"""
         .map(r => (r.string("title"), r.int("id")))
         .list()
     }
@@ -131,7 +122,8 @@ trait PageStorage {
     * @param source A sequence of data provided by TitleFinder getFlattened()
     */
   def writeTitleToPage(source: Seq[(String, Int)]): Unit = {
-    val batches = source.grouped(batchInsertSize)
+    val batchSize = 10000
+    val batches   = source.grouped(batchSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val cols: SQLSyntax = sqls"""title, page_id"""

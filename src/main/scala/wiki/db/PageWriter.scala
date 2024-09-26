@@ -1,6 +1,6 @@
 package wiki.db
 
-import wiki.extractor.types.{DumpPage, Namespace, PageMarkup_U, PageMarkup_Z}
+import wiki.extractor.types.{DumpPage, Namespace, PageMarkup_U, PageMarkup_Z, UNPARSEABLE}
 import wiki.extractor.util.Logging
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
@@ -68,6 +68,11 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
     logger.info("Starting writerThread for PageWriter")
     thread.start()
     thread
+  }
+
+  // Mark page as UNPARSEABLE when Sweble fails to parse wikitext
+  def markUnparseable(pageId: Int): Unit = {
+    db.updatePageType(pageId, UNPARSEABLE)
   }
 
   /**

@@ -29,6 +29,15 @@ object WikipediaExtractor extends Logging {
       case None =>
         phase01(args)
     }
+    dbStorage.getPhaseState(2) match {
+      case Some(COMPLETED) =>
+        logger.info("Already completed phase 2")
+      case Some(CREATED) =>
+        logger.warn("Phase 2 incomplete -- redoing")
+        phase02()
+      case None =>
+        phase02()
+    }
   }
 
   // Initialize system tables before running any extraction
@@ -67,7 +76,7 @@ object WikipediaExtractor extends Logging {
       language = Config.props.language
     )
     val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
-    dbStorage.deletePhase(2)
+    dbStorage.deletePhase(phase)
     dbStorage.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
     dbStorage.createTableDefinitions(phase)
     dbStorage.createIndexes(phase)
@@ -82,8 +91,22 @@ object WikipediaExtractor extends Logging {
     writer.writerThread.join()
     logger.info(s"Wrote ${writer.pageCount} pages to database")
     writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
-    val danglingRedirects = storeMappedTitles(fragmentProcessor.getUnparseable())
+    dbStorage.completePhase(phase)
+  }
+
+  /**
+    * Resolve title_to_page mapping and index the new table.
+    *
+    */
+  private def phase02(): Unit = {
+    val phase = 2
+    // TODO: recover if interrupted (remove rows before redo)
+    dbStorage.deletePhase(phase)
+    dbStorage.createPhase(phase, s"Building title_to_page map")
+    dbStorage.createTableDefinitions(phase)
+    val danglingRedirects = storeMappedTitles()
     markDanglingRedirects(danglingRedirects)
+    dbStorage.createIndexes(phase)
     dbStorage.completePhase(phase)
   }
 
@@ -155,20 +178,17 @@ object WikipediaExtractor extends Logging {
     * Resolve all title-to-ID mappings (e.g. resolve redirects) and store the
     * flattened data in the title_to_page table.
     *
-    * @param badPages Unparseable pages to exclude from mapping
     * @return Dangling redirects that need their page type updated
     */
-  private def storeMappedTitles(badPages: Set[Int]): Seq[Redirection] = {
+  private def storeMappedTitles(): Seq[Redirection] = {
     logger.info(s"Getting TitleFinder data")
     val redirects = dbStorage.readRedirects()
     logger.info(s"Loaded ${redirects.length} redirects")
     val titlePageMap = dbStorage.readTitlePageMap()
     logger.info(s"Loaded ${titlePageMap.size} title-to-ID map entries")
     val tf = new TitleFinder(titlePageMap, redirects)
-
     logger.info(s"Started writing title to page ID mappings to db")
-    val fpm = tf.getFlattenedPageMapping(badPages)
-    logger.info(s"Excluded ${badPages.size} bad pages")
+    val fpm = tf.getFlattenedPageMapping()
     dbStorage.writeTitleToPage(fpm)
     logger.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
     tf.danglingRedirects
