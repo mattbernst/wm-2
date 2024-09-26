@@ -99,9 +99,9 @@ object WikipediaExtractor extends Logging {
     */
   private def phase02(): Unit = {
     val phase = 2
-    // TODO: recover if interrupted (remove rows before redo)
     db.phase.deletePhase(phase)
     db.phase.createPhase(phase, s"Building title_to_page map")
+    db.page.clearTitleToPage()
     db.createTableDefinitions(phase)
     val danglingRedirects = storeMappedTitles()
     markDanglingRedirects(danglingRedirects)

@@ -134,6 +134,15 @@ object PageStorage {
   }
 
   /**
+    * Drop the title_to_page table before trying to build it again.
+    */
+  def clearTitleToPage(): Unit = {
+    DB.autoCommit { implicit session =>
+      sql"""DROP TABLE IF EXISTS title_to_page;""".update(): Unit
+    }
+  }
+
+  /**
     * Write page markup to the page_markup table. The page_markup table contains
     * the raw markup for each page along with a parsed derivative. This is
     * stored in a separate table because it is so much larger than the other
