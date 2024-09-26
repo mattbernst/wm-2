@@ -8,7 +8,8 @@ import wiki.extractor.util.{FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
-  "namespace table" should "write and read back Namespace records" in {
+  behavior of "NamespaceStorage"
+  it should "write and read back Namespace records" in {
     val ns = Namespace(14, FIRST_LETTER, "Category")
     storage.namespace.read(ns.id) shouldBe None
     storage.namespace.write(ns)
@@ -95,6 +96,24 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.transclusion.writeLastTransclusionCounts(m)
     // Before, this would throw on dupe write
     storage.transclusion.writeLastTransclusionCounts(m)
+  }
+
+  behavior of "LinkStorage"
+
+  it should "read and write links" in {
+    val a = randomInt()
+    val b = randomInt()
+    val c = randomInt()
+    val d = randomInt()
+    val data = Seq(IDLink(a, b, None), IDLink(a, c, Some("chemistry")), IDLink(b, d, Some("physics")))
+    storage.link.write(data)
+
+
+    storage.link.getBySource(a) shouldBe Seq(IDLink(a, b, None), IDLink(a, c, Some("chemistry")))
+    storage.link.getBySource(b) shouldBe Seq(IDLink(b, d, Some("physics")))
+    storage.link.getBySource(c) shouldBe Seq()
+    storage.link.getByDestination(a) shouldBe Seq()
+    storage.link.getByDestination(b) shouldBe Seq(IDLink(a, b, None))
   }
 
   override def afterAll(): Unit = {

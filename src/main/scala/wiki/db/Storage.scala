@@ -70,6 +70,7 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  val link: LinkStorage.type                 = LinkStorage
   val log: LogStorage.type                   = LogStorage
   val namespace: NamespaceStorage.type       = NamespaceStorage
   val page: PageStorage.type                 = PageStorage

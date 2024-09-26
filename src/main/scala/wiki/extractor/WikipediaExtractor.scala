@@ -109,6 +109,17 @@ object WikipediaExtractor extends Logging {
     db.phase.completePhase(phase)
   }
 
+  private def phase03(): Unit = {
+    val phase = 2
+    db.phase.deletePhase(phase)
+    db.phase.createPhase(phase, s"Building title_to_page map")
+    // TODO set up for interrupt-and-redo
+    db.createTableDefinitions(phase)
+
+    db.createIndexes(phase)
+    db.phase.completePhase(phase)
+  }
+
   /**
     * Get input to process. This can read a .xml.bz2 dump file as downloaded
     * from Wikipedia, a ZStandard compressed .xml.zst file, or an uncompressed

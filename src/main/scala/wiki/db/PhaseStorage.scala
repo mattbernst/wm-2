@@ -59,5 +59,5 @@ object PhaseStorage {
     }
   }
 
-  val lastPhase: Int = 2
+  val lastPhase: Int = 3
 }
