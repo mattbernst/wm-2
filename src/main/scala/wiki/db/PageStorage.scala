@@ -134,6 +134,21 @@ object PageStorage {
   }
 
   /**
+    * Read the flattened TitleFinder data back from the db with all page
+    * titles transformed to lower case.
+    *
+    * @return A map of page titles to page IDs
+    */
+  def readTitleToPage(): mutable.Map[String, Int] = {
+    val result = mutable.Map[String, Int]()
+    DB.autoCommit { implicit session =>
+      sql"""SELECT * FROM title_to_page"""
+        .foreach(rs => result.put(rs.string("title").toLowerCase, rs.int("page_id")))
+    }
+    result
+  }
+
+  /**
     * Drop the title_to_page table before trying to build it again.
     */
   def clearTitleToPage(): Unit = {
@@ -186,6 +201,46 @@ object PageStorage {
   }
 
   /**
+    * Read multiple rows from page_markup, all IDs between start and end.
+    * Also get page type by joining to page table.
+    *
+    * @param start Starting page ID
+    * @param end Ending page ID
+    * @return    All TypedPageMarkup with IDs between those ranges
+    */
+  def readMarkupSlice(start: Int, end: Int): Seq[TypedPageMarkup] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT page_type, page_markup.* FROM
+           page, page_markup
+           WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
+        val pmu = PageMarkup_U(rs.int("page_id"), rs.stringOpt("markup"), rs.stringOpt("parsed"))
+        val pm  = PageMarkup.deserializeUncompressed(pmu)
+        TypedPageMarkup(pm, PageTypes.byNumber(rs.int("page_type")))
+      }.list()
+    }
+  }
+
+  /**
+    * Read multiple rows from page_markup_z, all IDs between start and end.
+    *  Also get page type by joining to page table.
+    *
+    * @param start Starting page ID
+    * @param end Ending page ID
+    * @return    All TypedPageMarkup with IDs between those ranges
+    */
+  def readMarkupSlice_Z(start: Int, end: Int): Seq[TypedPageMarkup] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT page_type, page_markup_z.* FROM
+           page, page_markup_z
+           WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
+        val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytes("data"))
+        val pm  = PageMarkup.deserializeCompressed(pmz)
+        TypedPageMarkup(pm, PageTypes.byNumber(rs.int("page_type")))
+      }.list()
+    }
+  }
+
+  /**
     * Get the page markup data for a single page (if it exists) from the
     * page_markup_z table.
     *
@@ -226,6 +281,32 @@ object PageStorage {
         sql"""INSERT OR IGNORE INTO page_markup_z ($cols) VALUES $values""".update()
       }
     }
+  }
+
+  lazy val compressedMax: Int = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM page_markup_z"""
+        .map(rs => rs.int("m"))
+        .list()
+        .head
+    }
+  }
+
+  lazy val uncompressedMax: Int = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM page_markup"""
+        .map(rs => rs.int("m"))
+        .list()
+        .head
+    }
+  }
+
+  lazy val usingCompression: Boolean = {
+    val err1 = "Same page counts for page_markup and page_markup_z. Did extraction run?"
+    require(compressedMax != uncompressedMax, err1)
+    val err2 = "Both page_markup and page_markup_z have entries. This should not happen."
+    require(compressedMax == 0 || uncompressedMax == 0, err2)
+    compressedMax > uncompressedMax
   }
 
   val batchInsertSize: Int = 2000

@@ -3,7 +3,7 @@ package wiki.extractor
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, UnitSpec}
 
-class FragmentProcessorSpec extends UnitSpec {
+class XMLStructuredPageProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
 
   it should "extract standard page fields from a basic article" in {
@@ -140,5 +140,5 @@ class FragmentProcessorSpec extends UnitSpec {
     )
   )
 
-  private lazy val fragmentProcessor = new FragmentProcessor(siteInfo, language)
+  private lazy val fragmentProcessor = new XMLStructuredPageProcessor(siteInfo, language)
 }

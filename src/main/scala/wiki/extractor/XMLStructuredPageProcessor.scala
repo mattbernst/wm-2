@@ -1,7 +1,7 @@
 package wiki.extractor
 
-import wiki.db.PageWriter
-import wiki.extractor.language.{EnglishSnippetExtractor, SnippetExtractor}
+import wiki.db.PageSink
+import wiki.extractor.language.{EnglishLanguageLogic, LanguageLogic}
 import wiki.extractor.types.*
 import wiki.extractor.util.{Logging, Progress}
 
@@ -12,10 +12,12 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
-case class FragmentWorker(thread: Thread)
 case class StructuredPage(page: DumpPage, markup: PageMarkup)
 
-class FragmentProcessor(siteInfo: SiteInfo, language: Language, completedPages: mutable.Set[Int] = mutable.Set())
+class XMLStructuredPageProcessor(
+  siteInfo: SiteInfo,
+  language: Language,
+  completedPages: mutable.Set[Int] = mutable.Set())
     extends Logging {
 
   /**
@@ -73,12 +75,12 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language, completedPages: 
     }
   }
 
-  def fragmentWorker(
+  def worker(
     id: Int,
     source: () => Option[String],
-    writer: PageWriter,
+    sink: PageSink,
     compressMarkup: Boolean
-  ): FragmentWorker = {
+  ): Worker = {
     val thread = new Thread(() => {
       var skippedPages = 0
       var completed    = false
@@ -88,14 +90,14 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language, completedPages: 
             extract(article) match {
               case Some(result) =>
                 if (result.markup.wikitext.nonEmpty && result.markup.parseResult.isEmpty) {
-                  writer.markUnparseable(result.page.id)
+                  sink.markUnparseable(result.page.id)
                 }
                 if (compressMarkup) {
                   val compressed = PageMarkup.serializeCompressed(result.markup)
-                  writer.addPage(page = result.page, markupU = None, markupZ = Some(compressed))
+                  sink.addPage(page = result.page, markupU = None, markupZ = Some(compressed))
                 } else {
                   val uncompressed = PageMarkup.serializeUncompressed(result.markup)
-                  writer.addPage(page = result.page, markupU = Some(uncompressed), markupZ = None)
+                  sink.addPage(page = result.page, markupU = Some(uncompressed), markupZ = None)
                 }
               case None =>
                 skippedPages += 1
@@ -103,14 +105,14 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language, completedPages: 
             }
           case _ =>
             completed = true
-            logger.info(s"FragmentWorker $id finished")
+            logger.info(s"Worker $id finished")
         }
       }
     })
-    logger.info(s"Starting FragmentWorker $id")
+    logger.info(s"Starting Worker $id")
     thread.setDaemon(true)
     thread.start()
-    FragmentWorker(thread)
+    Worker(thread)
   }
 
   /**
@@ -182,15 +184,11 @@ class FragmentProcessor(siteInfo: SiteInfo, language: Language, completedPages: 
   }
 
   private val parser: WikitextParser = {
-    val snippetExtractors: Map[String, SnippetExtractor] = Map(
-      "en"        -> EnglishSnippetExtractor,
-      "en_simple" -> EnglishSnippetExtractor
-    )
-    Try(new WikitextParser(snippetExtractors(language.code))) match {
-      case Success(v) =>
-        v
+    Try(LanguageLogic.logicForLanguage(language.code)) match {
+      case Success(ll) =>
+        new WikitextParser(ll)
       case Failure(ex: NoSuchElementException) =>
-        logger.error(s"No SnippetExtractor defined for language code '${language.code}'")
+        logger.error(s"No LanguageLogic defined for language code '${language.code}'")
         throw ex
       case Failure(ex) =>
         throw ex

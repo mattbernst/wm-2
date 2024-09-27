@@ -22,20 +22,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of pages enqueued before writing
   */
-class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
-
-  def enableSqlitePragmas(): Unit = {
-    val pragmas = Seq(
-      "pragma cache_size=1048576;",
-      "pragma journal_mode=wal;",
-      "pragma synchronous=normal;"
-    )
-
-    pragmas.foreach { pragma =>
-      db.executeUnsafely(pragma)
-      logger.info(s"Applied SQLite pragma: $pragma")
-    }
-  }
+class PageSink(db: Storage, queueSize: Int = 8000) extends Logging {
 
   /**
     * Enqueue one page for writing along with its markup. The caller supplies
@@ -55,7 +42,7 @@ class PageWriter(db: Storage, queueSize: Int = 8000) extends Logging {
   }
 
   val writerThread: Thread = {
-    enableSqlitePragmas()
+    Storage.enableSqlitePragmas(db)
     val thread = new Thread(() => {
       while (!finished) {
         write()

@@ -2,7 +2,7 @@ package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
 import org.slf4j.event.Level
-import wiki.extractor.language.EnglishSnippetExtractor
+import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
@@ -101,13 +101,12 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   behavior of "LinkStorage"
 
   it should "read and write links" in {
-    val a = randomInt()
-    val b = randomInt()
-    val c = randomInt()
-    val d = randomInt()
+    val a    = randomInt()
+    val b    = randomInt()
+    val c    = randomInt()
+    val d    = randomInt()
     val data = Seq(IDLink(a, b, None), IDLink(a, c, Some("chemistry")), IDLink(b, d, Some("physics")))
     storage.link.write(data)
-
 
     storage.link.getBySource(a) shouldBe Seq(IDLink(a, b, None), IDLink(a, c, Some("chemistry")))
     storage.link.getBySource(b) shouldBe Seq(IDLink(b, d, Some("physics")))
@@ -189,6 +188,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                                     |{{R from CamelCase}}
                                     |}}""".stripMargin
 
-  private lazy val parser     = new WikitextParser(EnglishSnippetExtractor)
+  private lazy val parser     = new WikitextParser(EnglishLanguageLogic)
   private lazy val testDbName = s"test_${randomLong()}.db"
 }

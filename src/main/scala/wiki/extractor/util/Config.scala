@@ -2,7 +2,7 @@ package wiki.extractor.util
 
 import wiki.extractor.types.Language
 
-case class ConfiguredProperties(language: Language, fragmentWorkers: Int, compressMarkup: Boolean)
+case class ConfiguredProperties(language: Language, nWorkers: Int, compressMarkup: Boolean)
 
 object Config extends Logging {
 
@@ -74,7 +74,7 @@ object Config extends Logging {
 
     ConfiguredProperties(
       language = language,
-      fragmentWorkers = workerThreads,
+      nWorkers = workerThreads,
       compressMarkup = compressMarkup
     )
   }

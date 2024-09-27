@@ -5,6 +5,7 @@ import scalikejdbc.*
 case class IDLink(source: Int, destination: Int, anchorText: Option[String])
 
 object LinkStorage {
+
   /**
     * Write links to the link table with batching.
     *
