@@ -49,7 +49,7 @@ class PageSink(db: Storage, queueSize: Int = 8000) extends Logging {
       }
     })
     thread.setDaemon(true)
-    logger.info("Starting writerThread for PageWriter")
+    logger.info("Starting writerThread for PageSink")
     thread.start()
     thread
   }
@@ -70,7 +70,7 @@ class PageSink(db: Storage, queueSize: Int = 8000) extends Logging {
       var emptied = false
       val buffer  = new ListBuffer[QueueEntry]
       while (!emptied && buffer.size < db.page.batchInsertSize) {
-        Option(queue.poll(1, TimeUnit.SECONDS)) match {
+        Option(queue.poll(3, TimeUnit.SECONDS)) match {
           case Some(entry) => buffer.append(entry)
           case None        => emptied = true
         }

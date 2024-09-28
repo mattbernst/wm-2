@@ -89,15 +89,16 @@ object WikipediaExtractor extends Logging {
       completedPages = completedPages
     )
 
-    val workers = assignXMLWorkers(Config.props.nWorkers, processor, source.getFromQueue _)
+    val sink: PageSink = new PageSink(db)
+    val workers        = assignXMLWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
 
     source.extractPages()
     dumpSource.close()
     workers.foreach(_.thread.join())
     logger.info(s"Split out ${source.pageCount} pages")
-    pageSink.stopWriting()
-    pageSink.writerThread.join()
-    logger.info(s"Wrote ${pageSink.pageCount} pages to database")
+    sink.stopWriting()
+    sink.writerThread.join()
+    logger.info(s"Wrote ${sink.pageCount} pages to database")
     writeTransclusions(processor.getLastTransclusionCounts())
     db.phase.completePhase(phase)
   }
@@ -121,18 +122,20 @@ object WikipediaExtractor extends Logging {
   private def phase03(): Unit = {
     val phase = 3
     db.phase.deletePhase(phase)
-    //db.phase.createPhase(phase, s"Building title_to_page map")
+    db.phase.createPhase(phase, s"Resolving links to destinations")
     // TODO set up for interrupt-and-redo
     db.createTableDefinitions(phase)
-    // Get all pages
     val source    = new PageMarkupSource(db)
     val titleMap  = db.page.readTitleToPage()
     val processor = new PageMarkupLinkProcessor(titleMap)
-    val workers   = assignLinkWorkers(Config.props.nWorkers, processor, source.getFromQueue _)
+    val sink      = new LinkSink(db)
+    val workers   = assignLinkWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
     source.enqueueMarkup()
     workers.foreach(_.thread.join())
-    // db.createIndexes(phase)
-    //db.phase.completePhase(phase)
+    sink.stopWriting()
+    sink.writerThread.join()
+    db.createIndexes(phase)
+    db.phase.completePhase(phase)
   }
 
   /**
@@ -235,18 +238,17 @@ object WikipediaExtractor extends Logging {
   private val db: Storage =
     new Storage(fileName = Config.props.language.code + "_wiki.db")
 
-  private val pageSink: PageSink = new PageSink(db)
-
   private def assignXMLWorkers(
     n: Int,
     processor: XMLStructuredPageProcessor,
-    source: () => Option[String]
+    source: () => Option[String],
+    sink: PageSink
   ): Seq[Worker] = {
     0.until(n).map { id =>
       processor.worker(
         id = id,
         source = source,
-        sink = pageSink,
+        sink = sink,
         compressMarkup = Config.props.compressMarkup
       )
     }
@@ -255,10 +257,11 @@ object WikipediaExtractor extends Logging {
   private def assignLinkWorkers(
     n: Int,
     processor: PageMarkupLinkProcessor,
-    source: () => Option[PageMarkup]
+    source: () => Option[PageMarkup],
+    sink: LinkSink
   ): Seq[Worker] = {
     0.until(n).map { id =>
-      processor.worker(id = id, source = source)
+      processor.worker(id = id, source = source, sink = sink)
     }
   }
 }

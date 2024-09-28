@@ -105,14 +105,14 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val b    = randomInt()
     val c    = randomInt()
     val d    = randomInt()
-    val data = Seq(IDLink(a, b, None), IDLink(a, c, Some("chemistry")), IDLink(b, d, Some("physics")))
-    storage.link.write(data)
+    val data = Seq(ResolvedLink(a, b, None), ResolvedLink(a, c, Some("chemistry")), ResolvedLink(b, d, Some("physics")))
+    storage.link.writeResolved(data)
 
-    storage.link.getBySource(a) shouldBe Seq(IDLink(a, b, None), IDLink(a, c, Some("chemistry")))
-    storage.link.getBySource(b) shouldBe Seq(IDLink(b, d, Some("physics")))
+    storage.link.getBySource(a) shouldBe Seq(ResolvedLink(a, b, None), ResolvedLink(a, c, Some("chemistry")))
+    storage.link.getBySource(b) shouldBe Seq(ResolvedLink(b, d, Some("physics")))
     storage.link.getBySource(c) shouldBe Seq()
     storage.link.getByDestination(a) shouldBe Seq()
-    storage.link.getByDestination(b) shouldBe Seq(IDLink(a, b, None))
+    storage.link.getByDestination(b) shouldBe Seq(ResolvedLink(a, b, None))
   }
 
   override def afterAll(): Unit = {
