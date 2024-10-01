@@ -123,7 +123,8 @@ object WikipediaExtractor extends Logging {
     val phase = 3
     db.phase.deletePhase(phase)
     db.phase.createPhase(phase, s"Resolving links to destinations")
-    // TODO set up for interrupt-and-redo
+    db.executeUnsafely("DROP TABLE IF EXISTS link;")
+    db.executeUnsafely("DROP TABLE IF EXISTS dead_link;")
     db.createTableDefinitions(phase)
     val source    = new PageMarkupSource(db)
     val titleMap  = db.page.readTitleToPage()
