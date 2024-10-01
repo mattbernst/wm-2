@@ -3,7 +3,7 @@ import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
 
 import java.io.FileInputStream
 
-object EnglishSnippetExtractor extends SnippetExtractor {
+object EnglishLanguageLogic extends LanguageLogic {
 
   /**
     * Use heuristics to get the first paragraph and first sentence of content

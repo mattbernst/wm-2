@@ -2,8 +2,8 @@ package wiki.extractor
 
 import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
-import wiki.db.{COMPLETED, CREATED, PageWriter, Storage}
-import wiki.extractor.types.{DANGLING_REDIRECT, Redirection, SiteInfo}
+import wiki.db.*
+import wiki.extractor.types.{DANGLING_REDIRECT, PageMarkup, Redirection, SiteInfo, Worker}
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
@@ -32,6 +32,15 @@ object WikipediaExtractor extends Logging {
         phase02()
       case None =>
         phase02()
+    }
+    db.phase.getPhaseState(3) match {
+      case Some(COMPLETED) =>
+        logger.info("Already completed phase 3")
+      case Some(CREATED) =>
+        logger.warn("Phase 3 incomplete -- redoing")
+        phase03()
+      case None =>
+        phase03()
     }
   }
 
@@ -66,7 +75,7 @@ object WikipediaExtractor extends Logging {
     val head        = dumpStrings.take(128).toSeq
     val siteInfo    = SiteInfo(head.mkString("\n"))
 
-    val splitter = new WikipediaPageSplitter(head.iterator ++ dumpStrings)
+    val source = new XMLSource(head.iterator ++ dumpStrings)
     db.phase.createPhase(phase, s"Extracting $dumpFilePath pages with language ${Config.props.language.name}")
     db.createTableDefinitions(phase)
     db.createIndexes(phase)
@@ -74,22 +83,23 @@ object WikipediaExtractor extends Logging {
     if (completedPages.nonEmpty) {
       logger.info(s"Resuming page extraction with ${completedPages.size} pages already completed")
     }
-    val fragmentProcessor = new FragmentProcessor(
+    val processor = new XMLStructuredPageProcessor(
       siteInfo = siteInfo,
       language = Config.props.language,
       completedPages = completedPages
     )
 
-    val workers = assignWorkers(Config.props.fragmentWorkers, fragmentProcessor, splitter.getFromQueue _)
+    val sink: PageSink = new PageSink(db)
+    val workers        = assignXMLWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
 
-    splitter.extractPages()
+    source.extractPages()
     dumpSource.close()
     workers.foreach(_.thread.join())
-    logger.info(s"Split out ${splitter.pageCount} pages")
-    writer.stopWriting()
-    writer.writerThread.join()
-    logger.info(s"Wrote ${writer.pageCount} pages to database")
-    writeTransclusions(fragmentProcessor.getLastTransclusionCounts())
+    logger.info(s"Split out ${source.pageCount} pages")
+    sink.stopWriting()
+    sink.writerThread.join()
+    logger.info(s"Wrote ${sink.pageCount} pages to database")
+    writeTransclusions(processor.getLastTransclusionCounts())
     db.phase.completePhase(phase)
   }
 
@@ -105,6 +115,26 @@ object WikipediaExtractor extends Logging {
     db.createTableDefinitions(phase)
     val danglingRedirects = storeMappedTitles()
     markDanglingRedirects(danglingRedirects)
+    db.createIndexes(phase)
+    db.phase.completePhase(phase)
+  }
+
+  private def phase03(): Unit = {
+    val phase = 3
+    db.phase.deletePhase(phase)
+    db.phase.createPhase(phase, s"Resolving links to destinations")
+    db.executeUnsafely("DROP TABLE IF EXISTS link;")
+    db.executeUnsafely("DROP TABLE IF EXISTS dead_link;")
+    db.createTableDefinitions(phase)
+    val source    = new PageMarkupSource(db)
+    val titleMap  = db.page.readTitleToPage()
+    val processor = new PageMarkupLinkProcessor(titleMap)
+    val sink      = new LinkSink(db)
+    val workers   = assignLinkWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
+    source.enqueueMarkup()
+    workers.foreach(_.thread.join())
+    sink.stopWriting()
+    sink.writerThread.join()
     db.createIndexes(phase)
     db.phase.completePhase(phase)
   }
@@ -162,15 +192,16 @@ object WikipediaExtractor extends Logging {
     * @param input A map of transclusion names to counts
     */
   private def writeTransclusions(input: Map[String, Int]): Unit = {
-    assert(input.nonEmpty)
-    val totalCounts = input.values.map(_.toDouble).sum
-    val average     = totalCounts / input.size
-    val aboveAverage = input.filter {
-      case (_, n) => n > average
+    if (input.nonEmpty) {
+      val totalCounts = input.values.map(_.toDouble).sum
+      val average     = totalCounts / input.size
+      val aboveAverage = input.filter {
+        case (_, n) => n > average
+      }
+      logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
+      db.transclusion.writeLastTransclusionCounts(aboveAverage)
+      logger.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
     }
-    logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
-    db.transclusion.writeLastTransclusionCounts(aboveAverage)
-    logger.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
   }
 
   /**
@@ -208,21 +239,30 @@ object WikipediaExtractor extends Logging {
   private val db: Storage =
     new Storage(fileName = Config.props.language.code + "_wiki.db")
 
-  private val writer: PageWriter =
-    new PageWriter(db)
-
-  private def assignWorkers(
+  private def assignXMLWorkers(
     n: Int,
-    fragmentProcessor: FragmentProcessor,
-    source: () => Option[String]
-  ): Seq[FragmentWorker] = {
+    processor: XMLStructuredPageProcessor,
+    source: () => Option[String],
+    sink: PageSink
+  ): Seq[Worker] = {
     0.until(n).map { id =>
-      fragmentProcessor.fragmentWorker(
+      processor.worker(
         id = id,
         source = source,
-        writer = writer,
+        sink = sink,
         compressMarkup = Config.props.compressMarkup
       )
+    }
+  }
+
+  private def assignLinkWorkers(
+    n: Int,
+    processor: PageMarkupLinkProcessor,
+    source: () => Option[PageMarkup],
+    sink: LinkSink
+  ): Seq[Worker] = {
+    0.until(n).map { id =>
+      processor.worker(id = id, source = source, sink = sink)
     }
   }
 }

@@ -7,6 +7,14 @@ object Snippet {
   implicit val rw: ReadWriter[Snippet] = macroRW
 }
 
-trait SnippetExtractor {
+trait LanguageLogic {
   def getSnippet(input: String): Snippet
+}
+
+object LanguageLogic {
+
+  val logicForLanguage: Map[String, LanguageLogic] = Map(
+    "en"        -> EnglishLanguageLogic,
+    "en_simple" -> EnglishLanguageLogic
+  )
 }

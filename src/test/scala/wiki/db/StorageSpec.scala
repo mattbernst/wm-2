@@ -2,13 +2,14 @@ package wiki.db
 
 import org.scalatest.BeforeAndAfterAll
 import org.slf4j.event.Level
-import wiki.extractor.language.EnglishSnippetExtractor
+import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
-  "namespace table" should "write and read back Namespace records" in {
+  behavior of "NamespaceStorage"
+  it should "write and read back Namespace records" in {
     val ns = Namespace(14, FIRST_LETTER, "Category")
     storage.namespace.read(ns.id) shouldBe None
     storage.namespace.write(ns)
@@ -97,6 +98,23 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.transclusion.writeLastTransclusionCounts(m)
   }
 
+  behavior of "LinkStorage"
+
+  it should "read and write links" in {
+    val a    = randomInt()
+    val b    = randomInt()
+    val c    = randomInt()
+    val d    = randomInt()
+    val data = Seq(ResolvedLink(a, b, None), ResolvedLink(a, c, Some("chemistry")), ResolvedLink(b, d, Some("physics")))
+    storage.link.writeResolved(data)
+
+    storage.link.getBySource(a) shouldBe Seq(ResolvedLink(a, b, None), ResolvedLink(a, c, Some("chemistry")))
+    storage.link.getBySource(b) shouldBe Seq(ResolvedLink(b, d, Some("physics")))
+    storage.link.getBySource(c) shouldBe Seq()
+    storage.link.getByDestination(a) shouldBe Seq()
+    storage.link.getByDestination(b) shouldBe Seq(ResolvedLink(a, b, None))
+  }
+
   override def afterAll(): Unit = {
     super.afterAll()
     FileHelpers.deleteFileIfExists(testDbName)
@@ -170,6 +188,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                                     |{{R from CamelCase}}
                                     |}}""".stripMargin
 
-  private lazy val parser     = new WikitextParser(EnglishSnippetExtractor)
+  private lazy val parser     = new WikitextParser(EnglishLanguageLogic)
   private lazy val testDbName = s"test_${randomLong()}.db"
 }

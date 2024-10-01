@@ -70,6 +70,7 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  val link: LinkStorage.type                 = LinkStorage
   val log: LogStorage.type                   = LogStorage
   val namespace: NamespaceStorage.type       = NamespaceStorage
   val page: PageStorage.type                 = PageStorage
@@ -77,7 +78,20 @@ class Storage(fileName: String) extends Logging {
   val transclusion: TransclusionStorage.type = TransclusionStorage
 }
 
-object Storage {
+object Storage extends Logging {
+
+  def enableSqlitePragmas(db: Storage): Unit = {
+    val pragmas = Seq(
+      "pragma cache_size=1048576;",
+      "pragma journal_mode=wal;",
+      "pragma synchronous=normal;"
+    )
+
+    pragmas.foreach { pragma =>
+      db.executeUnsafely(pragma)
+      logger.info(s"Applied SQLite pragma: $pragma")
+    }
+  }
 
   def execute(sqls: String*)(implicit session: DBSession): Unit = {
     @annotation.tailrec

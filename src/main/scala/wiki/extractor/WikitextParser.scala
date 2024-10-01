@@ -2,7 +2,7 @@ package wiki.extractor
 
 import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
-import wiki.extractor.language.SnippetExtractor
+import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{Link, ParseResult}
 import wiki.extractor.util.{DBLogging, Logging}
 
@@ -10,7 +10,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-class WikitextParser(snippetExtractor: SnippetExtractor) extends Logging {
+class WikitextParser(languageLogic: LanguageLogic) extends Logging {
 
   /**
     * Parse wikitext markup for an article using Sweble and retain selected
@@ -52,7 +52,7 @@ class WikitextParser(snippetExtractor: SnippetExtractor) extends Logging {
     }
 
     val text    = cleanString(nodesToText(input))
-    val snippet = snippetExtractor.getSnippet(text)
+    val snippet = languageLogic.getSnippet(text)
     ParseResult(
       snippet = snippet,
       text = text,

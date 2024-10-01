@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
-import wiki.extractor.language.EnglishSnippetExtractor
+import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.Link
 import wiki.extractor.util.{FileHelpers, UnitSpec}
 
@@ -123,5 +123,5 @@ class WikitextParserSpec extends UnitSpec {
     }
   }
 
-  private lazy val parser = new WikitextParser(EnglishSnippetExtractor)
+  private lazy val parser = new WikitextParser(EnglishLanguageLogic)
 }
