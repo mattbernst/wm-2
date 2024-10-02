@@ -105,7 +105,6 @@ object WikipediaExtractor extends Logging {
 
   /**
     * Resolve title_to_page mapping and index the new table.
-    *
     */
   private def phase02(): Unit = {
     val phase = 2
@@ -119,6 +118,10 @@ object WikipediaExtractor extends Logging {
     db.phase.completePhase(phase)
   }
 
+  /**
+    * Resolve links to destinations in link table (or add entry to dead_link,
+    * if resolution was not possible.)
+    */
   private def phase03(): Unit = {
     val phase = 3
     db.phase.deletePhase(phase)
