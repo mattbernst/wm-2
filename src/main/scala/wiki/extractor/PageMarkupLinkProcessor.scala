@@ -28,12 +28,13 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int]) extends Loggin
       .map(_.links)
       .getOrElse(Seq())
       .foreach { link =>
-        val key = link.target.split('#').headOption.getOrElse("").toLowerCase
-        // Filter out anchor text if it's just whitespace
+        val target = link.target.replace("&nbsp;", " ")
+        val key    = target.split('#').headOption.map(_.trim).getOrElse("").toLowerCase
+        // Filter out anchor text if it's just whitespace.
         val anchorText = link.anchorText.map(_.trim).filter(_.nonEmpty)
         titleMap.get(key) match {
           case Some(id) => resolved.append(ResolvedLink(source, id, anchorText))
-          case None     => dead.append(DeadLink(source, link.target, anchorText))
+          case None     => dead.append(DeadLink(source, target, anchorText))
         }
       }
 
