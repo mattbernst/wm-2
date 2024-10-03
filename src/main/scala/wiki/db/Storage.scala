@@ -12,6 +12,10 @@ import wiki.extractor.util.{FileHelpers, Logging}
 class Storage(fileName: String) extends Logging {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
 
+  def closeAll(): Unit = {
+    ConnectionPool.closeAll()
+  }
+
   // Create tables for multiple phases at once
   def createTableDefinitions(phases: Seq[Int]): Unit =
     phases.foreach(phase => createTableDefinitions(phase))

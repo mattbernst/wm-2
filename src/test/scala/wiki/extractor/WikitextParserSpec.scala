@@ -102,6 +102,8 @@ class WikitextParserSpec extends UnitSpec {
     // The original markup for this sentence was
     // "Most mafic-lava volcanoes are [[shield volcano]]es, like those in [[Hawaii]]."
     // Appears to be Sweble error (node list from raw parse loses "es" also)
+    // Related to special handling of blend links?
+    // https://en.wikipedia.org/wiki/Help:Wikitext#Blend_link
     val error1   = "Most mafic-lava volcanoes are shield volcano, like those in Hawaii."
     val correct1 = "Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii."
     parsed.text.contains(error1) shouldBe true

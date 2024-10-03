@@ -42,6 +42,8 @@ object WikipediaExtractor extends Logging {
       case None =>
         phase03()
     }
+
+    db.closeAll()
   }
 
   // Initialize system tables before running any extraction
@@ -129,9 +131,13 @@ object WikipediaExtractor extends Logging {
     db.executeUnsafely("DROP TABLE IF EXISTS link;")
     db.executeUnsafely("DROP TABLE IF EXISTS dead_link;")
     db.createTableDefinitions(phase)
-    val source    = new PageMarkupSource(db)
-    val titleMap  = db.page.readTitleToPage()
-    val processor = new PageMarkupLinkProcessor(titleMap)
+    val source   = new PageMarkupSource(db)
+    val titleMap = db.page.readTitleToPage()
+    val categoryName = db.namespace
+      .read(SiteInfo.CATEGORY_KEY)
+      .map(_.name)
+      .getOrElse(throw new NoSuchElementException("Could not find CATEGORY_KEY in namespace table"))
+    val processor = new PageMarkupLinkProcessor(titleMap, Config.props.language, categoryName)
     val sink      = new LinkSink(db)
     val workers   = assignLinkWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
     source.enqueueMarkup()

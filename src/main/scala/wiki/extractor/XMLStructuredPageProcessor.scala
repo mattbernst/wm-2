@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.db.PageSink
-import wiki.extractor.language.{EnglishLanguageLogic, LanguageLogic}
+import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
 import wiki.extractor.util.{Logging, Progress}
 
@@ -136,9 +136,9 @@ class XMLStructuredPageProcessor(
     */
   private[extractor] def inferPageType(wikiText: String, namespace: Namespace): PageType = {
     namespace.id match {
-      case siteInfo.CATEGORY_KEY => CATEGORY
-      case siteInfo.TEMPLATE_KEY => TEMPLATE
-      case siteInfo.MAIN_KEY =>
+      case SiteInfo.CATEGORY_KEY => CATEGORY
+      case SiteInfo.TEMPLATE_KEY => TEMPLATE
+      case SiteInfo.MAIN_KEY =>
         val transclusions    = getTransclusions(wikiText)
         val lastTransclusion = transclusions.lastOption
         lastTransclusion.foreach(t => incrementTransclusion(t))

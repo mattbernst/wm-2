@@ -67,7 +67,7 @@ object Config extends Logging {
       if (storeCompressed) {
         logger.info(s"Binary compressed markup will be stored in table page_markup_z.")
       } else {
-        logger.warn(s"Text markup will be stored in table page_markup. This is human-readable but slow.")
+        logger.warn(s"Text markup will be stored in table page_markup. This is human-readable but voluminous.")
       }
       storeCompressed
     }

@@ -143,7 +143,7 @@ object PageStorage {
     val result = mutable.Map[String, Int]()
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM title_to_page"""
-        .foreach(rs => result.put(rs.string("title").toLowerCase, rs.int("page_id")))
+        .foreach(rs => result.put(rs.string("title").toLowerCase, rs.int("page_id")): Unit)
     }
     result
   }
