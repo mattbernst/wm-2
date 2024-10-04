@@ -91,8 +91,8 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     // Links like ":fr:Les Cahiers de l'Orient" point to the named page
     // in the language-specific Wikipedia instance. We can only resolve
     // links that point within the current Wikipedia.
-    if (k.startsWith(currentWikiPrefix)) {
-      k.slice(currentWikiPrefix.length, k.length)
+    val cleaned = if (k.startsWith(currentWikiPrefix)) {
+      k.slice(currentWikiPrefix.length, k.length).trim
     }
     // Category links may start this way, e.g. ":Category:Songwriters"
     else if (k.startsWith(catPrefix)) {
@@ -100,6 +100,8 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     } else {
       k
     }
+    // Categories can have stray spaces following the colon -- fix them here
+    cleaned.replace(spacedCat, unspacedCat)
   }
 
   // Normally this is based on the language code, but in the case of the Simple
@@ -115,4 +117,10 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
 
   private val catPrefix: String =
     s":$categoryName:".toLowerCase
+
+  private val spacedCat: String =
+    s"$categoryName: ".toLowerCase
+
+  private val unspacedCat: String =
+    s"$categoryName:".toLowerCase
 }

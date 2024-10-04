@@ -20,12 +20,20 @@ class PageMarkupLinkProcessorSpec extends UnitSpec {
     lp.keyFromTarget(":en:Dzongkha") shouldBe "dzongkha"
   }
 
+  it should "remove matching-language prefix and trim" in {
+    lp.keyFromTarget(":en: n-Butanol") shouldBe "n-butanol"
+  }
+
   it should "leave non-matching-language prefix in place" in {
     lp.keyFromTarget(":fr:Jeux et Stratégie") shouldBe ":fr:jeux et stratégie"
   }
 
   it should "rewrite :-prefixed category designators" in {
     lp.keyFromTarget(":Category:Atlantic hurricanes") shouldBe "category:atlantic hurricanes"
+  }
+
+  it should "rewrite :-prefixed category designators, dropping whitespace" in {
+    lp.keyFromTarget(":Category: People from Copenhagen") shouldBe "category:people from copenhagen"
   }
 
   it should "strip section heading destination" in {
