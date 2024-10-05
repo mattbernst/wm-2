@@ -25,6 +25,14 @@
          "geodis"
       ],
       "rootCategory" : "Category:Articles"
+   },
+   {
+      "code" : "fr",
+      "name" : "Français",
+      "disambiguationPrefixes" : [
+         "homonymie"
+      ],
+      "rootCategory" : "Catégorie:Espace encyclopédique"
    }
 ]
 

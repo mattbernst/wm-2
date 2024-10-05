@@ -15,6 +15,7 @@ object LanguageLogic {
 
   val logicForLanguage: Map[String, LanguageLogic] = Map(
     "en"        -> EnglishLanguageLogic,
-    "en_simple" -> EnglishLanguageLogic
+    "en_simple" -> EnglishLanguageLogic,
+    "fr"        -> FrenchLanguageLogic
   )
 }
