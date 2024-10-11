@@ -4,7 +4,7 @@ import wiki.extractor.types.{ARTICLE, CATEGORY, DISAMBIGUATION, PageMarkup, Page
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 
-class PageMarkupSource(db: Storage, queueSize: Int = 4000) {
+class PageMarkupSource(db: Storage, queueSize: Int = 20000) {
 
   /**
     * Continually enqueue PageMarkup into the internal queue until all relevant
@@ -24,18 +24,18 @@ class PageMarkupSource(db: Storage, queueSize: Int = 4000) {
     var j = 0
     // N.B. if sliceSize is too small, this could accidentally terminate early
     // (if all IDs in range were irrelevant page types)
-    val sliceSize = 1000
+    val sliceSize = 10000
     while (j < max) {
       val entries: Seq[TypedPageMarkup] = fn(j, j + sliceSize)
       entries
         .filter(e => relevantPages.contains(e.pageType))
-        .foreach(e => queue.put(e.pm))
+        .foreach(e => queue.put(e))
       j += sliceSize
     }
   }
 
-  def getFromQueue(): Option[PageMarkup] =
+  def getFromQueue(): Option[TypedPageMarkup] =
     Option(queue.poll(3, TimeUnit.SECONDS))
 
-  private lazy val queue = new ArrayBlockingQueue[PageMarkup](queueSize)
+  private lazy val queue = new ArrayBlockingQueue[TypedPageMarkup](queueSize)
 }

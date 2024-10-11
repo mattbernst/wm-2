@@ -3,7 +3,7 @@ package wiki.extractor
 import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
 import wiki.db.*
-import wiki.extractor.types.{DANGLING_REDIRECT, PageMarkup, Redirection, SiteInfo, Worker}
+import wiki.extractor.types.{DANGLING_REDIRECT, PageMarkup, Redirection, SiteInfo, TypedPageMarkup, Worker}
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
@@ -267,7 +267,7 @@ object WikipediaExtractor extends Logging {
   private def assignLinkWorkers(
     n: Int,
     processor: PageMarkupLinkProcessor,
-    source: () => Option[PageMarkup],
+    source: () => Option[TypedPageMarkup],
     sink: LinkSink
   ): Seq[Worker] = {
     0.until(n).map { id =>

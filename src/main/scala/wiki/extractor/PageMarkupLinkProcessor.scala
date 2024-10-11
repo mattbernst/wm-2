@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.db.{DeadLink, LinkSink, ResolvedLink}
-import wiki.extractor.types.{Language, PageMarkup, Worker}
+import wiki.extractor.types.{Language, PageMarkup, TypedPageMarkup, Worker}
 import wiki.extractor.util.Logging
 
 import scala.collection.mutable
@@ -18,10 +18,15 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     * numeric page ID, the link is transformed to a ResolvedLink. If the
     * destination could not be resolved, it is returned as a DeadLink.
     *
-    * @param pm PageMarkup data, including links
-    * @return   Resolved and dead links linking out from the input page
+    * @param tpm PageMarkup data, including links
+    * @return    Resolved and dead links linking out from the input page
     */
-  def extract(pm: PageMarkup): LinkResults = {
+  def extract(tpm: TypedPageMarkup): LinkResults = {
+    val pm = if (tpm.pmu.nonEmpty) {
+      PageMarkup.deserializeUncompressed(tpm.pmu.get)
+    } else {
+      PageMarkup.deserializeCompressed(tpm.pmz.get)
+    }
     val resolved = new ListBuffer[ResolvedLink]
     val dead     = new ListBuffer[DeadLink]
     val src      = pm.pageId
@@ -46,13 +51,13 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     LinkResults(resolved.toSeq, dead.toSeq)
   }
 
-  def worker(id: Int, source: () => Option[PageMarkup], sink: LinkSink): Worker = {
+  def worker(id: Int, source: () => Option[TypedPageMarkup], sink: LinkSink): Worker = {
     val thread = new Thread(() => {
       var completed = false
       while (!completed) {
         source() match {
-          case Some(pm) =>
-            val results = extract(pm)
+          case Some(tpm) =>
+            val results = extract(tpm)
             results.resolved.foreach(l => sink.addLink(resolvedLink = Some(l), deadLink = None))
             results.dead.foreach(l => sink.addLink(resolvedLink = None, deadLink = Some(l)))
           case None =>

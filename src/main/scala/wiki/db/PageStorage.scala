@@ -214,8 +214,7 @@ object PageStorage {
            page, page_markup
            WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
         val pmu = PageMarkup_U(rs.int("page_id"), rs.stringOpt("markup"), rs.stringOpt("parsed"))
-        val pm  = PageMarkup.deserializeUncompressed(pmu)
-        TypedPageMarkup(pm, PageTypes.byNumber(rs.int("page_type")))
+        TypedPageMarkup(Some(pmu), None, PageTypes.byNumber(rs.int("page_type")))
       }.list()
     }
   }
@@ -234,8 +233,7 @@ object PageStorage {
            page, page_markup_z
            WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
         val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytes("data"))
-        val pm  = PageMarkup.deserializeCompressed(pmz)
-        TypedPageMarkup(pm, PageTypes.byNumber(rs.int("page_type")))
+        TypedPageMarkup(None, Some(pmz), PageTypes.byNumber(rs.int("page_type")))
       }.list()
     }
   }
