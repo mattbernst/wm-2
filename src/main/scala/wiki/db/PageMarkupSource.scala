@@ -1,10 +1,10 @@
 package wiki.db
 
-import wiki.extractor.types.{ARTICLE, CATEGORY, DISAMBIGUATION, PageMarkup, PageType, TypedPageMarkup}
+import wiki.extractor.types.*
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 
-class PageMarkupSource(db: Storage, queueSize: Int = 20000) {
+class PageMarkupSource(db: Storage, queueSize: Int = 40000) {
 
   /**
     * Continually enqueue PageMarkup into the internal queue until all relevant
@@ -16,7 +16,7 @@ class PageMarkupSource(db: Storage, queueSize: Int = 20000) {
   def enqueueMarkup(): Unit = {
     val relevantPages: Set[PageType] = Set(ARTICLE, CATEGORY, DISAMBIGUATION)
     val max                          = Math.max(db.page.compressedMax, db.page.uncompressedMax)
-    val fn: (Int, Int) => Seq[TypedPageMarkup] = if (db.page.usingCompression) {
+    val fetch: (Int, Int) => Seq[TypedPageMarkup] = if (db.page.usingCompression) {
       db.page.readMarkupSlice_Z
     } else {
       db.page.readMarkupSlice
@@ -24,9 +24,9 @@ class PageMarkupSource(db: Storage, queueSize: Int = 20000) {
     var j = 0
     // N.B. if sliceSize is too small, this could accidentally terminate early
     // (if all IDs in range were irrelevant page types)
-    val sliceSize = 10000
+    val sliceSize = 20000
     while (j < max) {
-      val entries: Seq[TypedPageMarkup] = fn(j, j + sliceSize)
+      val entries = fetch(j, j + sliceSize)
       entries
         .filter(e => relevantPages.contains(e.pageType))
         .foreach(e => queue.put(e))

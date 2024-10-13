@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of links enqueued before writing
   */
-class LinkSink(db: Storage, queueSize: Int = 8000) extends Logging {
+class LinkSink(db: Storage, queueSize: Int = 100000) extends Logging {
 
   /**
     * Enqueue one link (resolved or dead) for writing. The data will be
