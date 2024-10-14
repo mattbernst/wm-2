@@ -1,6 +1,6 @@
 package wiki.db
 
-import wiki.extractor.util.{Logging, Progress}
+import wiki.extractor.util.{DBLogging, Progress}
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 import scala.collection.mutable.ListBuffer
@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of links enqueued before writing
   */
-class LinkSink(db: Storage, queueSize: Int = 100000) extends Logging {
+class LinkSink(db: Storage, queueSize: Int = 100000) {
 
   /**
     * Enqueue one link (resolved or dead) for writing. The data will be
@@ -39,7 +39,7 @@ class LinkSink(db: Storage, queueSize: Int = 100000) extends Logging {
       }
     })
     thread.setDaemon(true)
-    logger.info("Starting writerThread for PageWriter")
+    DBLogging.info("Starting writerThread for PageWriter")
     thread.start()
     thread
   }

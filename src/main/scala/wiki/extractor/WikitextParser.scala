@@ -4,13 +4,13 @@ import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{Link, ParseResult}
-import wiki.extractor.util.{DBLogging, Logging}
+import wiki.extractor.util.DBLogging
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-class WikitextParser(languageLogic: LanguageLogic) extends Logging {
+class WikitextParser(languageLogic: LanguageLogic) {
 
   /**
     * Parse wikitext markup for an article using Sweble and retain selected

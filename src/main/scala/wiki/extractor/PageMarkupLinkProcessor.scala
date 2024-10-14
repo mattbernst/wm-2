@@ -2,15 +2,14 @@ package wiki.extractor
 
 import wiki.db.{DeadLink, LinkSink, ResolvedLink}
 import wiki.extractor.types.{Language, PageMarkup, TypedPageMarkup, Worker}
-import wiki.extractor.util.Logging
+import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 case class LinkResults(resolved: Seq[ResolvedLink], dead: Seq[DeadLink])
 
-class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Language, categoryName: String)
-    extends Logging {
+class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Language, categoryName: String) {
 
   /**
     * Get all internal links from a single page out to other links within the
@@ -62,11 +61,11 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
             results.dead.foreach(l => sink.addLink(resolvedLink = None, deadLink = Some(l)))
           case None =>
             completed = true
-            logger.info(s"Worker $id finished")
+            DBLogging.info(s"PageMarkupLinkProcessor Worker $id finished")
         }
       }
     })
-    logger.info(s"Starting Worker $id")
+    DBLogging.info(s"Starting PageMarkupLinkProcessor Worker $id")
     thread.setDaemon(true)
     thread.start()
     Worker(thread)

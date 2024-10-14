@@ -3,7 +3,7 @@ package wiki.extractor
 import wiki.db.PageSink
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.{Logging, Progress}
+import wiki.extractor.util.{DBLogging, Logging, Progress}
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -105,11 +105,11 @@ class XMLStructuredPageProcessor(
             }
           case _ =>
             completed = true
-            logger.info(s"Worker $id finished")
+            DBLogging.info(s"XMLStructuredPageProcessor Worker $id finished")
         }
       }
     })
-    logger.info(s"Starting Worker $id")
+    DBLogging.info(s"Starting XMLStructuredPageProcessor Worker $id")
     thread.setDaemon(true)
     thread.start()
     Worker(thread)

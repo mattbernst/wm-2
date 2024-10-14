@@ -3,7 +3,7 @@ package wiki.extractor
 import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
 import wiki.db.*
-import wiki.extractor.types.{DANGLING_REDIRECT, PageMarkup, Redirection, SiteInfo, TypedPageMarkup, Worker}
+import wiki.extractor.types.*
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
@@ -97,10 +97,10 @@ object WikipediaExtractor extends Logging {
     source.extractPages()
     dumpSource.close()
     workers.foreach(_.thread.join())
-    logger.info(s"Split out ${source.pageCount} pages")
+    DBLogging.info(s"Split out ${source.pageCount} pages")
     sink.stopWriting()
     sink.writerThread.join()
-    logger.info(s"Wrote ${sink.pageCount} pages to database")
+    DBLogging.info(s"Wrote ${sink.pageCount} pages to database")
     writeTransclusions(processor.getLastTransclusionCounts())
     db.phase.completePhase(phase)
   }
@@ -176,14 +176,14 @@ object WikipediaExtractor extends Logging {
     } else if (fileName.endsWith(".bz2")) {
       val bz2   = new BZip2HadoopStreams
       val input = bz2.createInputStream(new BufferedInputStream(new FileInputStream(fileName)))
-      logger.warn(s"Reading from compressed bz2 input. This is much slower than uncompressed XML.")
+      DBLogging.warn(s"Reading from compressed bz2 input. This is much slower than uncompressed XML.")
       Source.fromInputStream(input)(StandardCharsets.UTF_8)
     } else if (fileName.endsWith(".zst")) {
       // N.B. the Apache Commons ZstdCompressorInputStream relies on native
       // libraries that are missing by default on macOS, so use the pure-Java
       // Airlift library for decompression here.
       val input = new ZstdInputStream(new BufferedInputStream(new FileInputStream(fileName)))
-      logger.info(s"Reading from compressed zst input.")
+      DBLogging.info(s"Reading from compressed zst input.")
       Source.fromInputStream(input)(StandardCharsets.UTF_8)
     } else {
       throw new RuntimeException(s"Unknown file extension: $fileName")
@@ -207,9 +207,9 @@ object WikipediaExtractor extends Logging {
       val aboveAverage = input.filter {
         case (_, n) => n > average
       }
-      logger.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
+      DBLogging.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
       db.transclusion.writeLastTransclusionCounts(aboveAverage)
-      logger.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
+      DBLogging.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
     }
   }
 
@@ -220,16 +220,16 @@ object WikipediaExtractor extends Logging {
     * @return Dangling redirects that need their page type updated
     */
   private def storeMappedTitles(): Seq[Redirection] = {
-    logger.info(s"Getting TitleFinder data")
+    DBLogging.info(s"Getting TitleFinder data")
     val redirects = db.page.readRedirects()
-    logger.info(s"Loaded ${redirects.length} redirects")
+    DBLogging.info(s"Loaded ${redirects.length} redirects")
     val titlePageMap = db.page.readTitlePageMap()
-    logger.info(s"Loaded ${titlePageMap.size} title-to-ID map entries")
+    DBLogging.info(s"Loaded ${titlePageMap.size} title-to-ID map entries")
     val tf = new TitleFinder(titlePageMap, redirects)
-    logger.info(s"Started writing title to page ID mappings to db")
+    DBLogging.info(s"Started writing title to page ID mappings to db")
     val fpm = tf.getFlattenedPageMapping()
     db.page.writeTitleToPage(fpm)
-    logger.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
+    DBLogging.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
     tf.danglingRedirects
   }
 
@@ -242,7 +242,7 @@ object WikipediaExtractor extends Logging {
     */
   private def markDanglingRedirects(input: Seq[Redirection]): Unit = {
     input.foreach(r => db.page.updatePageType(r.pageId, DANGLING_REDIRECT))
-    logger.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
+    DBLogging.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
   }
 
   private val db: Storage =

@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.extractor.types.Redirection
-import wiki.extractor.util.Logging
+import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
 
@@ -15,7 +15,7 @@ import scala.collection.mutable
   * @param pageMap     A map of page titles to page IDs
   * @param redirects   All redirects from the page table
   */
-class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirection]) extends Logging {
+class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirection]) {
 
   /**
     * Resolve a page title to its page ID. If the title belongs to an ordinary
@@ -36,7 +36,7 @@ class TitleFinder(pageMap: mutable.Map[String, Int], redirects: Seq[Redirection]
     */
   def getId(title: String, depth: Int = 1): Option[Int] = {
     if (depth > maxDepth) {
-      logger.warn(s"Exceeded max depth trying to resolve title '$title' to a non-redirect page")
+      DBLogging.warn(s"Exceeded max depth trying to resolve title '$title' to a non-redirect page")
       None
     } else if (pageMap.contains(title)) {
       pageMap.get(title)

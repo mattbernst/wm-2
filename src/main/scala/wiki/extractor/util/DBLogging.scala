@@ -5,24 +5,39 @@ import wiki.db.Storage
 
 object DBLogging extends Logging {
 
-  def info(message: String): Unit = {
+  def info(message: String, both: Boolean = true): Unit = {
     db match {
-      case Some(_) => write(Level.INFO, message)
-      case None    => logger.info(message)
+      case Some(_) =>
+        write(Level.INFO, message)
+        if (both) {
+          logger.info(message)
+        }
+      case None =>
+        logger.info(message)
     }
   }
 
-  def warn(message: String): Unit = {
+  def warn(message: String, both: Boolean = true): Unit = {
     db match {
-      case Some(_) => write(Level.WARN, message)
-      case None    => logger.warn(message)
+      case Some(_) =>
+        write(Level.WARN, message)
+        if (both) {
+          logger.warn(message)
+        }
+      case None =>
+        logger.warn(message)
     }
   }
 
-  def error(message: String): Unit = {
+  def error(message: String, both: Boolean = true): Unit = {
     db match {
-      case Some(_) => write(Level.ERROR, message)
-      case None    => logger.error(message)
+      case Some(_) =>
+        write(Level.ERROR, message)
+        if (both) {
+          logger.error(message)
+        }
+      case None =>
+        logger.error(message)
     }
   }
 

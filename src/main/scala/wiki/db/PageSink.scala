@@ -1,7 +1,7 @@
 package wiki.db
 
 import wiki.extractor.types.*
-import wiki.extractor.util.{Logging, Progress}
+import wiki.extractor.util.{DBLogging, Progress}
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 import scala.collection.mutable
@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of pages enqueued before writing
   */
-class PageSink(db: Storage, queueSize: Int = 8000) extends Logging {
+class PageSink(db: Storage, queueSize: Int = 8000) {
 
   /**
     * Enqueue one page for writing along with its markup. The caller supplies
@@ -49,7 +49,7 @@ class PageSink(db: Storage, queueSize: Int = 8000) extends Logging {
       }
     })
     thread.setDaemon(true)
-    logger.info("Starting writerThread for PageSink")
+    DBLogging.info("Starting writerThread for PageSink")
     thread.start()
     thread
   }
