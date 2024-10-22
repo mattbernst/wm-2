@@ -130,54 +130,61 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   private lazy val pages = {
     val defaultNamespace  = Namespace(0, FIRST_LETTER, "")
     val categoryNamespace = Namespace(14, FIRST_LETTER, "Category")
+    val now = System.currentTimeMillis()
     Seq(
       DumpPage(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
+        depth = None,
         title = "Ann Arbor, Michigan",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now
       ),
       DumpPage(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
+        depth = None,
         title = "Category:Mathematics",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now
       ),
       DumpPage(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = REDIRECT,
+        depth = None,
         title = "AsciiArt",
         redirectTarget = Some("ASCII art"),
-        lastEdited = None
+        lastEdited = now
       ),
       DumpPage(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
+        depth = None,
         title = "ASCII art",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now
       ),
       DumpPage(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = REDIRECT,
+        depth = None,
         title = "Category:Wikipedians who are not a Wikipedian",
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
-        lastEdited = None
+        lastEdited = now
       ),
       DumpPage(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
+        depth = None,
         title = "Category:Wikipedians who retain deleted categories on their userpages",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now
       )
     )
   }

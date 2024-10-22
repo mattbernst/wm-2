@@ -55,6 +55,7 @@ class XMLStructuredPageProcessor(
         .map(_.text)
         .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
         .map(_.toInstant.toEpochMilli)
+        .get
 
       val pageType = if (redirect.nonEmpty) {
         REDIRECT
@@ -66,6 +67,7 @@ class XMLStructuredPageProcessor(
         id = id,
         namespace = namespace,
         pageType = pageType,
+        depth = None,
         title = title,
         redirectTarget = redirect,
         lastEdited = lastEdited

@@ -17,7 +17,7 @@ object PageStorage {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""id, namespace_id, page_type, last_edited, title, redirect_target"""
+        val cols: SQLSyntax = sqls"""id, namespace_id, page_type, last_edited, depth, title, redirect_target"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
@@ -25,6 +25,7 @@ object PageStorage {
               sqls"${t.namespace.id}",
               sqls"${PageTypes.bySymbol(t.pageType)}",
               sqls"${t.lastEdited}",
+              sqls"${t.depth}",
               sqls"${t.title}",
               sqls"${t.redirectTarget}"
             )
