@@ -26,7 +26,7 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
   }
 
   it should "return an UNHANDLED page type for a Wikipedia: namespace page" in {
-    val expected = DumpPage(
+    val expected = Page(
       id = 551039,
       namespace = Namespace(id = 4, casing = FIRST_LETTER, name = "Wikipedia"),
       pageType = UNHANDLED,

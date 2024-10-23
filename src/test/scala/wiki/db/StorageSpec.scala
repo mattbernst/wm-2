@@ -18,7 +18,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
   behavior of "PageStorage"
   it should "write page records and resolve redirects" in {
-    storage.page.writeDumpPages(pages)
+    storage.page.writePages(pages)
     val tf = new TitleFinder(storage.page.readTitlePageMap(), storage.page.readRedirects())
     storage.page.writeTitleToPage(tf.getFlattenedPageMapping())
     tf.getId("This title does not exist") shouldBe None
@@ -130,9 +130,9 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   private lazy val pages = {
     val defaultNamespace  = Namespace(0, FIRST_LETTER, "")
     val categoryNamespace = Namespace(14, FIRST_LETTER, "Category")
-    val now = System.currentTimeMillis()
+    val now               = System.currentTimeMillis()
     Seq(
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
@@ -141,7 +141,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         redirectTarget = None,
         lastEdited = now
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
@@ -150,7 +150,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         redirectTarget = None,
         lastEdited = now
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = REDIRECT,
@@ -159,7 +159,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         redirectTarget = Some("ASCII art"),
         lastEdited = now
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
@@ -168,7 +168,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         redirectTarget = None,
         lastEdited = now
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = REDIRECT,
@@ -177,7 +177,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
         lastEdited = now
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,

@@ -8,7 +8,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
-  * A writer with an internal buffer that continually buffers DumpPages and
+  * A writer with an internal buffer that continually buffers Pages and
   * markup, then writes them in batches to the page and page_markup or
   * page_markup_z database tables. Since it is optimized for write speed while
   * processing a new dump file, it sets SQLite pragmas that are unsafe for
@@ -29,9 +29,11 @@ class PageSink(db: Storage, queueSize: Int = 8000) {
     * uncompressed or compressed markup. The data will be automatically written
     * by the continually running writerThread.
     *
-    * @param page A structured DumpPage
+    * @param page A structured Page
+    * @param markupU Optional uncompressed-text PageMarkup
+    * @param markupZ Optional compressed-text PageMarkup
     */
-  def addPage(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z]): Unit = {
+  def addPage(page: Page, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z]): Unit = {
     queue.put(QueueEntry(page = page, markupU = markupU, markupZ = markupZ))
     pageCount += 1
     Progress.tick(pageCount, "+")
@@ -88,7 +90,7 @@ class PageSink(db: Storage, queueSize: Int = 8000) {
       }
 
       // Write page descriptors and markup
-      db.page.writeDumpPages(pages)
+      db.page.writePages(pages)
       val markups = unwritten.flatMap(_.markupU)
       if (markups.nonEmpty) {
         db.page.writeMarkups(markups)
@@ -106,7 +108,7 @@ class PageSink(db: Storage, queueSize: Int = 8000) {
     }
   }
 
-  private case class QueueEntry(page: DumpPage, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z])
+  private case class QueueEntry(page: Page, markupU: Option[PageMarkup_U], markupZ: Option[PageMarkup_Z])
 
   var pageCount: Int                       = 0
   private var availableForWriting: Boolean = true

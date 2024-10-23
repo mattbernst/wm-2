@@ -1,6 +1,8 @@
 package wiki.db
 
+import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
+import wiki.extractor.types.{Namespace, Page, PageTypes}
 import wiki.extractor.util.{FileHelpers, Logging}
 
 /**
@@ -11,6 +13,30 @@ import wiki.extractor.util.{FileHelpers, Logging}
   */
 class Storage(fileName: String) extends Logging {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
+
+  /**
+    * Try to get a single Page from storage. This is implemented here instead
+    * of in PageStorage because it needs elements from PageStorage and from
+    * NamespaceStorage.
+    *
+    * @param pageId A numeric ID for a page to retrieve
+    * @return       The full page record for the ID, if retrievable
+    */
+  def getPage(pageId: Int): Option[Page] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT * from PAGE where id=$pageId""".map { r =>
+        Page(
+          id = r.int("id"),
+          namespace = namespaceCache.get(r.int("namespace_id")),
+          pageType = PageTypes.byNumber(r.int("page_type")),
+          depth = r.intOpt("depth"),
+          title = r.string("title"),
+          redirectTarget = r.stringOpt("redirect_target"),
+          lastEdited = r.long("last_edited")
+        )
+      }.single()
+    }
+  }
 
   def closeAll(): Unit = {
     ConnectionPool.closeAll()
@@ -80,6 +106,14 @@ class Storage(fileName: String) extends Logging {
   val page: PageStorage.type                 = PageStorage
   val phase: PhaseStorage.type               = PhaseStorage
   val transclusion: TransclusionStorage.type = TransclusionStorage
+
+  private lazy val namespaceCache: LoadingCache[Int, Namespace] =
+    Scaffeine()
+      .build(loader = (id: Int) => {
+        namespace.read(id).getOrElse {
+          throw new NoSuchElementException(s"Could not retrieve namespace $id")
+        }
+      })
 }
 
 object Storage extends Logging {

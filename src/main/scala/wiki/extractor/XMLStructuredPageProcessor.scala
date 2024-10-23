@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
-case class StructuredPage(page: DumpPage, markup: PageMarkup)
+case class StructuredPage(page: Page, markup: PageMarkup)
 
 class XMLStructuredPageProcessor(
   siteInfo: SiteInfo,
@@ -63,7 +63,7 @@ class XMLStructuredPageProcessor(
         inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
       }
 
-      val dp = DumpPage(
+      val dp = Page(
         id = id,
         namespace = namespace,
         pageType = pageType,

@@ -43,6 +43,17 @@ object WikipediaExtractor extends Logging {
         phase03()
     }
 
+    db.phase.getPhaseState(4) match {
+      case Some(COMPLETED) =>
+        logger.info("Already completed phase 4")
+      case Some(CREATED) =>
+        logger.warn("Phase 4 incomplete -- redoing")
+        db.page.clearAllDepths()
+        phase04()
+      case None =>
+        phase04()
+    }
+
     db.closeAll()
   }
 
@@ -148,6 +159,16 @@ object WikipediaExtractor extends Logging {
     db.phase.completePhase(phase)
   }
 
+  // Assign a page depth to categories and articles
+  private def phase04(): Unit = {
+    val phase = 4
+    db.phase.deletePhase(phase)
+    val rootCategory = Config.props.language.rootCategory
+    db.phase.createPhase(phase, s"Mapping depth starting from $rootCategory")
+
+    db.phase.completePhase(phase)
+  }
+
   /**
     * Get input to process. This can read a .xml.bz2 dump file as downloaded
     * from Wikipedia, a ZStandard compressed .xml.zst file, or an uncompressed
@@ -207,7 +228,9 @@ object WikipediaExtractor extends Logging {
       val aboveAverage = input.filter {
         case (_, n) => n > average
       }
-      DBLogging.info(s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)")
+      DBLogging.info(
+        s"Started writing ${aboveAverage.size} common last-transclusions to db (out of ${input.size} total)"
+      )
       db.transclusion.writeLastTransclusionCounts(aboveAverage)
       DBLogging.info(s"Finished writing ${aboveAverage.size} common last-transclusions to db")
     }

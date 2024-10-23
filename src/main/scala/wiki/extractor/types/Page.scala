@@ -1,6 +1,6 @@
 package wiki.extractor.types
 
-case class DumpPage(
+case class Page(
   id: Int,
   namespace: Namespace,
   pageType: PageType,
@@ -8,3 +8,5 @@ case class DumpPage(
   title: String,
   redirectTarget: Option[String],
   lastEdited: Long)
+
+case class PageDepth(pageId: Int, depth: Int)

@@ -8,12 +8,12 @@ import scala.collection.mutable
 object PageStorage {
 
   /**
-    * Write dump pages to the page table. The page table contains all the DumpPage
+    * Write pages to the page table. The page table contains all the Page
     * data except the raw markup.
     *
-    * @param input One or more DumpPages to write
+    * @param input One or more Pages to write
     */
-  def writeDumpPages(input: Seq[DumpPage]): Unit = {
+  def writePages(input: Seq[Page]): Unit = {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
@@ -33,6 +33,47 @@ object PageStorage {
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
         sql"""INSERT OR IGNORE INTO page ($cols) VALUES $values""".update()
       }
+    }
+  }
+
+  /**
+    * Assign depth to pages in the page table. Depth is calculated relative to
+    * the root category defined in the language-specific configuration in
+    * languages.json.
+    *
+    * @param input One or more page depths to write
+    */
+  def writeDepths(input: Seq[PageDepth]): Unit = {
+    val batches = input.grouped(batchInsertSize)
+    DB.autoCommit { implicit session =>
+      batches.foreach { batch =>
+        val cases = batch.map { e =>
+          sqls"WHEN ${e.pageId} THEN ${e.depth}"
+        }
+
+        val ids = batch.map(_.pageId)
+
+        sql"""
+        UPDATE page
+        SET depth = CASE id
+          ${sqls.csv(cases *)}
+          ELSE depth
+        END
+        WHERE id IN (${ids})
+      """.update()
+      }
+    }
+  }
+
+  /**
+    * Set all depths back to null. Called if depth mapping needs to be started
+    * again from beginning.
+    *
+    */
+  def clearAllDepths(): Unit = {
+    DB.autoCommit { implicit session =>
+      sql"""UPDATE page SET DEPTH = null"""
+        .update(): Unit
     }
   }
 
