@@ -63,6 +63,17 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.page.readMarkup_Z(0) shouldBe None
   }
 
+  it should "write depths" in {
+    pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
+    storage.page.writePages(pages)
+    val id = pages.last.id
+
+    storage.getPage(id).flatMap(_.depth) shouldBe None
+    val depth = 2
+    storage.page.writeDepths(Map(id -> depth))
+    storage.getPage(id).flatMap(_.depth) shouldBe Some(depth)
+  }
+
   behavior of "PhaseStorage"
 
   it should "get None for phase state of unknown phase" in {

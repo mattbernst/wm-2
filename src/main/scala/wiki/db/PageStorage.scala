@@ -41,17 +41,17 @@ object PageStorage {
     * the root category defined in the language-specific configuration in
     * languages.json.
     *
-    * @param input One or more page depths to write
+    * @param input Map of page IDs to depths
     */
-  def writeDepths(input: Seq[PageDepth]): Unit = {
+  def writeDepths(input: Map[Int, Int]): Unit = {
     val batches = input.grouped(batchInsertSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
-        val cases = batch.map { e =>
-          sqls"WHEN ${e.pageId} THEN ${e.depth}"
+        val cases = batch.toSeq.map { e =>
+          sqls"WHEN ${e._1} THEN ${e._2}"
         }
 
-        val ids = batch.map(_.pageId)
+        val ids = batch.keys.toSeq
 
         sql"""
         UPDATE page

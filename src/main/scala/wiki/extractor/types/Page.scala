@@ -8,5 +8,3 @@ case class Page(
   title: String,
   redirectTarget: Option[String],
   lastEdited: Long)
-
-case class PageDepth(pageId: Int, depth: Int)
