@@ -8,9 +8,23 @@ import wiki.extractor.util.{FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
+  behavior of "Storage.getPage"
+
+  it should "get None for an unknown page" in {
+    storage.getPage(-1) shouldBe None
+  }
+
+  it should "get a stored page with namespace" in {
+    pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
+    storage.page.writePages(pages)
+    val expected = pages.head
+
+    storage.getPage(expected.id) shouldBe Some(expected)
+  }
+
   behavior of "NamespaceStorage"
   it should "write and read back Namespace records" in {
-    val ns = Namespace(14, FIRST_LETTER, "Category")
+    val ns = Namespace(-1, FIRST_LETTER, "Category")
     storage.namespace.read(ns.id) shouldBe None
     storage.namespace.write(ns)
     storage.namespace.read(ns.id) shouldBe Some(ns)
