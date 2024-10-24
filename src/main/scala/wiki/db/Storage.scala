@@ -24,7 +24,31 @@ class Storage(fileName: String) extends Logging {
     */
   def getPage(pageId: Int): Option[Page] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * from PAGE where id=$pageId""".map { r =>
+      sql"""SELECT * from page where id=$pageId""".map { r =>
+        Page(
+          id = r.int("id"),
+          namespace = namespaceCache.get(r.int("namespace_id")),
+          pageType = PageTypes.byNumber(r.int("page_type")),
+          depth = r.intOpt("depth"),
+          title = r.string("title"),
+          redirectTarget = r.stringOpt("redirect_target"),
+          lastEdited = r.long("last_edited")
+        )
+      }.single()
+    }
+  }
+
+  /**
+    * Try to get a single Page from storage by title. This is implemented here
+    * instead of in PageStorage because it needs elements from PageStorage and
+    * from NamespaceStorage.
+    *
+    * @param title A page title a page to retrieve
+    * @return      The full page record for the title, if retrievable
+    */
+  def getPage(title: String): Option[Page] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT * from page where title=$title""".map { r =>
         Page(
           id = r.int("id"),
           namespace = namespaceCache.get(r.int("namespace_id")),

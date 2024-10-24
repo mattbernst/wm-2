@@ -14,11 +14,12 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.getPage(-1) shouldBe None
   }
 
-  it should "get a stored page with namespace" in {
+  it should "get a stored page with namespace (by ID or title)" in {
     pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
     storage.page.writePages(pages)
     val expected = pages.head
 
+    storage.getPage(expected.title) shouldBe Some(expected)
     storage.getPage(expected.id) shouldBe Some(expected)
   }
 
