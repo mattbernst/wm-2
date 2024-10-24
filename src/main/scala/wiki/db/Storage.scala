@@ -15,16 +15,16 @@ class Storage(fileName: String) extends Logging {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
 
   /**
-    * Try to get a single Page from storage. This is implemented here instead
-    * of in PageStorage because it needs elements from PageStorage and from
-    * NamespaceStorage.
+    * Try to get one or more Page records from storage. This is implemented
+    * here instead of in PageStorage because it needs elements from PageStorage
+    * and from NamespaceStorage.
     *
-    * @param pageId A numeric ID for a page to retrieve
-    * @return       The full page record for the ID, if retrievable
+    * @param pageIds Numeric IDs for pages to retrieve
+    * @return       The full page records for the IDs, where retrievable
     */
-  def getPage(pageId: Int): Option[Page] = {
+  def getPages(pageIds: Seq[Int]): Seq[Page] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * from page where id=$pageId""".map { r =>
+      sql"""SELECT * from page where id in ($pageIds)""".map { r =>
         Page(
           id = r.int("id"),
           namespace = namespaceCache.get(r.int("namespace_id")),
@@ -34,7 +34,7 @@ class Storage(fileName: String) extends Logging {
           redirectTarget = r.stringOpt("redirect_target"),
           lastEdited = r.long("last_edited")
         )
-      }.single()
+      }.list()
     }
   }
 

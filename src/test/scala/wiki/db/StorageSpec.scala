@@ -10,8 +10,8 @@ import wiki.extractor.{TitleFinder, WikitextParser}
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   behavior of "Storage.getPage"
 
-  it should "get None for an unknown page" in {
-    storage.getPage(-1) shouldBe None
+  it should "get nothing for an unknown page" in {
+    storage.getPages(Seq(-1)) shouldBe Seq()
   }
 
   it should "get a stored page with namespace (by ID or title)" in {
@@ -20,7 +20,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val expected = pages.head
 
     storage.getPage(expected.title) shouldBe Some(expected)
-    storage.getPage(expected.id) shouldBe Some(expected)
+    storage.getPages(Seq(expected.id)) shouldBe Seq(expected)
   }
 
   behavior of "NamespaceStorage"
@@ -69,10 +69,10 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.page.writePages(pages)
     val id = pages.last.id
 
-    storage.getPage(id).flatMap(_.depth) shouldBe None
+    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq()
     val depth = 2
     storage.page.writeDepths(Map(id -> depth))
-    storage.getPage(id).flatMap(_.depth) shouldBe Some(depth)
+    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq(depth)
   }
 
   behavior of "PhaseStorage"
