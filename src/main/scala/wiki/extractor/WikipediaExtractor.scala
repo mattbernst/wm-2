@@ -165,7 +165,8 @@ object WikipediaExtractor extends Logging {
     db.phase.deletePhase(phase)
     val rootCategory = Config.props.language.rootCategory
     db.phase.createPhase(phase, s"Mapping depth starting from $rootCategory")
-
+    val processor = new DepthProcessor(db)
+    processor.markDepths(rootCategory)
     db.phase.completePhase(phase)
   }
 

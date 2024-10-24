@@ -33,7 +33,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
       case Success(nodes) =>
         Some(processNodes(nodes))
       case Failure(ex) =>
-        DBLogging.warn(s"""Could not parse "$title" wikitext markup: ${ex.getClass.getSimpleName}""")
+        DBLogging.warn(s"""Could not parse "$title" wikitext markup: ${ex.getClass.getSimpleName}""", both = false)
         None
     }
   }
