@@ -72,7 +72,7 @@ object PageStorage {
     */
   def clearAllDepths(): Unit = {
     DB.autoCommit { implicit session =>
-      sql"""UPDATE page SET DEPTH = null"""
+      sql"""UPDATE page SET depth = null"""
         .update(): Unit
     }
   }

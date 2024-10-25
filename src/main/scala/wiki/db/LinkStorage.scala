@@ -63,12 +63,25 @@ object LinkStorage {
     * @param id ID of the source page involved in a link
     * @return   All matching links
     */
-  def getBySource(id: Int): Seq[ResolvedLink] = {
-    DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM link WHERE source=$id"""
-        .map(toResolvedLink)
-        .list()
+  def getBySource(id: Int): Seq[ResolvedLink] =
+    getBySource(Seq(id)).getOrElse(id, Seq())
+
+  /**
+    * Get links for multiple source page IDs, keyed by source page ID.
+    *
+    * @param ids IDs of the source pages involved in a link
+    * @return    Source IDs mapped to matching links
+    */
+  def getBySource(ids: Seq[Int]): Map[Int, Seq[ResolvedLink]] = {
+    val batches = ids.grouped(1000).toSeq
+    val rows = DB.autoCommit { implicit session =>
+      batches.flatMap { batch =>
+        sql"""SELECT * FROM link WHERE source IN ($batch)"""
+          .map(toResolvedLink)
+          .list()
+      }
     }
+    rows.groupBy(_.source)
   }
 
   /**

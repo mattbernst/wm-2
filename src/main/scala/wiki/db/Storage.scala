@@ -23,18 +23,21 @@ class Storage(fileName: String) extends Logging {
     * @return       The full page records for the IDs, where retrievable
     */
   def getPages(pageIds: Seq[Int]): Seq[Page] = {
+    val batches = pageIds.grouped(1000).toSeq
     DB.autoCommit { implicit session =>
-      sql"""SELECT * from page where id in ($pageIds)""".map { r =>
-        Page(
-          id = r.int("id"),
-          namespace = namespaceCache.get(r.int("namespace_id")),
-          pageType = PageTypes.byNumber(r.int("page_type")),
-          depth = r.intOpt("depth"),
-          title = r.string("title"),
-          redirectTarget = r.stringOpt("redirect_target"),
-          lastEdited = r.long("last_edited")
-        )
-      }.list()
+      batches.flatMap { batch =>
+        sql"""SELECT * from page where id in ($batch)""".map { r =>
+          Page(
+            id = r.int("id"),
+            namespace = namespaceCache.get(r.int("namespace_id")),
+            pageType = PageTypes.byNumber(r.int("page_type")),
+            depth = r.intOpt("depth"),
+            title = r.string("title"),
+            redirectTarget = r.stringOpt("redirect_target"),
+            lastEdited = r.long("last_edited")
+          )
+        }.list()
+      }
     }
   }
 
