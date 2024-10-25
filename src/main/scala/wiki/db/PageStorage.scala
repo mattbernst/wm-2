@@ -54,13 +54,13 @@ object PageStorage {
         val ids = batch.keys.toSeq
 
         sql"""
-        UPDATE page
-        SET depth = CASE id
-          ${sqls.csv(cases *)}
-          ELSE depth
-        END
-        WHERE id IN (${ids})
-      """.update()
+      UPDATE page
+      SET depth = CASE id
+        ${sqls.join(cases, sqls" ")}
+        ELSE depth
+      END
+      WHERE id IN (${ids})
+    """.update()
       }
     }
   }
