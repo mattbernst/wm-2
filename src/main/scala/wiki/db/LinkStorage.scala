@@ -73,7 +73,7 @@ object LinkStorage {
     * @return    Source IDs mapped to matching links
     */
   def getBySource(ids: Seq[Int]): Map[Int, Seq[ResolvedLink]] = {
-    val batches = ids.grouped(1000).toSeq
+    val batches = ids.grouped(10000).toSeq
     val rows = DB.autoCommit { implicit session =>
       batches.flatMap { batch =>
         sql"""SELECT * FROM link WHERE source IN ($batch)"""

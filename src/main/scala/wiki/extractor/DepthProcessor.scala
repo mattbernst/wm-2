@@ -1,12 +1,17 @@
 package wiki.extractor
 
+import com.github.blemale.scaffeine.LoadingCache
 import wiki.db.Storage
-import wiki.extractor.types.{ARTICLE, CATEGORY}
+import wiki.extractor.types.{ARTICLE, CATEGORY, PageType}
 import wiki.extractor.util.Progress
 
 import scala.collection.mutable
 
-class DepthProcessor(db: Storage) {
+class DepthProcessor(
+  db: Storage,
+  pageGroups: Map[PageType, Set[Int]],
+  destinationCache: LoadingCache[Int, Seq[Int]],
+  maximumDepth: Int) {
 
   /**
     * Start with one named page to mark depths of all connected pages.
@@ -25,65 +30,44 @@ class DepthProcessor(db: Storage) {
     }
   }
 
+  def getCompletedCount(): Int =
+    completedPages.size
+
   /**
     * Mark depth of the given page IDs and their children up to maximum depth.
     *
     * @param pageIds Current page IDs
     * @param depth Current depth
-    * @param maximumDepth Maximum depth to explore
     */
-  private def markDepth(pageIds: Seq[Int], depth: Int, maximumDepth: Int = 64): Unit = {
+  private def markDepth(pageIds: Seq[Int], depth: Int): Unit = {
     val nextDestinations = mutable.Set[Int]()
 
     pageIds
       .filterNot(p => completedPages.contains(p))
       .foreach { id =>
         completedPages.add(id)
-        val links = db.link.getBySource(id).filter(link => !completedPages.contains(link.destination))
+        val links = destinationCache.get(id).filter(dst => !completedPages.contains(dst))
         links.foreach { link =>
           markedCount += 1
           Progress.tick(markedCount, "+")
-          if (!completedPages.contains(link.destination)) {
-            nextDestinations.add(link.destination)
-          }
+          nextDestinations.add(link)
         }
 
-        val depths = links.map(link => (link.destination, depth)).toMap
+        val depths = links.map(link => (link, depth)).toMap
         db.page.writeDepths(depths)
       }
 
     if (depth < maximumDepth) {
-      val childPages = {
-        // Sort pages so that those with more incomplete destination links get
-        // processed first. When pages have the same number of links, the page
-        // ID is the tie-breaker.
-        val pages = db.getPages(nextDestinations.toSeq).filter(_.redirectTarget.isEmpty)
-        val remainingDestinationsByPage = db.link
-          .getBySource(pages.map(_.id))
-          .map(t => t.copy(_2 = t._2.count(link => !completedPages.contains(link.destination))))
-
-        val decorated = pages
-          .map(p => ((remainingDestinationsByPage.getOrElse(p.id, 0), -p.id), p))
-          .sortBy(_._1)
-          .reverse
-
-        decorated.map(_._2)
-      }
-
       // Traverse deeper by way of non-redirecting children
-      val childArticles   = childPages.filter(_.pageType == ARTICLE)
-      val childCategories = childPages.filter(_.pageType == CATEGORY)
+      val childCategories = nextDestinations.intersect(pageGroups(CATEGORY)).toSeq.sorted
+      val childArticles   = nextDestinations.intersect(pageGroups(ARTICLE)).toSeq.sorted
 
       if (childCategories.nonEmpty) {
-        println(s"Depth: $depth")
-        println(s"childCategories: ${childCategories.map(_.title)}")
-        markDepth(childCategories.map(_.id), depth + 1, maximumDepth = maximumDepth)
+        markDepth(childCategories, depth + 1)
       }
 
       if (childArticles.nonEmpty) {
-        println(s"Depth: $depth")
-        println(s"childArticles: ${childArticles.map(_.title)}")
-        markDepth(childArticles.map(_.id), depth + 1, maximumDepth = maximumDepth)
+        markDepth(childArticles, depth + 1)
       }
     }
   }

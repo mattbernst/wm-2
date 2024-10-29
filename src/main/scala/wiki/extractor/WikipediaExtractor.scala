@@ -1,5 +1,6 @@
 package wiki.extractor
 
+import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
 import wiki.db.*
@@ -165,9 +166,25 @@ object WikipediaExtractor extends Logging {
     db.phase.deletePhase(phase)
     val rootCategory = Config.props.language.rootCategory
     db.phase.createPhase(phase, s"Mapping depth starting from $rootCategory")
-    val processor = new DepthProcessor(db)
-    //processor.markDepths(rootCategory)
-    processor.markDepths("Category:Fundamental categories")
+    DBLogging.info(s"Getting candidates for depth mapping")
+    val pageGroups: Map[PageType, Set[Int]] = db.page.getPagesForDepth()
+    DBLogging.info(s"Got ${pageGroups.values.map(_.size).sum} candidates for depth mapping")
+    DBLogging.info(s"Getting source-to-destination mapping")
+
+    val destinationCache: LoadingCache[Int, Seq[Int]] =
+      Scaffeine()
+        .maximumSize(10000000)
+        .build(loader = (id: Int) => {
+          db.link.getBySource(id).map(_.destination)
+        })
+    1.until(30).foreach { maxDepth =>
+      val processor = new DepthProcessor(db, pageGroups, destinationCache, maxDepth)
+      //processor.markDepths(rootCategory)
+      processor.markDepths("Category:Fundamental categories")
+      val completed = processor.getCompletedCount()
+      DBLogging.info(s"Completed marking $completed pages with max depth $maxDepth")
+    }
+
     db.phase.completePhase(phase)
   }
 

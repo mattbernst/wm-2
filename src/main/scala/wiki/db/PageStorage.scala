@@ -60,6 +60,7 @@ object PageStorage {
         ELSE depth
       END
       WHERE id IN (${ids})
+      AND depth IS NULL
     """.update()
       }
     }
@@ -145,6 +146,25 @@ object PageStorage {
 
     rows.foreach(r => result.put(r._1, r._2))
     result
+  }
+
+  /**
+    * Get ARTICLE and CATEGORY pages for use in depth mapping.
+    *
+    * @return Page IDs keyed by page type
+    */
+  def getPagesForDepth(): Map[PageType, Set[Int]] = {
+    val included = Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(CATEGORY))
+
+    DB.autoCommit { implicit session =>
+      sql"""SELECT id, page_type FROM page WHERE page_type IN ($included)"""
+        .map(r => (r.int("page_type"), r.int("id")))
+        .list()
+        .groupBy(_._1)
+        .map { t =>
+          (PageTypes.byNumber(t._1), t._2.map(_._2).toSet)
+        }
+    }
   }
 
   /**
