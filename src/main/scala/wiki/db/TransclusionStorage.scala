@@ -12,7 +12,7 @@ object TransclusionStorage {
     * @param input A map of transclusion names to counts
     */
   def writeLastTransclusionCounts(input: Map[String, Int]): Unit = {
-    val batches = input.toSeq.sorted.grouped(1000)
+    val batches = input.toSeq.sorted.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val params: Seq[Seq[SQLSyntax]] = batch.map(t => Seq(sqls"${t._1}", sqls"${t._2}"))

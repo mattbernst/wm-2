@@ -64,16 +64,16 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.page.readMarkup_Z(0) shouldBe None
   }
 
-  it should "write depths" in {
-    pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
-    storage.page.writePages(pages)
-    val id = pages.last.id
-
-    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq()
-    val depth = 2
-    storage.page.writeDepths(Map(id -> depth))
-    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq(depth)
-  }
+//  it should "write depths" in {
+//    pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
+//    storage.page.writePages(pages)
+//    val id = pages.last.id
+//
+//    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq()
+//    val depth = 2
+//    storage.page.writeDepths(Map(id -> depth))
+//    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq(depth)
+//  }
 
   behavior of "PhaseStorage"
 
@@ -162,7 +162,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
-        depth = None,
         title = "Ann Arbor, Michigan",
         redirectTarget = None,
         lastEdited = now
@@ -171,7 +170,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
-        depth = None,
         title = "Category:Mathematics",
         redirectTarget = None,
         lastEdited = now
@@ -180,7 +178,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = REDIRECT,
-        depth = None,
         title = "AsciiArt",
         redirectTarget = Some("ASCII art"),
         lastEdited = now
@@ -189,7 +186,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
-        depth = None,
         title = "ASCII art",
         redirectTarget = None,
         lastEdited = now
@@ -198,7 +194,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = REDIRECT,
-        depth = None,
         title = "Category:Wikipedians who are not a Wikipedian",
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
         lastEdited = now
@@ -207,7 +202,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
-        depth = None,
         title = "Category:Wikipedians who retain deleted categories on their userpages",
         redirectTarget = None,
         lastEdited = now

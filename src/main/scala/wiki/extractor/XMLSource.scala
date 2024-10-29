@@ -1,10 +1,11 @@
 package wiki.extractor
 
+import wiki.db.Storage
 import wiki.extractor.util.Text
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 
-class XMLSource(source: Iterator[String], queueSize: Int = 8000) {
+class XMLSource(source: Iterator[String], queueSize: Int = Storage.batchSqlSize * 2) {
   var pageCount = 0
 
   /**

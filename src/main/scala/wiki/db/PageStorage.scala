@@ -14,10 +14,10 @@ object PageStorage {
     * @param input One or more Pages to write
     */
   def writePages(input: Seq[Page]): Unit = {
-    val batches = input.grouped(batchInsertSize)
+    val batches = input.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
+      val cols: SQLSyntax = sqls"""id, namespace_id, page_type, last_edited, title, redirect_target"""
       batches.foreach { batch =>
-        val cols: SQLSyntax = sqls"""id, namespace_id, page_type, last_edited, depth, title, redirect_target"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
@@ -25,7 +25,6 @@ object PageStorage {
               sqls"${t.namespace.id}",
               sqls"${PageTypes.bySymbol(t.pageType)}",
               sqls"${t.lastEdited}",
-              sqls"${t.depth}",
               sqls"${t.title}",
               sqls"${t.redirectTarget}"
             )
@@ -33,48 +32,6 @@ object PageStorage {
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
         sql"""INSERT OR IGNORE INTO page ($cols) VALUES $values""".update()
       }
-    }
-  }
-
-  /**
-    * Assign depth to pages in the page table. Depth is calculated relative to
-    * the root category defined in the language-specific configuration in
-    * languages.json.
-    *
-    * @param input Map of page IDs to depths
-    */
-  def writeDepths(input: Map[Int, Int]): Unit = {
-    val batches = input.grouped(batchInsertSize)
-    DB.autoCommit { implicit session =>
-      batches.foreach { batch =>
-        val cases = batch.toSeq.map { e =>
-          sqls"WHEN ${e._1} THEN ${e._2}"
-        }
-
-        val ids = batch.keys.toSeq
-
-        sql"""
-      UPDATE page
-      SET depth = CASE id
-        ${sqls.join(cases, sqls" ")}
-        ELSE depth
-      END
-      WHERE id IN (${ids})
-      AND depth IS NULL
-    """.update()
-      }
-    }
-  }
-
-  /**
-    * Set all depths back to null. Called if depth mapping needs to be started
-    * again from beginning.
-    *
-    */
-  def clearAllDepths(): Unit = {
-    DB.autoCommit { implicit session =>
-      sql"""UPDATE page SET depth = null"""
-        .update(): Unit
     }
   }
 
@@ -177,8 +134,7 @@ object PageStorage {
     * @param source A sequence of data provided by TitleFinder getFlattened()
     */
   def writeTitleToPage(source: Seq[(String, Int)]): Unit = {
-    val batchSize = 10000
-    val batches   = source.grouped(batchSize)
+    val batches = source.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val cols: SQLSyntax = sqls"""title, page_id"""
@@ -228,7 +184,7 @@ object PageStorage {
     * @param input One or more PageMarkup_U entries to write
     */
   def writeMarkups(input: Seq[PageMarkup_U]): Unit = {
-    val batches = input.grouped(batchInsertSize)
+    val batches = input.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val cols: SQLSyntax = sqls"""page_id, markup, parsed"""
@@ -326,7 +282,7 @@ object PageStorage {
     * @param input One or more PageMarkup_Z entries to write
     */
   def writeMarkups_Z(input: Seq[PageMarkup_Z]): Unit = {
-    val batches = input.grouped(batchInsertSize)
+    val batches = input.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
       batches.foreach { batch =>
         val cols: SQLSyntax = sqls"""page_id, data"""
@@ -368,6 +324,4 @@ object PageStorage {
     require(compressedMax == 0 || uncompressedMax == 0, err2)
     compressedMax > uncompressedMax
   }
-
-  val batchInsertSize: Int = 2000
 }

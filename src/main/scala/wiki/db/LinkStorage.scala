@@ -13,8 +13,7 @@ object LinkStorage {
     * @param links Cross-page links
     */
   def writeResolved(links: Seq[ResolvedLink]): Unit = {
-    val batchSize = 10000
-    val batched   = links.grouped(batchSize)
+    val batched = links.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
       batched.foreach { batch =>
         val cols: SQLSyntax = sqls"""source, destination, anchor_text"""
@@ -38,8 +37,7 @@ object LinkStorage {
     * @param links Cross-page links
     */
   def writeDead(links: Seq[DeadLink]): Unit = {
-    val batchSize = 1000
-    val batched   = links.grouped(batchSize)
+    val batched = links.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
       batched.foreach { batch =>
         val cols: SQLSyntax = sqls"""source, destination, anchor_text"""
@@ -73,7 +71,7 @@ object LinkStorage {
     * @return    Source IDs mapped to matching links
     */
   def getBySource(ids: Seq[Int]): Map[Int, Seq[ResolvedLink]] = {
-    val batches = ids.grouped(10000).toSeq
+    val batches = ids.grouped(Storage.batchSqlSize).toSeq
     val rows = DB.autoCommit { implicit session =>
       batches.flatMap { batch =>
         sql"""SELECT * FROM link WHERE source IN ($batch)"""

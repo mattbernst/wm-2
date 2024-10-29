@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import com.github.blemale.scaffeine.LoadingCache
-import wiki.db.Storage
+import wiki.db.{DepthSink, PageDepth, Storage}
 import wiki.extractor.types.{ARTICLE, CATEGORY, PageType}
 import wiki.extractor.util.Progress
 
@@ -9,6 +9,7 @@ import scala.collection.mutable
 
 class DepthProcessor(
   db: Storage,
+  sink: DepthSink,
   pageGroups: Map[PageType, Set[Int]],
   destinationCache: LoadingCache[Int, Seq[Int]],
   maximumDepth: Int) {
@@ -21,9 +22,9 @@ class DepthProcessor(
   def markDepths(rootTitle: String): Unit = {
     db.getPage(rootTitle) match {
       case Some(page) =>
-        val depth = 0
-        db.page.writeDepths(Map(page.id -> depth))
-        markDepth(Seq(page.id), depth)
+        val depth = 1
+        sink.addDepth(PageDepth(page.id, depth, Seq(page.id)))
+        markDepth(page.id, List(page.id), depth)
       case None =>
         val msg = s"Could not find root category title '$rootTitle'"
         throw new NoSuchElementException(msg)
@@ -34,40 +35,30 @@ class DepthProcessor(
     completedPages.size
 
   /**
-    * Mark depth of the given page IDs and their children up to maximum depth.
+    * Mark depth of the given page ID and its unseen children up to maximum depth.
     *
-    * @param pageIds Current page IDs
+    * @param pageId Current page ID
+    * @param route Sequence of pages connecting current page ID to the root page
     * @param depth Current depth
     */
-  private def markDepth(pageIds: Seq[Int], depth: Int): Unit = {
-    val nextDestinations = mutable.Set[Int]()
-
-    pageIds
-      .filterNot(p => completedPages.contains(p))
-      .foreach { id =>
-        completedPages.add(id)
-        val links = destinationCache.get(id).filter(dst => !completedPages.contains(dst))
-        links.foreach { link =>
-          markedCount += 1
-          Progress.tick(markedCount, "+")
-          nextDestinations.add(link)
-        }
-
-        val depths = links.map(link => (link, depth)).toMap
-        db.page.writeDepths(depths)
+  private def markDepth(pageId: Int, route: List[Int], depth: Int): Unit = {
+    if (!completedPages.contains(pageId)) {
+      val nextDestinations = mutable.Set[Int]()
+      sink.addDepth(PageDepth(pageId, depth, route))
+      completedPages.add(pageId)
+      val links = destinationCache.get(pageId).filter(dst => !completedPages.contains(dst))
+      links.foreach { link =>
+        markedCount += 1
+        Progress.tick(markedCount, "+")
+        nextDestinations.add(link)
       }
 
-    if (depth < maximumDepth) {
-      // Traverse deeper by way of non-redirecting children
-      val childCategories = nextDestinations.intersect(pageGroups(CATEGORY)).toSeq.sorted
-      val childArticles   = nextDestinations.intersect(pageGroups(ARTICLE)).toSeq.sorted
-
-      if (childCategories.nonEmpty) {
-        markDepth(childCategories, depth + 1)
-      }
-
-      if (childArticles.nonEmpty) {
-        markDepth(childArticles, depth + 1)
+      if (depth < maximumDepth) {
+        // Traverse deeper by way of non-redirecting children
+        val childCategories = nextDestinations.intersect(pageGroups(CATEGORY)).toSeq.sorted
+        val childArticles   = nextDestinations.intersect(pageGroups(ARTICLE)).toSeq.sorted
+        childArticles.foreach(id => markDepth(id, id :: route, depth + 1))
+        childCategories.foreach(id => markDepth(id, id :: route, depth + 1))
       }
     }
   }

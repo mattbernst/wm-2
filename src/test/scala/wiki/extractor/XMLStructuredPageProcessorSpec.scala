@@ -30,7 +30,6 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
       id = 551039,
       namespace = Namespace(id = 4, casing = FIRST_LETTER, name = "Wikipedia"),
       pageType = UNHANDLED,
-      depth = None,
       title = "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G",
       redirectTarget = None,
       lastEdited = 1219519229000L

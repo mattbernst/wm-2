@@ -6,25 +6,24 @@ import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 import scala.collection.mutable.ListBuffer
 
 /**
-  * A writer with an internal buffer that continually buffers links, then writes
-  * them in batches to the link and dead_link database tables.
+  * A writer with an internal buffer that continually buffers depth records,
+  * then writes them in batches to the depth table.
   *
   * @param db        A database storage writer
-  * @param queueSize The maximum number of links enqueued before writing
+  * @param queueSize The maximum number of depth records enqueued before writing
   */
-class LinkSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
+class DepthSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
 
   /**
-    * Enqueue one link (resolved or dead) for writing. The data will be
+    * Enqueue one page depth record for writing. The data will be
     * automatically written by the continually running writerThread.
     *
-    * @param resolvedLink A link with link text mapped to numeric IDs
-    * @param deadLink A link that could not resolve to a numeric destination
+    * @param depth A page depth record with depth and route to root page
     */
-  def addLink(resolvedLink: Option[ResolvedLink], deadLink: Option[DeadLink]): Unit = {
-    queue.put(QueueEntry(resolvedLink = resolvedLink, deadLink = deadLink))
-    linkCount += 1
-    Progress.tick(linkCount, "+", 100000)
+  def addDepth(depth: PageDepth): Unit = {
+    queue.put(QueueEntry(depth))
+    depthCount += 1
+    Progress.tick(depthCount, "+")
   }
 
   def stopWriting(): Unit = this.synchronized {
@@ -39,7 +38,7 @@ class LinkSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
       }
     })
     thread.setDaemon(true)
-    DBLogging.info("Starting writerThread for LinkSink")
+    DBLogging.info("Starting writerThread for DepthSink")
     thread.start()
     thread
   }
@@ -65,14 +64,8 @@ class LinkSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
     }
 
     if (unwritten.nonEmpty) {
-      val resolvedLinks = unwritten.flatMap(_.resolvedLink)
-      if (resolvedLinks.nonEmpty) {
-        db.link.writeResolved(resolvedLinks)
-      }
-      val deadLinks = unwritten.flatMap(_.deadLink)
-      if (deadLinks.nonEmpty) {
-        db.link.writeDead(deadLinks)
-      }
+      val depths = unwritten.map(_.depth)
+      db.depth.write(depths)
     } else {
       this.synchronized {
         if (!availableForWriting) {
@@ -82,9 +75,9 @@ class LinkSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
     }
   }
 
-  private case class QueueEntry(resolvedLink: Option[ResolvedLink], deadLink: Option[DeadLink])
+  private case class QueueEntry(depth: PageDepth)
 
-  var linkCount: Int                       = 0
+  var depthCount: Int                      = 0
   private var availableForWriting: Boolean = true
   private var finished: Boolean            = false
   private lazy val queue                   = new ArrayBlockingQueue[QueueEntry](queueSize)

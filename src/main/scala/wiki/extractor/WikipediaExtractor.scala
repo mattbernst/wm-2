@@ -48,8 +48,7 @@ object WikipediaExtractor extends Logging {
       case Some(COMPLETED) =>
         logger.info("Already completed phase 4")
       case Some(CREATED) =>
-        logger.warn("Phase 4 incomplete -- redoing")
-        db.page.clearAllDepths()
+        logger.warn("Phase 4 incomplete -- restarting")
         phase04()
       case None =>
         phase04()
@@ -164,6 +163,7 @@ object WikipediaExtractor extends Logging {
   private def phase04(): Unit = {
     val phase = 4
     db.phase.deletePhase(phase)
+    db.createTableDefinitions(phase)
     val rootCategory = Config.props.language.rootCategory
     db.phase.createPhase(phase, s"Mapping depth starting from $rootCategory")
     DBLogging.info(s"Getting candidates for depth mapping")
@@ -177,14 +177,20 @@ object WikipediaExtractor extends Logging {
         .build(loader = (id: Int) => {
           db.link.getBySource(id).map(_.destination)
         })
+
+    val sink = new DepthSink(db)
+    var completedCount = 0
+
     1.until(30).foreach { maxDepth =>
-      val processor = new DepthProcessor(db, pageGroups, destinationCache, maxDepth)
+      val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, maxDepth)
       //processor.markDepths(rootCategory)
       processor.markDepths("Category:Fundamental categories")
-      val completed = processor.getCompletedCount()
-      DBLogging.info(s"Completed marking $completed pages with max depth $maxDepth")
+      completedCount += processor.getCompletedCount()
+      DBLogging.info(s"Completed marking $completedCount pages to max depth $maxDepth")
     }
 
+    sink.stopWriting()
+    sink.writerThread.join()
     db.phase.completePhase(phase)
   }
 
@@ -216,12 +222,9 @@ object WikipediaExtractor extends Logging {
     } else if (fileName.endsWith(".bz2")) {
       val bz2   = new BZip2HadoopStreams
       val input = bz2.createInputStream(new BufferedInputStream(new FileInputStream(fileName)))
-      DBLogging.warn(s"Reading from compressed bz2 input. This is much slower than uncompressed XML.")
+      DBLogging.warn(s"Reading from compressed bz2 input. This is slow.")
       Source.fromInputStream(input)(StandardCharsets.UTF_8)
     } else if (fileName.endsWith(".zst")) {
-      // N.B. the Apache Commons ZstdCompressorInputStream relies on native
-      // libraries that are missing by default on macOS, so use the pure-Java
-      // Airlift library for decompression here.
       val input = new ZstdInputStream(new BufferedInputStream(new FileInputStream(fileName)))
       DBLogging.info(s"Reading from compressed zst input.")
       Source.fromInputStream(input)(StandardCharsets.UTF_8)

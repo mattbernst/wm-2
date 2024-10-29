@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
   * @param db        A database storage writer
   * @param queueSize The maximum number of pages enqueued before writing
   */
-class PageSink(db: Storage, queueSize: Int = 8000) {
+class PageSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
 
   /**
     * Enqueue one page for writing along with its markup. The caller supplies
@@ -71,7 +71,7 @@ class PageSink(db: Storage, queueSize: Int = 8000) {
     val unwritten: Seq[QueueEntry] = {
       var emptied = false
       val buffer  = new ListBuffer[QueueEntry]
-      while (!emptied && buffer.size < db.page.batchInsertSize) {
+      while (!emptied && buffer.size < Storage.batchSqlSize) {
         Option(queue.poll(3, TimeUnit.SECONDS)) match {
           case Some(entry) => buffer.append(entry)
           case None        => emptied = true

@@ -67,7 +67,6 @@ class XMLStructuredPageProcessor(
         id = id,
         namespace = namespace,
         pageType = pageType,
-        depth = None,
         title = title,
         redirectTarget = redirect,
         lastEdited = lastEdited
