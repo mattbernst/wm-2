@@ -26,14 +26,15 @@ class Storage(fileName: String) extends Logging {
     val batches = pageIds.grouped(Storage.batchSqlSize).toSeq
     DB.autoCommit { implicit session =>
       batches.flatMap { batch =>
-        sql"""SELECT * from page where id in ($batch)""".map { r =>
+        sql"""SELECT * FROM page WHERE id IN ($batch)""".map { r =>
           Page(
             id = r.int("id"),
             namespace = namespaceCache.get(r.int("namespace_id")),
             pageType = PageTypes.byNumber(r.int("page_type")),
             title = r.string("title"),
             redirectTarget = r.stringOpt("redirect_target"),
-            lastEdited = r.long("last_edited")
+            lastEdited = r.long("last_edited"),
+            markupSize = r.int("markup_size")
           )
         }.list()
       }
@@ -50,14 +51,15 @@ class Storage(fileName: String) extends Logging {
     */
   def getPage(title: String): Option[Page] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * from page where title=$title""".map { r =>
+      sql"""SELECT * FROM page WHERE title=$title""".map { r =>
         Page(
           id = r.int("id"),
           namespace = namespaceCache.get(r.int("namespace_id")),
           pageType = PageTypes.byNumber(r.int("page_type")),
           title = r.string("title"),
           redirectTarget = r.stringOpt("redirect_target"),
-          lastEdited = r.long("last_edited")
+          lastEdited = r.long("last_edited"),
+          markupSize = r.int("markup_size")
         )
       }.single()
     }

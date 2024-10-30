@@ -64,17 +64,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.page.readMarkup_Z(0) shouldBe None
   }
 
-//  it should "write depths" in {
-//    pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
-//    storage.page.writePages(pages)
-//    val id = pages.last.id
-//
-//    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq()
-//    val depth = 2
-//    storage.page.writeDepths(Map(id -> depth))
-//    storage.getPages(Seq(id)).flatMap(_.depth) shouldBe Seq(depth)
-//  }
-
   behavior of "PhaseStorage"
 
   it should "get None for phase state of unknown phase" in {
@@ -164,7 +153,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         pageType = ARTICLE,
         title = "Ann Arbor, Michigan",
         redirectTarget = None,
-        lastEdited = now
+        lastEdited = now,
+        markupSize = 123
       ),
       Page(
         id = randomInt(),
@@ -172,7 +162,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         pageType = ARTICLE,
         title = "Category:Mathematics",
         redirectTarget = None,
-        lastEdited = now
+        lastEdited = now,
+        markupSize = 123
       ),
       Page(
         id = randomInt(),
@@ -180,7 +171,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         pageType = REDIRECT,
         title = "AsciiArt",
         redirectTarget = Some("ASCII art"),
-        lastEdited = now
+        lastEdited = now,
+        markupSize = 123
       ),
       Page(
         id = randomInt(),
@@ -188,7 +180,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         pageType = ARTICLE,
         title = "ASCII art",
         redirectTarget = None,
-        lastEdited = now
+        lastEdited = now,
+        markupSize = 123
       ),
       Page(
         id = randomInt(),
@@ -196,7 +189,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         pageType = REDIRECT,
         title = "Category:Wikipedians who are not a Wikipedian",
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
-        lastEdited = now
+        lastEdited = now,
+        markupSize = 123
       ),
       Page(
         id = randomInt(),
@@ -204,7 +198,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         pageType = ARTICLE,
         title = "Category:Wikipedians who retain deleted categories on their userpages",
         redirectTarget = None,
-        lastEdited = now
+        lastEdited = now,
+        markupSize = 123
       )
     )
   }

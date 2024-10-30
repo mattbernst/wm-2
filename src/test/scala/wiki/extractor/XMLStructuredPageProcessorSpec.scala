@@ -32,7 +32,8 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
       pageType = UNHANDLED,
       title = "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G",
       redirectTarget = None,
-      lastEdited = 1219519229000L
+      lastEdited = 1219519229000L,
+      markupSize = 0
     )
     val result = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/missing-text.xml")).get.page
     result shouldBe expected

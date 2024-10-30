@@ -5,6 +5,7 @@ import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
 import wiki.extractor.util.{DBLogging, Logging, Progress}
 
+import java.nio.charset.StandardCharsets
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
@@ -48,6 +49,7 @@ class XMLStructuredPageProcessor(
       val revision = xml \ "revision"
 
       val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+      val markupSize = text.map(_.getBytes(StandardCharsets.UTF_8).length).getOrElse(0)
       val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
       val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
 
@@ -69,7 +71,8 @@ class XMLStructuredPageProcessor(
         pageType = pageType,
         title = title,
         redirectTarget = redirect,
-        lastEdited = lastEdited
+        lastEdited = lastEdited,
+        markupSize = markupSize
       )
 
       Some(StructuredPage(page = dp, markup = markup))
