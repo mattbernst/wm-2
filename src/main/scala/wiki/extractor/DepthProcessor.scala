@@ -31,9 +31,6 @@ class DepthProcessor(
     }
   }
 
-  def getCompletedCount(): Int =
-    completedPages.size
-
   /**
     * Mark depth of the given page ID and its unseen children up to maximum depth.
     *
@@ -46,10 +43,9 @@ class DepthProcessor(
       val nextDestinations = mutable.Set[Int]()
       sink.addDepth(PageDepth(pageId, depth, route))
       completedPages.add(pageId)
+      Progress.tick(completedPages.size, "+")
       val links = destinationCache.get(pageId).filter(dst => !completedPages.contains(dst))
       links.foreach { link =>
-        markedCount += 1
-        Progress.tick(markedCount, "+")
         nextDestinations.add(link)
       }
 
@@ -63,6 +59,5 @@ class DepthProcessor(
     }
   }
 
-  private var markedCount    = 0
   private val completedPages = mutable.Set[Int]()
 }

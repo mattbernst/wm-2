@@ -7,19 +7,19 @@ case class Language(
   code: String, // e.g. "en"
   name: String, // e.g. "English"
   /*
-   See https://en.wikipedia.org/wiki/Template:Disambiguation
-   and also transclusion_counts.json after running with
-   COUNT_LAST_TRANSCLUSIONS=true
+                      See https://en.wikipedia.org/wiki/Template:Disambiguation
+                      and also transclusion_counts.json after running with
+                      COUNT_LAST_TRANSCLUSIONS=true
    */
   disambiguationPrefixes: Seq[String],
   /*
-   The root category is a somewhat arbitrary starting point
-   for determining the "depth" of a Wikipedia page. Milne used
-   "Category:Fundamental categories" as his root category for
-   English Wikipedia, but it was deleted in December 2016:
-   https://en.wikipedia.org/wiki/Wikipedia:Categories_for_discussion/Log/2016_December_18#Category:Fundamental_categories
+                      The root page is a somewhat arbitrary starting point
+                      for determining the "depth" of a Wikipedia page. Milne used
+                      "Category:Fundamental categories" as his root page for
+                      English Wikipedia, but it was deleted in December 2016:
+                      https://en.wikipedia.org/wiki/Wikipedia:Categories_for_discussion/Log/2016_December_18#Category:Fundamental_categories
    */
-  rootCategory: String) {
+  rootPage: String) {
 
   /**
     * Determine if the last transclusion from a page indicates that the page is

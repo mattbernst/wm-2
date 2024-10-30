@@ -27,7 +27,7 @@ object DepthStorage {
           )
         }
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO depth ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO $table ($cols) VALUES $values""".update()
       }
     }
   }
@@ -41,10 +41,27 @@ object DepthStorage {
     */
   def read(pageId: Int): Option[PageDepth] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM depth WHERE page_id=$pageId""".map { r =>
+      sql"""SELECT * FROM $table WHERE page_id=$pageId""".map { r =>
         val route = upickle.default.read[Seq[Int]](r.string("route"))
         PageDepth(pageId = r.int("page_id"), n = r.int("n"), route = route)
       }.single()
     }
   }
+
+  /**
+    * Count number of pages at depth n
+    *
+    * @param n The depth at which to count marked pages
+    * @return The number of marked pages at depth n from the root
+    */
+  def count(n: Int): Int = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT count(*) AS ct FROM $table WHERE n=$n"""
+        .map(r => r.int("ct"))
+        .single()
+        .getOrElse(0)
+    }
+  }
+
+  private val table = Storage.table("depth")
 }

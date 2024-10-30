@@ -17,7 +17,7 @@ object PhaseStorage {
   def createPhase(id: Int, description: String): Unit = {
     val startTs = System.currentTimeMillis()
     DB.autoCommit { implicit session =>
-      sql"""INSERT OR IGNORE INTO phase VALUES ($id, $description, $startTs, null, $CREATED)"""
+      sql"""INSERT OR IGNORE INTO $table VALUES ($id, $description, $startTs, null, $CREATED)"""
         .update(): Unit
     }
   }
@@ -42,14 +42,14 @@ object PhaseStorage {
     */
   def deletePhase(id: Int): Unit = {
     DB.autoCommit { implicit session =>
-      sql"""DELETE FROM phase WHERE id=$id"""
+      sql"""DELETE FROM $table WHERE id=$id"""
         .update(): Unit
     }
   }
 
   def getPhaseState(id: Int): Option[PHASE_STATE] = {
     val name = DB.autoCommit { implicit session =>
-      sql"""SELECT state FROM phase WHERE id=$id"""
+      sql"""SELECT state FROM $table WHERE id=$id"""
         .map(rs => rs.string("state"))
         .single()
     }
@@ -60,4 +60,5 @@ object PhaseStorage {
   }
 
   val lastPhase: Int = 4
+  private val table  = Storage.table("phase")
 }

@@ -13,7 +13,7 @@
          "genus disambiguation",
          "school disambiguation"
       ],
-      "rootCategory" : "Category:Main topic classifications"
+      "rootPage" : "Kevin Bacon"
    },
    {
       "code" : "en_simple",
@@ -24,7 +24,7 @@
          "disambig",
          "geodis"
       ],
-      "rootCategory" : "Category:Articles"
+      "rootPage" : "Category:Articles"
    },
    {
       "code" : "fr",
@@ -32,7 +32,7 @@
       "disambiguationPrefixes" : [
          "homonymie"
       ],
-      "rootCategory" : "Catégorie:Espace encyclopédique"
+      "rootPage" : "Catégorie:Espace encyclopédique"
    }
 ]
 

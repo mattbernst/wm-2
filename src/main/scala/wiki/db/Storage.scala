@@ -144,6 +144,14 @@ class Storage(fileName: String) extends Logging {
 
 object Storage extends Logging {
 
+  /**
+    * Generate table name reference for use in SQL.
+    *
+    * @param name Name of the table
+    * @return SQLSyntax for the table that can be used in queries
+    */
+  def table(name: String): SQLSyntax = SQLSyntax.createUnsafely(name)
+
   def enableSqlitePragmas(db: Storage): Unit = {
     val pragmas = Seq(
       "pragma cache_size=1048576;",

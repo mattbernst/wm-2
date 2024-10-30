@@ -164,8 +164,8 @@ object WikipediaExtractor extends Logging {
     val phase = 4
     db.phase.deletePhase(phase)
     db.createTableDefinitions(phase)
-    val rootCategory = Config.props.language.rootCategory
-    db.phase.createPhase(phase, s"Mapping depth starting from $rootCategory")
+    val rootPage = Config.props.language.rootPage
+    db.phase.createPhase(phase, s"Mapping depth starting from $rootPage")
     DBLogging.info(s"Getting candidates for depth mapping")
     val pageGroups: Map[PageType, Set[Int]] = db.page.getPagesForDepth()
     DBLogging.info(s"Got ${pageGroups.values.map(_.size).sum} candidates for depth mapping")
@@ -178,14 +178,13 @@ object WikipediaExtractor extends Logging {
           db.link.getBySource(id).map(_.destination)
         })
 
-    val sink = new DepthSink(db)
+    val sink           = new DepthSink(db)
     var completedCount = 0
 
     1.until(30).foreach { maxDepth =>
       val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, maxDepth)
-      //processor.markDepths(rootCategory)
-      processor.markDepths("Category:Fundamental categories")
-      completedCount += processor.getCompletedCount()
+      processor.markDepths(rootPage)
+      completedCount += db.depth.count(maxDepth)
       DBLogging.info(s"Completed marking $completedCount pages to max depth $maxDepth")
     }
 

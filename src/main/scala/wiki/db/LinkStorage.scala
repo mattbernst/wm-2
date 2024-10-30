@@ -26,7 +26,7 @@ object LinkStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO link ($cols) VALUES $values""".update()
+        sql"""INSERT INTO $table ($cols) VALUES $values""".update()
       }
     }
   }
@@ -74,7 +74,7 @@ object LinkStorage {
     val batches = ids.grouped(Storage.batchSqlSize).toSeq
     val rows = DB.autoCommit { implicit session =>
       batches.flatMap { batch =>
-        sql"""SELECT * FROM link WHERE source IN ($batch)"""
+        sql"""SELECT * FROM $table WHERE source IN ($batch)"""
           .map(toResolvedLink)
           .list()
       }
@@ -90,7 +90,7 @@ object LinkStorage {
     */
   def getByDestination(id: Int): Seq[ResolvedLink] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM link WHERE destination=$id"""
+      sql"""SELECT * FROM $table WHERE destination=$id"""
         .map(toResolvedLink)
         .list()
     }
@@ -102,4 +102,6 @@ object LinkStorage {
       destination = rs.int("destination"),
       anchorText = rs.stringOpt("anchor_text")
     )
+
+  private val table = Storage.table("link")
 }

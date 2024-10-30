@@ -30,7 +30,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO page ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO $table ($cols) VALUES $values""".update()
       }
     }
   }
@@ -61,7 +61,7 @@ object PageStorage {
   def updatePageType(id: Int, pageType: PageType): Unit = {
     val pageTypeId = PageTypes.bySymbol(pageType)
     DB.autoCommit { implicit session =>
-      sql"""UPDATE page SET page_type=$pageTypeId WHERE id=$id""".update(): Unit
+      sql"""UPDATE $table SET page_type=$pageTypeId WHERE id=$id""".update(): Unit
     }
   }
 
@@ -75,7 +75,7 @@ object PageStorage {
   def readRedirects(): Seq[Redirection] = {
     val redirectPageTypeId = PageTypes.bySymbol(REDIRECT)
     DB.autoCommit { implicit session =>
-      sql"""SELECT id, title, redirect_target FROM page WHERE page_type=$redirectPageTypeId"""
+      sql"""SELECT id, title, redirect_target FROM $table WHERE page_type=$redirectPageTypeId"""
         .map(r => Redirection(r.int("id"), r.string("title"), r.string("redirect_target")))
         .list()
     }
@@ -96,7 +96,7 @@ object PageStorage {
     val result   = mutable.Map[String, Int]()
     val excluded = Seq(PageTypes.bySymbol(REDIRECT), PageTypes.bySymbol(UNPARSEABLE))
     val rows = DB.autoCommit { implicit session =>
-      sql"""SELECT id, title FROM page WHERE page_type NOT IN ($excluded)"""
+      sql"""SELECT id, title FROM $table WHERE page_type NOT IN ($excluded)"""
         .map(r => (r.string("title"), r.int("id")))
         .list()
     }
@@ -114,7 +114,7 @@ object PageStorage {
     val included = Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(CATEGORY))
 
     DB.autoCommit { implicit session =>
-      sql"""SELECT id, page_type FROM page WHERE page_type IN ($included)"""
+      sql"""SELECT id, page_type FROM $table WHERE page_type IN ($included)"""
         .map(r => (r.int("page_type"), r.int("id")))
         .list()
         .groupBy(_._1)
@@ -229,7 +229,7 @@ object PageStorage {
   def readMarkupSlice(start: Int, end: Int): Seq[TypedPageMarkup] = {
     DB.autoCommit { implicit session =>
       sql"""SELECT page_type, page_markup.* FROM
-           page, page_markup
+           $table, page_markup
            WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
         val pmu = PageMarkup_U(rs.int("page_id"), rs.stringOpt("markup"), rs.stringOpt("parsed"))
         TypedPageMarkup(Some(pmu), None, PageTypes.byNumber(rs.int("page_type")))
@@ -248,7 +248,7 @@ object PageStorage {
   def readMarkupSlice_Z(start: Int, end: Int): Seq[TypedPageMarkup] = {
     DB.autoCommit { implicit session =>
       sql"""SELECT page_type, page_markup_z.* FROM
-           page, page_markup_z
+           $table, page_markup_z
            WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
         val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytes("data"))
         TypedPageMarkup(None, Some(pmz), PageTypes.byNumber(rs.int("page_type")))
@@ -324,4 +324,6 @@ object PageStorage {
     require(compressedMax == 0 || uncompressedMax == 0, err2)
     compressedMax > uncompressedMax
   }
+
+  private val table = Storage.table("page")
 }
