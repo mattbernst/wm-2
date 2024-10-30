@@ -130,6 +130,28 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.link.getByDestination(b) shouldBe Seq(ResolvedLink(a, b, None))
   }
 
+  behavior of "DepthStorage"
+
+  it should "count pages traversed at depth N" in {
+    val n = 10
+    storage.depth.count(n) shouldBe 0
+    storage.depth.write(Seq(PageDepth(randomInt(), n, Seq())))
+    storage.depth.count(n) shouldBe 1
+  }
+
+  it should "write and read depth records" in {
+    val n = 4
+    def randRoute(): Seq[Int] = {
+      val tail = 0.to(n).map(_ => randomInt()).toList
+      (n :: tail).reverse
+    }
+    val depths = 0.until(3).map(j => PageDepth(j, n, randRoute()))
+    storage.depth.write(depths)
+    depths.foreach { pd =>
+      depths.contains(storage.depth.read(pd.pageId).get) shouldBe true
+    }
+  }
+
   override def afterAll(): Unit = {
     super.afterAll()
     FileHelpers.deleteFileIfExists(testDbName)

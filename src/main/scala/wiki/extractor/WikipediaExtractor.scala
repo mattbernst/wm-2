@@ -181,11 +181,12 @@ object WikipediaExtractor extends Logging {
     val sink           = new DepthSink(db)
     var completedCount = 0
 
-    1.until(30).foreach { maxDepth =>
-      val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, maxDepth)
+    val maxDepth = 31
+    1.until(maxDepth).foreach { depthLimit =>
+      val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, depthLimit)
       processor.markDepths(rootPage)
-      completedCount += db.depth.count(maxDepth)
-      DBLogging.info(s"Completed marking $completedCount pages to max depth $maxDepth")
+      completedCount += db.depth.count(depthLimit)
+      DBLogging.info(s"Completed marking $completedCount pages to max depth $depthLimit")
     }
 
     sink.stopWriting()

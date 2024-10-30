@@ -48,10 +48,10 @@ class XMLStructuredPageProcessor(
       assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
       val revision = xml \ "revision"
 
-      val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+      val text       = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
       val markupSize = text.map(_.getBytes(StandardCharsets.UTF_8).length).getOrElse(0)
-      val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
-      val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
+      val parsed     = text.flatMap(markup => parser.parseMarkup(title, markup))
+      val markup     = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
 
       val lastEdited = (revision \ "timestamp").headOption
         .map(_.text)

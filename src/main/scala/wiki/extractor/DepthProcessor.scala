@@ -12,7 +12,7 @@ class DepthProcessor(
   sink: DepthSink,
   pageGroups: Map[PageType, Set[Int]],
   destinationCache: LoadingCache[Int, Seq[Int]],
-  maximumDepth: Int) {
+  depthLimit: Int) {
 
   /**
     * Start with one named page to mark depths of all connected pages.
@@ -49,7 +49,7 @@ class DepthProcessor(
         nextDestinations.add(link)
       }
 
-      if (depth < maximumDepth) {
+      if (depth < depthLimit) {
         // Traverse deeper by way of non-redirecting children
         val childCategories = nextDestinations.intersect(pageGroups(CATEGORY)).toSeq.sorted
         val childArticles   = nextDestinations.intersect(pageGroups(ARTICLE)).toSeq.sorted
