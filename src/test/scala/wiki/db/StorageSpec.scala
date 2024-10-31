@@ -176,7 +176,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         title = "Ann Arbor, Michigan",
         redirectTarget = None,
         lastEdited = now,
-        markupSize = 123
+        markupSize = Some(123)
       ),
       Page(
         id = randomInt(),
@@ -185,7 +185,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         title = "Category:Mathematics",
         redirectTarget = None,
         lastEdited = now,
-        markupSize = 123
+        markupSize = Some(123)
       ),
       Page(
         id = randomInt(),
@@ -194,7 +194,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         title = "AsciiArt",
         redirectTarget = Some("ASCII art"),
         lastEdited = now,
-        markupSize = 123
+        markupSize = Some(123)
       ),
       Page(
         id = randomInt(),
@@ -203,7 +203,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         title = "ASCII art",
         redirectTarget = None,
         lastEdited = now,
-        markupSize = 123
+        markupSize = Some(123)
       ),
       Page(
         id = randomInt(),
@@ -212,7 +212,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         title = "Category:Wikipedians who are not a Wikipedian",
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
         lastEdited = now,
-        markupSize = 123
+        markupSize = Some(123)
       ),
       Page(
         id = randomInt(),
@@ -221,7 +221,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
         title = "Category:Wikipedians who retain deleted categories on their userpages",
         redirectTarget = None,
         lastEdited = now,
-        markupSize = 123
+        markupSize = Some(123)
       )
     )
   }

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS page
     namespace_id    INTEGER NOT NULL,
     page_type       INTEGER NOT NULL,
     last_edited     INTEGER NOT NULL,
-    markup_size     INTEGER NOT NULL,
+    markup_size     INTEGER,
     title           TEXT NOT NULL,
     redirect_target TEXT
 );

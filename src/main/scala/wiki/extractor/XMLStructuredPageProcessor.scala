@@ -49,7 +49,7 @@ class XMLStructuredPageProcessor(
       val revision = xml \ "revision"
 
       val text       = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-      val markupSize = text.map(_.getBytes(StandardCharsets.UTF_8).length).getOrElse(0)
+      val markupSize = text.map(_.getBytes(StandardCharsets.UTF_8).length)
       val parsed     = text.flatMap(markup => parser.parseMarkup(title, markup))
       val markup     = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
 

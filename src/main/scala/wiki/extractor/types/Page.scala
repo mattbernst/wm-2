@@ -7,4 +7,4 @@ case class Page(
   title: String,
   redirectTarget: Option[String],
   lastEdited: Long,
-  markupSize: Int)
+  markupSize: Option[Int])

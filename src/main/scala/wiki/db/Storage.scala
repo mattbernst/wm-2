@@ -34,7 +34,7 @@ class Storage(fileName: String) extends Logging {
             title = r.string("title"),
             redirectTarget = r.stringOpt("redirect_target"),
             lastEdited = r.long("last_edited"),
-            markupSize = r.int("markup_size")
+            markupSize = r.intOpt("markup_size")
           )
         }.list()
       }
@@ -59,7 +59,7 @@ class Storage(fileName: String) extends Logging {
           title = r.string("title"),
           redirectTarget = r.stringOpt("redirect_target"),
           lastEdited = r.long("last_edited"),
-          markupSize = r.int("markup_size")
+          markupSize = r.intOpt("markup_size")
         )
       }.single()
     }
