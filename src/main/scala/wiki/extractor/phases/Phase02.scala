@@ -5,8 +5,7 @@ import wiki.extractor.TitleFinder
 import wiki.extractor.types.{DANGLING_REDIRECT, Redirection}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
-class Phase02(number: Int, db: Storage, props: ConfiguredProperties)
-    extends Phase(number: Int, db: Storage, props: ConfiguredProperties) {
+class Phase02(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
 
   override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 
@@ -55,4 +54,6 @@ class Phase02(number: Int, db: Storage, props: ConfiguredProperties)
     input.foreach(r => db.page.updatePageType(r.pageId, DANGLING_REDIRECT))
     DBLogging.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
   }
+
+  override def number: Int = 2
 }

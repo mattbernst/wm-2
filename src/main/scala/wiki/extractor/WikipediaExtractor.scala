@@ -2,7 +2,7 @@ package wiki.extractor
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.*
-import wiki.extractor.phases.{Phase01, Phase02}
+import wiki.extractor.phases.{Phase01, Phase02, Phase03}
 import wiki.extractor.types.*
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
@@ -11,8 +11,9 @@ object WikipediaExtractor extends Logging {
   def main(args: Array[String]): Unit = {
     DBLogging.initDb(db)
     init()
-    lazy val phase01 = new Phase01(1, db, Config.props)
-    lazy val phase02 = new Phase02(2, db, Config.props)
+    lazy val phase01 = new Phase01(db, Config.props)
+    lazy val phase02 = new Phase02(db, Config.props)
+    lazy val phase03 = new Phase03(db, Config.props)
     db.phase.getPhaseState(1) match {
       case Some(COMPLETED) =>
         logger.info(phase01.finishedMessage)
@@ -33,12 +34,12 @@ object WikipediaExtractor extends Logging {
     }
     db.phase.getPhaseState(3) match {
       case Some(COMPLETED) =>
-        logger.info("Already completed phase 3")
+        logger.info(phase03.finishedMessage)
       case Some(CREATED) =>
-        logger.warn("Phase 3 incomplete -- redoing")
-        phase03()
+        logger.warn(phase03.incompleteMessage)
+        phase03.run()
       case None =>
-        phase03()
+        phase03.run()
     }
 
     db.phase.getPhaseState(4) match {
@@ -57,34 +58,6 @@ object WikipediaExtractor extends Logging {
   // Initialize system tables before running any extraction
   private def init(): Unit = {
     db.createTableDefinitions(0)
-  }
-
-  /**
-    * Resolve links to destinations in link table (or add entry to dead_link,
-    * if resolution was not possible.)
-    */
-  private def phase03(): Unit = {
-    val phase = 3
-    db.phase.deletePhase(phase)
-    db.phase.createPhase(phase, s"Resolving links to destinations")
-    db.executeUnsafely("DROP TABLE IF EXISTS link;")
-    db.executeUnsafely("DROP TABLE IF EXISTS dead_link;")
-    db.createTableDefinitions(phase)
-    val source   = new PageMarkupSource(db)
-    val titleMap = db.page.readTitleToPage()
-    val categoryName = db.namespace
-      .read(SiteInfo.CATEGORY_KEY)
-      .map(_.name)
-      .getOrElse(throw new NoSuchElementException("Could not find CATEGORY_KEY in namespace table"))
-    val processor = new PageMarkupLinkProcessor(titleMap, Config.props.language, categoryName)
-    val sink      = new LinkSink(db)
-    val workers   = assignLinkWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
-    source.enqueueMarkup()
-    workers.foreach(_.thread.join())
-    sink.stopWriting()
-    sink.writerThread.join()
-    db.createIndexes(phase)
-    db.phase.completePhase(phase)
   }
 
   // Assign a page depth to categories and articles
@@ -124,15 +97,4 @@ object WikipediaExtractor extends Logging {
 
   private val db: Storage =
     new Storage(fileName = Config.props.language.code + "_wiki.db")
-
-  private def assignLinkWorkers(
-    n: Int,
-    processor: PageMarkupLinkProcessor,
-    source: () => Option[TypedPageMarkup],
-    sink: LinkSink
-  ): Seq[Worker] = {
-    0.until(n).map { id =>
-      processor.worker(id = id, source = source, sink = sink)
-    }
-  }
 }

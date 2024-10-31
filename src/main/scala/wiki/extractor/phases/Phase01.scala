@@ -11,8 +11,8 @@ import java.io.{BufferedInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import scala.io.{BufferedSource, Source}
 
-class Phase01(number: Int, db: Storage, props: ConfiguredProperties)
-    extends Phase(number: Int, db: Storage, props: ConfiguredProperties)
+class Phase01(db: Storage, props: ConfiguredProperties)
+    extends Phase(db: Storage, props: ConfiguredProperties)
     with Logging {
 
   override val incompleteMessage: String = s"Phase $number incomplete -- resuming"
@@ -149,4 +149,6 @@ class Phase01(number: Int, db: Storage, props: ConfiguredProperties)
       )
     }
   }
+
+  override def number: Int = 1
 }
