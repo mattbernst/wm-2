@@ -1,6 +1,8 @@
 package wiki.db
 
+import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
+import wiki.extractor.types.{Namespace, Page, PageTypes}
 import wiki.extractor.util.{FileHelpers, Logging}
 
 /**
@@ -11,6 +13,57 @@ import wiki.extractor.util.{FileHelpers, Logging}
   */
 class Storage(fileName: String) extends Logging {
   ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
+
+  /**
+    * Try to get one or more Page records from storage. This is implemented
+    * here instead of in PageStorage because it needs elements from PageStorage
+    * and from NamespaceStorage.
+    *
+    * @param pageIds Numeric IDs for pages to retrieve
+    * @return       The full page records for the IDs, where retrievable
+    */
+  def getPages(pageIds: Seq[Int]): Seq[Page] = {
+    val batches = pageIds.grouped(Storage.batchSqlSize).toSeq
+    DB.autoCommit { implicit session =>
+      batches.flatMap { batch =>
+        sql"""SELECT * FROM page WHERE id IN ($batch)""".map { r =>
+          Page(
+            id = r.int("id"),
+            namespace = namespaceCache.get(r.int("namespace_id")),
+            pageType = PageTypes.byNumber(r.int("page_type")),
+            title = r.string("title"),
+            redirectTarget = r.stringOpt("redirect_target"),
+            lastEdited = r.long("last_edited"),
+            markupSize = r.intOpt("markup_size")
+          )
+        }.list()
+      }
+    }
+  }
+
+  /**
+    * Try to get a single Page from storage by title. This is implemented here
+    * instead of in PageStorage because it needs elements from PageStorage and
+    * from NamespaceStorage.
+    *
+    * @param title A page title a page to retrieve
+    * @return      The full page record for the title, if retrievable
+    */
+  def getPage(title: String): Option[Page] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT * FROM page WHERE title=$title""".map { r =>
+        Page(
+          id = r.int("id"),
+          namespace = namespaceCache.get(r.int("namespace_id")),
+          pageType = PageTypes.byNumber(r.int("page_type")),
+          title = r.string("title"),
+          redirectTarget = r.stringOpt("redirect_target"),
+          lastEdited = r.long("last_edited"),
+          markupSize = r.intOpt("markup_size")
+        )
+      }.single()
+    }
+  }
 
   def closeAll(): Unit = {
     ConnectionPool.closeAll()
@@ -74,15 +127,32 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  val depth: DepthStorage.type               = DepthStorage
   val link: LinkStorage.type                 = LinkStorage
   val log: LogStorage.type                   = LogStorage
   val namespace: NamespaceStorage.type       = NamespaceStorage
   val page: PageStorage.type                 = PageStorage
   val phase: PhaseStorage.type               = PhaseStorage
   val transclusion: TransclusionStorage.type = TransclusionStorage
+
+  private lazy val namespaceCache: LoadingCache[Int, Namespace] =
+    Scaffeine()
+      .build(loader = (id: Int) => {
+        namespace.read(id).getOrElse {
+          throw new NoSuchElementException(s"Could not retrieve namespace $id")
+        }
+      })
 }
 
 object Storage extends Logging {
+
+  /**
+    * Generate table name reference for use in SQL.
+    *
+    * @param name Name of the table
+    * @return SQLSyntax for the table that can be used in queries
+    */
+  def table(name: String): SQLSyntax = SQLSyntax.createUnsafely(name)
 
   def enableSqlitePragmas(db: Storage): Unit = {
     val pragmas = Seq(
@@ -114,4 +184,6 @@ object Storage extends Logging {
     }
     loop(sqls.toList, Nil)
   }
+
+  val batchSqlSize: Int = 5000
 }

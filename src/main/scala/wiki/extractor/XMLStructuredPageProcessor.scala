@@ -5,6 +5,7 @@ import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
 import wiki.extractor.util.{DBLogging, Logging, Progress}
 
+import java.nio.charset.StandardCharsets
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
@@ -12,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
-case class StructuredPage(page: DumpPage, markup: PageMarkup)
+case class StructuredPage(page: Page, markup: PageMarkup)
 
 class XMLStructuredPageProcessor(
   siteInfo: SiteInfo,
@@ -47,14 +48,16 @@ class XMLStructuredPageProcessor(
       assert(title.nonEmpty, s"Expected non-empty title. Input was:\n $pageXML")
       val revision = xml \ "revision"
 
-      val text   = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
-      val parsed = text.flatMap(markup => parser.parseMarkup(title, markup))
-      val markup = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
+      val text       = Some((revision \ "text").text).map(_.trim).filter(_.nonEmpty)
+      val markupSize = text.map(_.getBytes(StandardCharsets.UTF_8).length)
+      val parsed     = text.flatMap(markup => parser.parseMarkup(title, markup))
+      val markup     = PageMarkup(pageId = id, wikitext = text, parseResult = parsed)
 
       val lastEdited = (revision \ "timestamp").headOption
         .map(_.text)
         .map(string => OffsetDateTime.parse(string, DateTimeFormatter.ISO_DATE_TIME))
         .map(_.toInstant.toEpochMilli)
+        .get
 
       val pageType = if (redirect.nonEmpty) {
         REDIRECT
@@ -62,13 +65,14 @@ class XMLStructuredPageProcessor(
         inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
       }
 
-      val dp = DumpPage(
+      val dp = Page(
         id = id,
         namespace = namespace,
         pageType = pageType,
         title = title,
         redirectTarget = redirect,
-        lastEdited = lastEdited
+        lastEdited = lastEdited,
+        markupSize = markupSize
       )
 
       Some(StructuredPage(page = dp, markup = markup))

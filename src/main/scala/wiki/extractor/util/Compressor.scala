@@ -43,11 +43,12 @@ object Compressor {
     new String(buffer, StandardCharsets.UTF_8)
   }
 
-  private val compressor   = new ThreadLocal[ZstdCompressor] {
+  private val compressor = new ThreadLocal[ZstdCompressor] {
     override def initialValue(): ZstdCompressor = new ZstdCompressor
   }
+
   private val decompressor = new ThreadLocal[ZstdDecompressor] {
     override def initialValue(): ZstdDecompressor = new ZstdDecompressor
   }
-  private val maxSize      = Int.MaxValue / 2
+  private val maxSize = Int.MaxValue / 2
 }

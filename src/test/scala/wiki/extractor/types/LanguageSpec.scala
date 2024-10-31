@@ -30,6 +30,6 @@ class LanguageSpec extends UnitSpec {
     code = "en",
     name = "English",
     disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
-    rootCategory = "Category:Main topic classifications"
+    rootPage = "Category:Main topic classifications"
   )
 }

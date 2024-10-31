@@ -8,6 +8,7 @@ scalaVersion := "2.13.14"
 lazy val scalaTestVersion = "3.2.19"
 
 libraryDependencies ++= Seq(
+  "com.github.blemale" %% "scaffeine" % "5.3.0",
   "com.lihaoyi" %% "upickle" % "4.0.0",
   "com.lihaoyi" %% "pprint" % "0.9.0",
   "io.airlift" % "aircompressor" % "0.27",

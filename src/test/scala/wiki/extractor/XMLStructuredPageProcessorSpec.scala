@@ -12,7 +12,7 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
     page.pageType shouldBe ARTICLE
     page.title shouldBe "Animalia (book)"
     page.redirectTarget shouldBe None
-    page.lastEdited.get shouldBe 1463339539000L // "2016-05-15T19:12:19Z"
+    page.lastEdited shouldBe 1463339539000L // "2016-05-15T19:12:19Z"
   }
 
   it should "detect a redirect page" in {
@@ -22,17 +22,18 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
     page.pageType shouldBe REDIRECT
     page.title shouldBe "AccessibleComputing"
     page.redirectTarget shouldBe Some("Computer accessibility")
-    page.lastEdited.get shouldBe 1414299023000L
+    page.lastEdited shouldBe 1414299023000L
   }
 
   it should "return an UNHANDLED page type for a Wikipedia: namespace page" in {
-    val expected = DumpPage(
+    val expected = Page(
       id = 551039,
       namespace = Namespace(id = 4, casing = FIRST_LETTER, name = "Wikipedia"),
       pageType = UNHANDLED,
       title = "Wikipedia:WikiProject Missing encyclopedic articles/biographies/G",
       redirectTarget = None,
-      lastEdited = Some(1219519229000L)
+      lastEdited = 1219519229000L,
+      markupSize = None
     )
     val result = fragmentProcessor.extract(FileHelpers.readTextFile("src/test/resources/missing-text.xml")).get.page
     result shouldBe expected
@@ -98,7 +99,7 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
     code = "en",
     name = "English",
     disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
-    rootCategory = "Category:Main topic classifications"
+    rootPage = "Category:Main topic classifications"
   )
 
   private lazy val siteInfo = SiteInfo(

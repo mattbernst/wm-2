@@ -14,7 +14,7 @@ object NamespaceStorage {
     */
   def write(input: Namespace): Unit = {
     DB.autoCommit { implicit session =>
-      sql"""INSERT OR IGNORE INTO namespace
+      sql"""INSERT OR IGNORE INTO $table
            (id, casing, name) VALUES (${input.id}, ${input.casing}, ${input.name})""".update(): Unit
     }
   }
@@ -30,7 +30,7 @@ object NamespaceStorage {
     */
   def read(id: Int): Option[Namespace] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM namespace WHERE id=$id""".map { rs =>
+      sql"""SELECT * FROM $table WHERE id=$id""".map { rs =>
         val casing: Casing = rs.string("casing") match {
           case "FIRST_LETTER"   => FIRST_LETTER
           case "CASE_SENSITIVE" => CASE_SENSITIVE
@@ -39,4 +39,6 @@ object NamespaceStorage {
       }.single()
     }
   }
+
+  private val table = Storage.table("namespace")
 }

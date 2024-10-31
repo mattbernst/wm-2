@@ -15,7 +15,7 @@ object LogStorage {
     */
   def write(level: Level, message: String, timestamp: Long = System.currentTimeMillis()): Unit = {
     DB.autoCommit { implicit session =>
-      sql"""INSERT INTO log VALUES ($level, $timestamp, $message)"""
+      sql"""INSERT INTO $table VALUES ($level, $timestamp, $message)"""
         .update(): Unit
     }
   }
@@ -28,10 +28,12 @@ object LogStorage {
     */
   def readAll(timestamp: Long): Seq[StoredLog] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM log WHERE ts=$timestamp""".map { rs =>
+      sql"""SELECT * FROM $table WHERE ts=$timestamp""".map { rs =>
         val level = Level.valueOf(rs.string("log_level"))
         StoredLog(level = level, message = rs.string("message"), timestamp = rs.long("ts"))
       }.list()
     }
   }
+
+  private val table = Storage.table("log")
 }

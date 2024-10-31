@@ -8,9 +8,24 @@ import wiki.extractor.util.{FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
+  behavior of "Storage.getPage"
+
+  it should "get nothing for an unknown page" in {
+    storage.getPages(Seq(-1)) shouldBe Seq()
+  }
+
+  it should "get a stored page with namespace (by ID or title)" in {
+    pages.map(_.namespace).foreach(ns => storage.namespace.write(ns))
+    storage.page.writePages(pages)
+    val expected = pages.head
+
+    storage.getPage(expected.title) shouldBe Some(expected)
+    storage.getPages(Seq(expected.id)) shouldBe Seq(expected)
+  }
+
   behavior of "NamespaceStorage"
   it should "write and read back Namespace records" in {
-    val ns = Namespace(14, FIRST_LETTER, "Category")
+    val ns = Namespace(-1, FIRST_LETTER, "Category")
     storage.namespace.read(ns.id) shouldBe None
     storage.namespace.write(ns)
     storage.namespace.read(ns.id) shouldBe Some(ns)
@@ -18,7 +33,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
   behavior of "PageStorage"
   it should "write page records and resolve redirects" in {
-    storage.page.writeDumpPages(pages)
+    storage.page.writePages(pages)
     val tf = new TitleFinder(storage.page.readTitlePageMap(), storage.page.readRedirects())
     storage.page.writeTitleToPage(tf.getFlattenedPageMapping())
     tf.getId("This title does not exist") shouldBe None
@@ -115,6 +130,28 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.link.getByDestination(b) shouldBe Seq(ResolvedLink(a, b, None))
   }
 
+  behavior of "DepthStorage"
+
+  it should "count pages traversed at depth N" in {
+    val n = 10
+    storage.depth.count(n) shouldBe 0
+    storage.depth.write(Seq(PageDepth(randomInt(), n, Seq())))
+    storage.depth.count(n) shouldBe 1
+  }
+
+  it should "write and read depth records" in {
+    val n = 4
+    def randRoute(): Seq[Int] = {
+      val tail = 0.to(n).map(_ => randomInt()).toList
+      (n :: tail).reverse
+    }
+    val depths = 0.until(3).map(j => PageDepth(j, n, randRoute()))
+    storage.depth.write(depths)
+    depths.foreach { pd =>
+      depths.contains(storage.depth.read(pd.pageId).get) shouldBe true
+    }
+  }
+
   override def afterAll(): Unit = {
     super.afterAll()
     FileHelpers.deleteFileIfExists(testDbName)
@@ -130,54 +167,61 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   private lazy val pages = {
     val defaultNamespace  = Namespace(0, FIRST_LETTER, "")
     val categoryNamespace = Namespace(14, FIRST_LETTER, "Category")
+    val now               = System.currentTimeMillis()
     Seq(
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
         title = "Ann Arbor, Michigan",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now,
+        markupSize = Some(123)
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
         title = "Category:Mathematics",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now,
+        markupSize = Some(123)
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = REDIRECT,
         title = "AsciiArt",
         redirectTarget = Some("ASCII art"),
-        lastEdited = None
+        lastEdited = now,
+        markupSize = Some(123)
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = defaultNamespace,
         pageType = ARTICLE,
         title = "ASCII art",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now,
+        markupSize = Some(123)
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = REDIRECT,
         title = "Category:Wikipedians who are not a Wikipedian",
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
-        lastEdited = None
+        lastEdited = now,
+        markupSize = Some(123)
       ),
-      DumpPage(
+      Page(
         id = randomInt(),
         namespace = categoryNamespace,
         pageType = ARTICLE,
         title = "Category:Wikipedians who retain deleted categories on their userpages",
         redirectTarget = None,
-        lastEdited = None
+        lastEdited = now,
+        markupSize = Some(123)
       )
     )
   }
