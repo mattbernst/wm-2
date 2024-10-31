@@ -2,7 +2,7 @@ package wiki.extractor
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.*
-import wiki.extractor.phases.Phase01
+import wiki.extractor.phases.{Phase01, Phase02}
 import wiki.extractor.types.*
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
@@ -11,7 +11,8 @@ object WikipediaExtractor extends Logging {
   def main(args: Array[String]): Unit = {
     DBLogging.initDb(db)
     init()
-    val phase01 = new Phase01(1, db, Config.props)
+    lazy val phase01 = new Phase01(1, db, Config.props)
+    lazy val phase02 = new Phase02(2, db, Config.props)
     db.phase.getPhaseState(1) match {
       case Some(COMPLETED) =>
         logger.info(phase01.finishedMessage)
@@ -23,12 +24,12 @@ object WikipediaExtractor extends Logging {
     }
     db.phase.getPhaseState(2) match {
       case Some(COMPLETED) =>
-        logger.info("Already completed phase 2")
+        logger.info(phase02.finishedMessage)
       case Some(CREATED) =>
-        logger.warn("Phase 2 incomplete -- redoing")
-        phase02()
+        logger.warn(phase02.incompleteMessage)
+        phase02.run()
       case None =>
-        phase02()
+        phase02.run()
     }
     db.phase.getPhaseState(3) match {
       case Some(COMPLETED) =>
@@ -56,21 +57,6 @@ object WikipediaExtractor extends Logging {
   // Initialize system tables before running any extraction
   private def init(): Unit = {
     db.createTableDefinitions(0)
-  }
-
-  /**
-    * Resolve title_to_page mapping and index the new table.
-    */
-  private def phase02(): Unit = {
-    val phase = 2
-    db.phase.deletePhase(phase)
-    db.phase.createPhase(phase, s"Building title_to_page map")
-    db.page.clearTitleToPage()
-    db.createTableDefinitions(phase)
-    val danglingRedirects = storeMappedTitles()
-    markDanglingRedirects(danglingRedirects)
-    db.createIndexes(phase)
-    db.phase.completePhase(phase)
   }
 
   /**
@@ -134,38 +120,6 @@ object WikipediaExtractor extends Logging {
     sink.stopWriting()
     sink.writerThread.join()
     db.phase.completePhase(phase)
-  }
-
-  /**
-    * Resolve all title-to-ID mappings (e.g. resolve redirects) and store the
-    * flattened data in the title_to_page table.
-    *
-    * @return Dangling redirects that need their page type updated
-    */
-  private def storeMappedTitles(): Seq[Redirection] = {
-    DBLogging.info(s"Getting TitleFinder data")
-    val redirects = db.page.readRedirects()
-    DBLogging.info(s"Loaded ${redirects.length} redirects")
-    val titlePageMap = db.page.readTitlePageMap()
-    DBLogging.info(s"Loaded ${titlePageMap.size} title-to-ID map entries")
-    val tf = new TitleFinder(titlePageMap, redirects)
-    DBLogging.info(s"Started writing title to page ID mappings to db")
-    val fpm = tf.getFlattenedPageMapping()
-    db.page.writeTitleToPage(fpm)
-    DBLogging.info(s"Finished writing ${fpm.length} title to page ID mappings to db")
-    tf.danglingRedirects
-  }
-
-  /**
-    * Mark all dangling redirect pages that were discovered during
-    * redirect resolution. This has to run after createIndexes() or
-    * it takes way too long to find the page by ID.
-    *
-    * @param input Dangling redirect pages that need to be marked
-    */
-  private def markDanglingRedirects(input: Seq[Redirection]): Unit = {
-    input.foreach(r => db.page.updatePageType(r.pageId, DANGLING_REDIRECT))
-    DBLogging.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
   }
 
   private val db: Storage =

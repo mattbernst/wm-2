@@ -12,17 +12,18 @@ import java.nio.charset.StandardCharsets
 import scala.io.{BufferedSource, Source}
 
 class Phase01(number: Int, db: Storage, props: ConfiguredProperties)
-  extends Phase(number: Int, db: Storage, props: ConfiguredProperties) with Logging {
+    extends Phase(number: Int, db: Storage, props: ConfiguredProperties)
+    with Logging {
 
   override val incompleteMessage: String = s"Phase $number incomplete -- resuming"
 
   /**
-   * Extract a Wikipedia dump into structured data (first pass). This phase
-   * gets page descriptors, page wikitext, links, excerpts, and pages rendered
-   * as plain text.
-   *
-   * @param args Command line arguments: the path to a Wikipedia dump file
-   */
+    * Extract a Wikipedia dump into structured data (first pass). This phase
+    * gets page descriptors, page wikitext, links, excerpts, and pages rendered
+    * as plain text.
+    *
+    * @param args Command line arguments: the path to a Wikipedia dump file
+    */
   override def run(args: Array[String]): Unit = {
     val usage = "Usage: WikipediaExtractor <path-to-xml-dump>"
     if (args.length == 0) {
@@ -70,27 +71,27 @@ class Phase01(number: Int, db: Storage, props: ConfiguredProperties)
   }
 
   /**
-   * Get input to process. This can read a .xml.bz2 dump file as downloaded
-   * from Wikipedia, a ZStandard compressed .xml.zst file, or an uncompressed
-   * .xml file.
-   *
-   * When reading directly from a .bz2 file, decompression is the bottleneck.
-   * Downstream workers will be mostly idle, most cores on a multicore system
-   * will be idle, and the wall clock time to complete will be much higher.
-   *
-   * Converting the original .bz2 dump to a .zst dump offers reasonable
-   * performance when read here, and it consumes much less disk space than
-   * fully decompressed XML. The .zst dump file is about 20% larger than
-   * a .bz2 file for the same data, but much faster to read. The extraction
-   * process takes about 10% longer when using .zst input than uncompressed
-   * XML.
-   *
-   * Run this with a bz2-compressed dump only if disk space is at a dear
-   * premium.
-   *
-   * @param  fileName Name of the Wikipedia dump file on disk
-   * @return
-   */
+    * Get input to process. This can read a .xml.bz2 dump file as downloaded
+    * from Wikipedia, a ZStandard compressed .xml.zst file, or an uncompressed
+    * .xml file.
+    *
+    * When reading directly from a .bz2 file, decompression is the bottleneck.
+    * Downstream workers will be mostly idle, most cores on a multicore system
+    * will be idle, and the wall clock time to complete will be much higher.
+    *
+    * Converting the original .bz2 dump to a .zst dump offers reasonable
+    * performance when read here, and it consumes much less disk space than
+    * fully decompressed XML. The .zst dump file is about 20% larger than
+    * a .bz2 file for the same data, but much faster to read. The extraction
+    * process takes about 10% longer when using .zst input than uncompressed
+    * XML.
+    *
+    * Run this with a bz2-compressed dump only if disk space is at a dear
+    * premium.
+    *
+    * @param  fileName Name of the Wikipedia dump file on disk
+    * @return
+    */
   private def getInputSource(fileName: String): BufferedSource = {
     if (fileName.endsWith(".xml")) {
       Source.fromFile(fileName)(StandardCharsets.UTF_8)
@@ -109,15 +110,15 @@ class Phase01(number: Int, db: Storage, props: ConfiguredProperties)
   }
 
   /**
-   * Write last-transclusions of above-average size to the database. The
-   * accumulated statistics can help to configure the disambiguationPrefixes
-   * for a new language in languages.json. Only common names (those with
-   * above average counts) are included because less common ones are unlikely
-   * to be useful and because writing all the minor names to the db can be
-   * time-consuming.
-   *
-   * @param input A map of transclusion names to counts
-   */
+    * Write last-transclusions of above-average size to the database. The
+    * accumulated statistics can help to configure the disambiguationPrefixes
+    * for a new language in languages.json. Only common names (those with
+    * above average counts) are included because less common ones are unlikely
+    * to be useful and because writing all the minor names to the db can be
+    * time-consuming.
+    *
+    * @param input A map of transclusion names to counts
+    */
   private def writeTransclusions(input: Map[String, Int]): Unit = {
     if (input.nonEmpty) {
       val totalCounts = input.values.map(_.toDouble).sum
@@ -134,11 +135,11 @@ class Phase01(number: Int, db: Storage, props: ConfiguredProperties)
   }
 
   private def assignXMLWorkers(
-                                n: Int,
-                                processor: XMLStructuredPageProcessor,
-                                source: () => Option[String],
-                                sink: PageSink
-                              ): Seq[Worker] = {
+    n: Int,
+    processor: XMLStructuredPageProcessor,
+    source: () => Option[String],
+    sink: PageSink
+  ): Seq[Worker] = {
     0.until(n).map { id =>
       processor.worker(
         id = id,
