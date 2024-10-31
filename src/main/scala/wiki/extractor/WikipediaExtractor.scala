@@ -1,9 +1,7 @@
 package wiki.extractor
 
-import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.*
-import wiki.extractor.phases.{Phase01, Phase02, Phase03}
-import wiki.extractor.types.*
+import wiki.extractor.phases.{Phase01, Phase02, Phase03, Phase04}
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
 object WikipediaExtractor extends Logging {
@@ -11,9 +9,12 @@ object WikipediaExtractor extends Logging {
   def main(args: Array[String]): Unit = {
     DBLogging.initDb(db)
     init()
+
     lazy val phase01 = new Phase01(db, Config.props)
     lazy val phase02 = new Phase02(db, Config.props)
     lazy val phase03 = new Phase03(db, Config.props)
+    lazy val phase04 = new Phase04(db, Config.props)
+
     db.phase.getPhaseState(1) match {
       case Some(COMPLETED) =>
         logger.info(phase01.finishedMessage)
@@ -41,15 +42,14 @@ object WikipediaExtractor extends Logging {
       case None =>
         phase03.run()
     }
-
     db.phase.getPhaseState(4) match {
       case Some(COMPLETED) =>
-        logger.info("Already completed phase 4")
+        logger.info(phase04.finishedMessage)
       case Some(CREATED) =>
-        logger.warn("Phase 4 incomplete -- restarting")
-        phase04()
+        logger.warn(phase04.incompleteMessage)
+        phase04.run()
       case None =>
-        phase04()
+        phase04.run()
     }
 
     db.closeAll()
@@ -58,41 +58,6 @@ object WikipediaExtractor extends Logging {
   // Initialize system tables before running any extraction
   private def init(): Unit = {
     db.createTableDefinitions(0)
-  }
-
-  // Assign a page depth to categories and articles
-  private def phase04(): Unit = {
-    val phase = 4
-    db.phase.deletePhase(phase)
-    db.createTableDefinitions(phase)
-    val rootPage = Config.props.language.rootPage
-    db.phase.createPhase(phase, s"Mapping depth starting from $rootPage")
-    DBLogging.info(s"Getting candidates for depth mapping")
-    val pageGroups: Map[PageType, Set[Int]] = db.page.getPagesForDepth()
-    DBLogging.info(s"Got ${pageGroups.values.map(_.size).sum} candidates for depth mapping")
-    DBLogging.info(s"Getting source-to-destination mapping")
-
-    val destinationCache: LoadingCache[Int, Seq[Int]] =
-      Scaffeine()
-        .maximumSize(10000000)
-        .build(loader = (id: Int) => {
-          db.link.getBySource(id).map(_.destination)
-        })
-
-    val sink           = new DepthSink(db)
-    var completedCount = 0
-
-    val maxDepth = 31
-    1.until(maxDepth).foreach { depthLimit =>
-      val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, depthLimit)
-      processor.markDepths(rootPage)
-      completedCount += db.depth.count(depthLimit)
-      DBLogging.info(s"Completed marking $completedCount pages to max depth $depthLimit")
-    }
-
-    sink.stopWriting()
-    sink.writerThread.join()
-    db.phase.completePhase(phase)
   }
 
   private val db: Storage =
