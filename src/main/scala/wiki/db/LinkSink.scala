@@ -24,7 +24,7 @@ class LinkSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
   def addLink(resolvedLink: Option[ResolvedLink], deadLink: Option[DeadLink]): Unit = {
     queue.put(QueueEntry(resolvedLink = resolvedLink, deadLink = deadLink))
     linkCount += 1
-    Progress.tick(linkCount, "+", 100000)
+    Progress.tick(linkCount, "+", 100_000)
   }
 
   def stopWriting(): Unit = this.synchronized {

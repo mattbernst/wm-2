@@ -111,18 +111,24 @@ object PageStorage {
     *
     * @return Page IDs keyed by page type
     */
-  def getPagesForDepth(): Map[PageType, Set[Int]] = {
+  def getPagesForDepth(): mutable.Map[PageType, mutable.Set[Int]] = {
     val included = Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(CATEGORY))
+    val result   = mutable.Map[PageType, mutable.Set[Int]]()
 
     DB.autoCommit { implicit session =>
-      sql"""SELECT id, page_type FROM $table WHERE page_type IN ($included)"""
-        .map(r => (r.int("page_type"), r.int("id")))
-        .list()
-        .groupBy(_._1)
-        .map { t =>
-          (PageTypes.byNumber(t._1), t._2.map(_._2).toSet)
+      sql"""SELECT id, page_type FROM $table WHERE page_type IN ($included)""".foreach { r =>
+        val key = PageTypes.byNumber(r.int("page_type"))
+        if (result.contains(key)) {
+          result(key).add(r.int("id")): Unit
+        } else {
+          val s = mutable.Set[Int]()
+          s.add(r.int("id"))
+          result(key) = s
         }
+      }
     }
+
+    result
   }
 
   /**

@@ -10,8 +10,8 @@ import scala.collection.mutable
 class DepthProcessor(
   db: Storage,
   sink: DepthSink,
-  pageGroups: Map[PageType, Set[Int]],
-  destinationCache: LoadingCache[Int, Seq[Int]],
+  pageGroups: mutable.Map[PageType, mutable.Set[Int]],
+  destinationCache: LoadingCache[Int, Array[Int]],
   depthLimit: Int) {
 
   /**

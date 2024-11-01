@@ -4,7 +4,7 @@ import wiki.extractor.types.*
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 
-class PageMarkupSource(db: Storage, queueSize: Int = 40000) {
+class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
 
   /**
     * Continually enqueue PageMarkup into the internal queue until all relevant
@@ -24,7 +24,7 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40000) {
     var j = 0
     // N.B. if sliceSize is too small, this could accidentally terminate early
     // (if all IDs in range were irrelevant page types)
-    val sliceSize = 20000
+    val sliceSize = 20_000
     while (j < max) {
       val entries = fetch(j, j + sliceSize)
       entries

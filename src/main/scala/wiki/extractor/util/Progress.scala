@@ -9,5 +9,5 @@ object Progress {
     }
   }
 
-  val interval: Int = 10000
+  val interval: Int = 10_000
 }

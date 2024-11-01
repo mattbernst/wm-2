@@ -185,5 +185,5 @@ object Storage extends Logging {
     loop(sqls.toList, Nil)
   }
 
-  val batchSqlSize: Int = 5000
+  val batchSqlSize: Int = 5_000
 }

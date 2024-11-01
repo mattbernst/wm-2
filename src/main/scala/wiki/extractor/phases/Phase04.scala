@@ -6,6 +6,8 @@ import wiki.extractor.DepthProcessor
 import wiki.extractor.types.PageType
 import wiki.extractor.util.{Config, ConfiguredProperties, DBLogging}
 
+import scala.collection.mutable
+
 class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
 
   // Assign a page depth to categories and articles
@@ -13,17 +15,16 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.deletePhase(number)
     db.createTableDefinitions(number)
     val rootPage = Config.props.language.rootPage
-    db.phase.createPhase(number, s"Mapping depth starting from $rootPage")
+    db.phase.createPhase(number, s"Mapping depth starting from '$rootPage'")
     DBLogging.info(s"Getting candidates for depth mapping")
-    val pageGroups: Map[PageType, Set[Int]] = db.page.getPagesForDepth()
+    val pageGroups: mutable.Map[PageType, mutable.Set[Int]] = db.page.getPagesForDepth()
     DBLogging.info(s"Got ${pageGroups.values.map(_.size).sum} candidates for depth mapping")
-    DBLogging.info(s"Getting source-to-destination mapping")
 
-    val destinationCache: LoadingCache[Int, Seq[Int]] =
+    val destinationCache: LoadingCache[Int, Array[Int]] =
       Scaffeine()
-        .maximumSize(10000000)
+        .maximumSize(10_000_000)
         .build(loader = (id: Int) => {
-          db.link.getBySource(id).map(_.destination)
+          db.link.getBySource(id).map(_.destination).toArray
         })
 
     val sink           = new DepthSink(db)
