@@ -2,8 +2,8 @@ package wiki.db
 
 import scalikejdbc.*
 
-case class ResolvedLink(source: Int, destination: Int, anchorText: Option[String])
-case class DeadLink(source: Int, destination: String, anchorText: Option[String])
+case class ResolvedLink(source: Int, destination: Int, anchorText: String)
+case class DeadLink(source: Int, destination: String, anchorText: String)
 
 object LinkStorage {
 
@@ -100,7 +100,7 @@ object LinkStorage {
     ResolvedLink(
       source = rs.int("source"),
       destination = rs.int("destination"),
-      anchorText = rs.stringOpt("anchor_text")
+      anchorText = rs.string("anchor_text")
     )
 
   private val table = Storage.table("link")

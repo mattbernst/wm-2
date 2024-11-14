@@ -35,15 +35,13 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
       .foreach { link =>
         val dst = link.target.replace("&nbsp;", " ")
         val key = keyFromTarget(dst)
-        // Filter out anchor text if it's just whitespace.
-        val anchorText = link.anchorText.map(_.trim).filter(_.nonEmpty)
         titleMap.get(key) match {
           // Valid links have destination text resolved to numeric page IDs,
           // and the source ID is different from the destination.
           // Dead links either have destination text that could not be matched
           // to a page or they have a source that is the same as the destination.
-          case Some(id) if src != id => resolved.append(ResolvedLink(src, id, anchorText))
-          case _                     => dead.append(DeadLink(src, dst, anchorText))
+          case Some(id) if src != id => resolved.append(ResolvedLink(src, id, link.anchorText))
+          case _                     => dead.append(DeadLink(src, dst, link.anchorText))
         }
       }
 

@@ -120,14 +120,14 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val b    = randomInt()
     val c    = randomInt()
     val d    = randomInt()
-    val data = Seq(ResolvedLink(a, b, None), ResolvedLink(a, c, Some("chemistry")), ResolvedLink(b, d, Some("physics")))
+    val data = Seq(ResolvedLink(a, b, "math"), ResolvedLink(a, c, "chemistry"), ResolvedLink(b, d, "physics"))
     storage.link.writeResolved(data)
 
-    storage.link.getBySource(a) shouldBe Seq(ResolvedLink(a, b, None), ResolvedLink(a, c, Some("chemistry")))
-    storage.link.getBySource(b) shouldBe Seq(ResolvedLink(b, d, Some("physics")))
+    storage.link.getBySource(a) shouldBe Seq(ResolvedLink(a, b, "math"), ResolvedLink(a, c, "chemistry"))
+    storage.link.getBySource(b) shouldBe Seq(ResolvedLink(b, d, "physics"))
     storage.link.getBySource(c) shouldBe Seq()
     storage.link.getByDestination(a) shouldBe Seq()
-    storage.link.getByDestination(b) shouldBe Seq(ResolvedLink(a, b, None))
+    storage.link.getByDestination(b) shouldBe Seq(ResolvedLink(a, b, "math"))
   }
 
   behavior of "DepthStorage"

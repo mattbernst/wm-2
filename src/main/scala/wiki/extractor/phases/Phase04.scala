@@ -30,7 +30,8 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     val sink           = new DepthSink(db)
     var completedCount = 0
 
-    val maxDepth = 31
+    // Keep this shallow until I understand where it's actually needed
+    val maxDepth = 9
     1.until(maxDepth).foreach { depthLimit =>
       val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, depthLimit)
       processor.markDepths(rootPage)

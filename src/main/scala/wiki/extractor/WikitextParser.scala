@@ -45,9 +45,10 @@ class WikitextParser(languageLogic: LanguageLogic) {
   private[extractor] def processNodes(input: Array[WtNode]): ParseResult = {
     val links = extractNodes[WtInternalLink](input).map { link =>
       if (link.hasTitle) {
-        Link(target = textualize(link.getTarget), Some(textualize(link.getTitle)))
+        Link(target = textualize(link.getTarget).trim, textualize(link.getTitle).trim)
       } else {
-        Link(target = textualize(link.getTarget), anchorText = None)
+        val target = textualize(link.getTarget).trim
+        Link(target = target, anchorText = target)
       }
     }
 
