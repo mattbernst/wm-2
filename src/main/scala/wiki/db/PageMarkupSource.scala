@@ -40,6 +40,6 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
   def getFromQueue(): Option[TypedPageMarkup] =
     Option(queue.poll(pollTime, TimeUnit.SECONDS))
 
-  private var pollTime = 30L
+  private var pollTime   = 30L
   private lazy val queue = new ArrayBlockingQueue[TypedPageMarkup](queueSize)
 }

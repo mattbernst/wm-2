@@ -8,7 +8,7 @@ This software has only been tested under Linux and macOS, though there is no con
 code.
 
 You will need a Java runtime environment and [sbt](https://www.scala-sbt.org/1.x/docs/Setup.html), the Scala build tool.
-The code has been tested on JREs 8 through 21.
+The code has been tested on JREs 11 through 23.
 
 The Makefile is written for GNU Make.
 

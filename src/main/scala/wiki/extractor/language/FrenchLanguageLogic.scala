@@ -40,14 +40,11 @@ object FrenchLanguageLogic extends LanguageLogic {
     Snippet(firstParagraph = firstParagraph, firstSentence = firstSentence)
   }
 
-  // N.B. Central OpenNLP only offers sentence detector models for a few languages:
-  // https://opennlp.apache.org/models.html (fr, de, en, it, nl)
-  // Other languages will need third party models or another approach.
   // This needs to be a ThreadLocal because OpenNLP is not thread-safe
   private val sentenceDetector = new ThreadLocal[SentenceDetectorME] {
 
     override def initialValue(): SentenceDetectorME = {
-      val inStream = new FileInputStream("opennlp/fr/opennlp-1.0-1.9.3fr-ud-ftb-sentence-1.0-1.9.3.bin")
+      val inStream = new FileInputStream("opennlp/fr/opennlp-fr-ud-gsd-sentence-1.1-2.4.0.bin")
       val model    = new SentenceModel(inStream)
       val result   = new SentenceDetectorME(model)
       inStream.close()

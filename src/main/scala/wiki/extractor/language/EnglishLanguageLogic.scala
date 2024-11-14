@@ -40,14 +40,13 @@ object EnglishLanguageLogic extends LanguageLogic {
     Snippet(firstParagraph = firstParagraph, firstSentence = firstSentence)
   }
 
-  // N.B. Central OpenNLP only offers sentence detector models for a few languages:
-  // https://opennlp.apache.org/models.html (fr, de, en, it, nl)
-  // Other languages will need third party models or another approach.
+  // OpenNLP offers models for other languages here:
+  // https://opennlp.apache.org/models.html
   // This needs to be a ThreadLocal because OpenNLP is not thread-safe
   private val sentenceDetector = new ThreadLocal[SentenceDetectorME] {
 
     override def initialValue(): SentenceDetectorME = {
-      val inStream = new FileInputStream("opennlp/en/opennlp-en-ud-ewt-sentence-1.0-1.9.3.bin")
+      val inStream = new FileInputStream("opennlp/en/opennlp-en-ud-ewt-sentence-1.1-2.4.0.bin")
       val model    = new SentenceModel(inStream)
       val result   = new SentenceDetectorME(model)
       inStream.close()
