@@ -3,23 +3,35 @@ package wiki.extractor.types
 import upickle.default.*
 import wiki.extractor.util.FileHelpers
 
+import java.util.Locale
+
 case class Language(
-  code: String, // e.g. "en"
+  code: String, // an ISO 639-1 language code e.g. "en"
   name: String, // e.g. "English"
   /*
-                      See https://en.wikipedia.org/wiki/Template:Disambiguation
-                      and also transclusion_counts.json after running with
-                      COUNT_LAST_TRANSCLUSIONS=true
+                                         See https://en.wikipedia.org/wiki/Template:Disambiguation
+                                         and also transclusion_counts.json after running with
+                                         COUNT_LAST_TRANSCLUSIONS=true
    */
   disambiguationPrefixes: Seq[String],
   /*
-                      The root page is a somewhat arbitrary starting point
-                      for determining the "depth" of a Wikipedia page. Milne used
-                      "Category:Fundamental categories" as his root page for
-                      English Wikipedia, but it was deleted in December 2016:
-                      https://en.wikipedia.org/wiki/Wikipedia:Categories_for_discussion/Log/2016_December_18#Category:Fundamental_categories
+                                         The root page is a somewhat arbitrary starting point
+                                         for determining the "depth" of a Wikipedia page. Milne used
+                                         "Category:Fundamental categories" as his root page for
+                                         English Wikipedia, but it was deleted in December 2016:
+                                         https://en.wikipedia.org/wiki/Wikipedia:Categories_for_discussion/Log/2016_December_18#Category:Fundamental_categories
    */
   rootPage: String) {
+
+  val locale: Locale = {
+    val cc = if (code == "en_simple") {
+      "en"
+    } else {
+      code
+    }
+
+    new Locale(cc)
+  }
 
   /**
     * Determine if the last transclusion from a page indicates that the page is
@@ -31,12 +43,12 @@ case class Language(
     * @return             Whether the transclusion matches a disambiguation prefix
     */
   def isDisambiguation(transclusion: String): Boolean = {
-    val tHead = transclusion.split('|').headOption.map(_.toLowerCase).getOrElse("")
+    val tHead = transclusion.split('|').headOption.map(_.toLowerCase(locale)).getOrElse("")
     normalizedDisambiguationPrefixes.contains(tHead)
   }
 
   private val normalizedDisambiguationPrefixes: Set[String] =
-    disambiguationPrefixes.map(_.toLowerCase).toSet
+    disambiguationPrefixes.map(_.toLowerCase(locale)).toSet
 }
 
 object Language {

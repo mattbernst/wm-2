@@ -33,15 +33,16 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
       .map(_.links)
       .getOrElse(Seq())
       .foreach { link =>
-        val dst = link.target.replace("&nbsp;", " ")
-        val key = keyFromTarget(dst)
+        val dst        = link.target.replace("&nbsp;", " ")
+        val key        = keyFromTarget(link.target)
+        val anchorText = cleanAnchor(link.anchorText)
         titleMap.get(key) match {
           // Valid links have destination text resolved to numeric page IDs,
           // and the source ID is different from the destination.
           // Dead links either have destination text that could not be matched
           // to a page or they have a source that is the same as the destination.
-          case Some(id) if src != id => resolved.append(ResolvedLink(src, id, link.anchorText))
-          case _                     => dead.append(DeadLink(src, dst, link.anchorText))
+          case Some(id) if src != id => resolved.append(ResolvedLink(src, id, anchorText))
+          case _                     => dead.append(DeadLink(src, dst, anchorText))
         }
       }
 
@@ -89,7 +90,7 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
       .map(_.replace('_', ' '))
       .map(_.trim)
       .getOrElse("")
-      .toLowerCase
+      .toLowerCase(language.locale)
     // Links like ":fr:Les Cahiers de l'Orient" point to the named page
     // in the language-specific Wikipedia instance. We can only resolve
     // links that point within the current Wikipedia.
@@ -97,13 +98,41 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
       k.slice(currentWikiPrefix.length, k.length).trim
     }
     // Category links may start this way, e.g. ":Category:Songwriters"
-    else if (k.startsWith(catPrefix)) {
+    else if (k.startsWith(extraColonCatPrefix)) {
       k.tail
     } else {
       k
     }
     // Categories can have stray spaces following the colon -- fix them here
     cleaned.replace(spacedCat, unspacedCat)
+  }
+
+  /**
+    * Perform some less aggressive modifications to the anchor text. We need
+    * to simplify/normalize link text but preserve casing.
+    *
+    * @param input An anchor text
+    * @return      Anchor text with cleanup
+    */
+  private[extractor] def cleanAnchor(input: String): String = {
+    val k = input
+      .split('#')
+      .headOption
+      .map(_.replace("&nbsp;", " "))
+      .map(_.replace('_', ' '))
+      .map(_.trim)
+      .getOrElse("")
+
+    // Links like ":fr:Les Cahiers de l'Orient" point to the named page
+    // in the language-specific Wikipedia instance. Remove these
+    // language-indicator prefixes.
+    val cleaned = if (k.startsWith(currentWikiPrefix)) {
+      k.slice(currentWikiPrefix.length, k.length).trim
+    } else {
+      k
+    }
+
+    cleaned.trim
   }
 
   // Normally this is based on the language code, but in the case of the Simple
@@ -117,12 +146,12 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     s":$code:"
   }
 
-  private val catPrefix: String =
-    s":$categoryName:".toLowerCase
+  private val extraColonCatPrefix: String =
+    s":$categoryName:".toLowerCase(language.locale)
 
   private val spacedCat: String =
-    s"$categoryName: ".toLowerCase
+    s"$categoryName: ".toLowerCase(language.locale)
 
   private val unspacedCat: String =
-    s"$categoryName:".toLowerCase
+    s"$categoryName:".toLowerCase(language.locale)
 }

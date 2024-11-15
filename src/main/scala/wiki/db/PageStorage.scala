@@ -3,6 +3,7 @@ package wiki.db
 import scalikejdbc.*
 import wiki.extractor.types.*
 
+import java.util.Locale
 import scala.collection.mutable
 
 object PageStorage {
@@ -164,11 +165,11 @@ object PageStorage {
     *
     * @return A map of page titles to page IDs
     */
-  def readTitleToPage(): mutable.Map[String, Int] = {
+  def readTitleToPage(locale: Locale): mutable.Map[String, Int] = {
     val result = mutable.Map[String, Int]()
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM title_to_page"""
-        .foreach(rs => result.put(rs.string("title").toLowerCase, rs.int("page_id")): Unit)
+        .foreach(rs => result.put(rs.string("title").toLowerCase(locale), rs.int("page_id")): Unit)
     }
     result
   }

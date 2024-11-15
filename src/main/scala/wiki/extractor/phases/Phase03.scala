@@ -18,7 +18,7 @@ class Phase03(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.executeUnsafely("DROP TABLE IF EXISTS dead_link;")
     db.createTableDefinitions(number)
     val source   = new PageMarkupSource(db)
-    val titleMap = db.page.readTitleToPage()
+    val titleMap = db.page.readTitleToPage(Config.props.language.locale)
     val categoryName = db.namespace
       .read(SiteInfo.CATEGORY_KEY)
       .map(_.name)
