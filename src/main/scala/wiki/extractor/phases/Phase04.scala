@@ -44,6 +44,6 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.completePhase(number)
   }
 
-  override val incompleteMessage: String = s"Phase $number incomplete -- restarting"
+  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
   override def number: Int               = 4
 }

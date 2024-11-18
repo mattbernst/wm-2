@@ -9,7 +9,7 @@ class AnchorCounterSpec extends UnitSpec {
     val label               = randomString()
     val linkOccurrenceCount = randomInt()
     val linkDocCount        = linkOccurrenceCount / 2
-    val ac                  = AnchorCounter()
+    val ac                  = new AnchorCounter
 
     ac.setLinkCount(label, linkOccurrenceCount, linkDocCount)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount)
@@ -20,7 +20,7 @@ class AnchorCounterSpec extends UnitSpec {
     val label               = randomString()
     val linkOccurrenceCount = randomInt()
     val linkDocCount        = linkOccurrenceCount / 2
-    val ac                  = AnchorCounter()
+    val ac                  = new AnchorCounter
 
     ac.setLinkCount(label, linkOccurrenceCount, linkDocCount)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount)
@@ -34,14 +34,14 @@ class AnchorCounterSpec extends UnitSpec {
   behavior of "updateOccurrences"
 
   it should "throw when called for uninitialized label" in {
-    val ac = AnchorCounter()
+    val ac = new AnchorCounter
     assertThrows[NoSuchElementException] {
       ac.updateOccurrences(Map("natural numbers" -> 1))
     }
   }
 
   it should "update doc count by 1 and occurrence count by N" in {
-    val ac = AnchorCounter()
+    val ac = new AnchorCounter
     val l1 = randomString()
     val l2 = randomString()
 

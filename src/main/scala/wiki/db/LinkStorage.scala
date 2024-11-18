@@ -15,8 +15,8 @@ object LinkStorage {
   def writeResolved(links: Seq[ResolvedLink]): Unit = {
     val batched = links.grouped(Storage.batchSqlSize)
     DB.autoCommit { implicit session =>
+      val cols: SQLSyntax = sqls"""source, destination, anchor_text"""
       batched.foreach { batch =>
-        val cols: SQLSyntax = sqls"""source, destination, anchor_text"""
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(

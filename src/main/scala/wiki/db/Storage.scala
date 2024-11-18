@@ -127,6 +127,7 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  val anchor: AnchorStorage.type             = AnchorStorage
   val depth: DepthStorage.type               = DepthStorage
   val link: LinkStorage.type                 = LinkStorage
   val log: LogStorage.type                   = LogStorage
