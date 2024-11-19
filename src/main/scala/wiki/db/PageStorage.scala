@@ -133,6 +133,25 @@ object PageStorage {
   }
 
   /**
+    * Get the set of page IDs for ARTICLE and DISAMBIGUATION pages. This is used
+    * in the Storage logic of getLinkAnchors because SQLite appears to be slow for
+    * the join.
+    *
+    * @return
+    */
+  def getAnchorPages(): mutable.Set[Int] = {
+    val result = mutable.Set[Int]()
+    DB.autoCommit { implicit session =>
+      Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(DISAMBIGUATION)).foreach { pt =>
+        sql"""SELECT id FROM $table WHERE page_type=$pt"""
+          .foreach(rs => result.add(rs.int("id")))
+      }
+    }
+
+    result
+  }
+
+  /**
     * Write the flattened TitleFinder data into title_to_page. This table gives
     * a direct mapping from every title to its destination page ID.
     *

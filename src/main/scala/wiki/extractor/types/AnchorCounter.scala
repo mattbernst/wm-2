@@ -5,22 +5,22 @@ import scala.collection.mutable
 class AnchorCounter {
 
   /**
-    * Set link occurrence count and link document count for a label. This should
-    * be called using data from the link table to initialize the AnchorCounter
-    * before processing the raw text of pages.
+    * Set or update link occurrence count and link document count for a label.
+    * This should be called using data from the link table to initialize the
+    * AnchorCounter before processing the raw text of pages.
     *
     * @param label               A label attached to a link (e.g. its anchor_text)
     * @param linkOccurrenceCount The number of times this label is used as a link
     * @param linkDocCount        The number of distinct pages where this label
     *                            is used as a link
     */
-  def setLinkCount(label: String, linkOccurrenceCount: Int, linkDocCount: Int): Unit = {
+  def updateLinkCount(label: String, linkOccurrenceCount: Int, linkDocCount: Int): Unit = {
     if (!labelToCount.contains(label)) {
       val counts = Array(0, 0, linkOccurrenceCount, linkDocCount)
       labelToCount.put(label, counts): Unit
     } else {
-      labelToCount(label)(AnchorCounter.linkOccurrenceCountIndex) = linkOccurrenceCount
-      labelToCount(label)(AnchorCounter.linkOccurrenceDocCountIndex) = linkDocCount
+      labelToCount(label)(AnchorCounter.linkOccurrenceCountIndex) += linkOccurrenceCount
+      labelToCount(label)(AnchorCounter.linkOccurrenceDocCountIndex) += linkDocCount
     }
   }
 
@@ -51,7 +51,7 @@ class AnchorCounter {
     */
   def insert(label: String, counts: Array[Int]): Unit = {
     require(counts.length == 4, s"Expected a length-4 array but got ${counts.length}")
-    labelToCount.put(label, counts)
+    labelToCount.put(label, counts): Unit
   }
 
   def getOccurrenceCount(label: String): Option[Int] =

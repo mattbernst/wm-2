@@ -11,7 +11,7 @@ class AnchorCounterSpec extends UnitSpec {
     val linkDocCount        = linkOccurrenceCount / 2
     val ac                  = new AnchorCounter
 
-    ac.setLinkCount(label, linkOccurrenceCount, linkDocCount)
+    ac.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount)
     ac.getLinkOccurrenceDocCount(label) shouldBe Some(linkDocCount)
   }
@@ -22,11 +22,11 @@ class AnchorCounterSpec extends UnitSpec {
     val linkDocCount        = linkOccurrenceCount / 2
     val ac                  = new AnchorCounter
 
-    ac.setLinkCount(label, linkOccurrenceCount, linkDocCount)
+    ac.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount)
     ac.getLinkOccurrenceDocCount(label) shouldBe Some(linkDocCount)
 
-    ac.setLinkCount(label, linkOccurrenceCount + 1, linkDocCount + 1)
+    ac.updateLinkCount(label, 1, 1)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount + 1)
     ac.getLinkOccurrenceDocCount(label) shouldBe Some(linkDocCount + 1)
   }
@@ -45,8 +45,8 @@ class AnchorCounterSpec extends UnitSpec {
     val l1 = randomString()
     val l2 = randomString()
 
-    ac.setLinkCount(l1, 1, 1)
-    ac.setLinkCount(l2, 2, 2)
+    ac.updateLinkCount(l1, 1, 1)
+    ac.updateLinkCount(l2, 2, 2)
 
     val updates = Map(l1 -> 3, l2 -> 2)
     ac.updateOccurrences(updates)

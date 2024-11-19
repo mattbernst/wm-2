@@ -3,7 +3,7 @@ JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors
-JAVA_OPTS := -Xmx10G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
+JAVA_OPTS := -Xmx32G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
 
 clean:
 	sbt clean

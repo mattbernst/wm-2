@@ -2,7 +2,7 @@ package wiki.db
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
-import wiki.extractor.types.{Namespace, Page, PageTypes}
+import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, Logging}
 
 /**
@@ -65,8 +65,24 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
-  def closeAll(): Unit = {
-    ConnectionPool.closeAll()
+  /**
+    * Get destinations from the link table along with the anchor text for each.
+    * Only includes articles and disambiguation pages. This is used to set up
+    * the AnchorCounter data before processing raw text of each page.
+    *
+    * @return Labels and destination page IDs
+    */
+  def getLinkAnchors(): Seq[(String, Int)] = {
+    val included = page.getAnchorPages()
+    DB.autoCommit { implicit session =>
+      sql"""SELECT anchor_text, destination
+           FROM link
+           WHERE anchor_text > ''
+           ORDER BY anchor_text"""
+        .map(rs => (rs.string("anchor_text"), rs.int("destination")))
+        .list()
+        .filter(t => included.contains(t._2))
+    }
   }
 
   // Create tables for multiple phases at once
@@ -125,6 +141,10 @@ class Storage(fileName: String) extends Logging {
     DB.autoCommit { implicit session =>
       Storage.execute(command)
     }
+  }
+
+  def closeAll(): Unit = {
+    ConnectionPool.closeAll()
   }
 
   val anchor: AnchorStorage.type             = AnchorStorage

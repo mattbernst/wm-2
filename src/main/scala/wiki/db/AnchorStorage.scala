@@ -54,16 +54,15 @@ object AnchorStorage {
     ac
   }
 
-
   /**
-   * Delete contents of anchor table. This will get called if the
-   * anchor-counting phase needs to run again (in case data had been partially
-   * written).
-   */
+    * Delete contents of anchor table. This will get called if the
+    * anchor-counting phase needs to run again (in case data had been partially
+    * written).
+    */
   def delete(): Unit = {
     DB.autoCommit { implicit session =>
       sql"""DELETE FROM $table"""
-        .update()
+        .update(): Unit
     }
   }
 

@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.db.*
-import wiki.extractor.phases.{Phase01, Phase02, Phase03, Phase04}
+import wiki.extractor.phases.*
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
 object WikipediaExtractor extends Logging {
@@ -14,6 +14,7 @@ object WikipediaExtractor extends Logging {
     lazy val phase02 = new Phase02(db, Config.props)
     lazy val phase03 = new Phase03(db, Config.props)
     lazy val phase04 = new Phase04(db, Config.props)
+    lazy val phase05 = new Phase05(db, Config.props)
 
     db.phase.getPhaseState(1) match {
       case Some(COMPLETED) =>
@@ -50,6 +51,15 @@ object WikipediaExtractor extends Logging {
         phase04.run()
       case None =>
         phase04.run()
+    }
+    db.phase.getPhaseState(5) match {
+      case Some(COMPLETED) =>
+        logger.info(phase05.finishedMessage)
+      case Some(CREATED) =>
+        logger.warn(phase05.incompleteMessage)
+        phase05.run()
+      case None =>
+        phase05.run()
     }
 
     db.closeAll()
