@@ -1,6 +1,9 @@
 package wiki.extractor.language
 import opennlp.tools.sentdetect.SentenceDetectorME
 import upickle.default.*
+import wiki.extractor.util.Logging
+
+import scala.util.{Failure, Success, Try}
 
 case class Snippet(firstParagraph: Option[String], firstSentence: Option[String])
 
@@ -48,9 +51,29 @@ trait LanguageLogic {
   protected def sentenceDetector: ThreadLocal[SentenceDetectorME]
 }
 
-object LanguageLogic {
+object LanguageLogic extends Logging {
 
-  val logicForLanguage: Map[String, LanguageLogic] = Map(
+  /**
+    * Get the language-specific LanguageLogic implementation from its
+    * corresponding ISO 639-1 language code. Throws if no implementation
+    * yet defined and mapped for the given language code.
+    *
+    * @param languageCode An ISO 639-1 language code e.g. "en"
+    * @return             Language-specific NLP logic
+    */
+  def getLanguageLogic(languageCode: String): LanguageLogic = {
+    Try(logicForLanguage(languageCode)) match {
+      case Success(res) =>
+        res
+      case Failure(ex: NoSuchElementException) =>
+        logger.error(s"No LanguageLogic defined for language code '$languageCode'")
+        throw ex
+      case Failure(ex) =>
+        throw ex
+    }
+  }
+
+  private val logicForLanguage: Map[String, LanguageLogic] = Map(
     "en"        -> EnglishLanguageLogic,
     "en_simple" -> EnglishLanguageLogic,
     "fr"        -> FrenchLanguageLogic

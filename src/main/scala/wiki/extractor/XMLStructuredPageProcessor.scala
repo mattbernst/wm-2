@@ -187,17 +187,8 @@ class XMLStructuredPageProcessor(
     lastTransclusions.put(transclusion, count + 1): Unit
   }
 
-  private val parser: WikitextParser = {
-    Try(LanguageLogic.logicForLanguage(language.code)) match {
-      case Success(ll) =>
-        new WikitextParser(ll)
-      case Failure(ex: NoSuchElementException) =>
-        logger.error(s"No LanguageLogic defined for language code '${language.code}'")
-        throw ex
-      case Failure(ex) =>
-        throw ex
-    }
-  }
+  private val parser: WikitextParser =
+    new WikitextParser(LanguageLogic.getLanguageLogic(language.code))
 
   // Counting transclusions that end a page can be useful to find the
   // most common disambiguation transclusions for configuring the
