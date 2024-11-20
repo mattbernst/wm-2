@@ -1,4 +1,4 @@
-.PHONY: clean build extract extract-with-profiling format extract-graal
+.PHONY: build clean extract extract-graal extract-with-profiling format test
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
@@ -30,3 +30,6 @@ extract-with-profiling: build
 
 format:
 	sbt scalafmtAll
+
+test:
+	sbt test

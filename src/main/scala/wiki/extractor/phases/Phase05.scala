@@ -13,16 +13,16 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.createPhase(number, s"Gathering link anchor statistics")
     db.createTableDefinitions(number)
     db.anchor.delete()
-    DBLogging.info("Loading links from DB")
-    val ac = prepareAnchorCounter()
-
-    DBLogging.info("Storing link anchor statistics")
-    db.anchor.write(ac)
+    DBLogging.info("Collecting link anchor statistics from db")
+    val counter = prepareAnchorCounter()
+    DBLogging.info("Storing link anchor statistics to db")
+    db.anchor.write(counter)
+    db.createIndexes(number)
     db.phase.completePhase(number)
   }
 
   private def prepareAnchorCounter(): AnchorCounter = {
-    val ac             = new AnchorCounter
+    val counter        = new AnchorCounter
     val anchorIterator = db.getLinkAnchors()
     var label = anchorIterator
       .nextOption()
@@ -38,7 +38,7 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
         // Set link occurrence count, link document count for completed label
         val linkOccurrenceCount = buffer.length
         val linkDocCount        = buffer.map(_.source).toSet.size
-        ac.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
+        counter.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
 
         // Clear buffer, update label, append latest
         buffer.clear()
@@ -47,7 +47,7 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
       }
     }
 
-    ac
+    counter
   }
 
   override def number: Int = 5
