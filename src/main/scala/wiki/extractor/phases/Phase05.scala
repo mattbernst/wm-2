@@ -10,12 +10,12 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
 
   override def run(): Unit = {
     db.phase.deletePhase(number)
-    db.phase.createPhase(number, s"Gathering link anchor statistics")
+    db.phase.createPhase(number, s"Gathering link label statistics")
     db.createTableDefinitions(number)
     db.anchor.delete()
-    DBLogging.info("Collecting link anchor statistics from db")
+    DBLogging.info("Collecting link label statistics from db")
     val counter = prepareAnchorCounter()
-    DBLogging.info("Storing link anchor statistics to db")
+    DBLogging.info("Storing link label statistics to db")
     db.anchor.write(counter)
     db.createIndexes(number)
     db.phase.completePhase(number)

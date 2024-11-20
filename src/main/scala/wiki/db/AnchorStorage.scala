@@ -74,13 +74,25 @@ object AnchorStorage {
   }
 
   /**
-    * Delete contents of anchor table. This will get called if the
+    * Delete contents of anchor table. This will get called if the link
     * anchor-counting phase needs to run again (in case data had been partially
     * written).
     */
   def delete(): Unit = {
     DB.autoCommit { implicit session =>
       sql"""DELETE FROM $table"""
+        .update(): Unit
+    }
+  }
+
+  /**
+    * Zero out the occurrence_count and occurrence_doc_count statistics.
+    * This will get called if the page label-counting phase needs to run
+    * again (in case data had been partially written).
+    */
+  def clearOccurrenceCounts(): Unit = {
+    DB.autoCommit { implicit session =>
+      sql"""UPDATE $table SET occurrence_count=0, occurrence_doc_count=0"""
         .update(): Unit
     }
   }
