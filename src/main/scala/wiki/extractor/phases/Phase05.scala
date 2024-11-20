@@ -47,7 +47,6 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
       }
     }
 
-    anchorIterator
     counter
   }
 
