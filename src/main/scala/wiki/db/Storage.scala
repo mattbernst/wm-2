@@ -3,7 +3,7 @@ package wiki.db
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, Logging}
+import wiki.extractor.util.{FileHelpers, Logging, Progress}
 
 import java.util
 
@@ -68,46 +68,40 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
-    * Get destinations from the link table along with the anchor text for each.
-    * Only includes articles and disambiguation pages. This is used to set up
-    * the AnchorCounter data before processing raw text of each page.
+    * Get links from the link table.
+    * Only includes links to articles and disambiguation pages. This is used to
+    * set up the AnchorCounter data before processing raw text of each page.
     *
     * This needs to be an iterator because memory requirements are excessive
     * to fetch all results in one query.
     *
-    * @param batchSize The number of page IDs to include in each DB query.
-    * @return An iterator of labels and destination page IDs
+    * @return An iterator of Anchors
     */
-  def getLinkAnchors(batchSize: Int = 5000): Iterator[(String, Int)] = {
-    // Need to get source pages and destination pages?
-    val targets = page.getAnchorPages()
+  def getLinkAnchors(): Iterator[Anchor] = {
+    val batchSize = Storage.batchSqlSize
+    val targets   = page.getAnchorPages()
 
-    new Iterator[(String, Int)] {
-      private var index                              = 0
-      private var offset                             = 0
-      private var currentBatch: Array[(String, Int)] = Array()
+    new Iterator[Anchor] {
+      private var total                       = 0
+      private var index                       = 0
+      private var offset                      = 0
+      private var currentBatch: Array[Anchor] = Array()
 
       def fetchNextBatch(): Unit = {
         val pageIds = targets.slice(offset, offset + batchSize)
         val lower   = pageIds.headOption.getOrElse(Int.MaxValue)
         val upper   = pageIds.lastOption.map(_ + 1).getOrElse(Int.MaxValue)
-        val t0      = System.currentTimeMillis()
         val rows = DB.autoCommit { implicit session =>
-          sql"""SELECT anchor_text, destination
+          sql"""SELECT source, destination, anchor_text
              FROM link
-             WHERE destination >= $lower AND destination < $upper
+             WHERE source >= $lower AND source < $upper
              AND anchor_text > ''
              ORDER BY anchor_text
              """
-            .map(rs => (rs.string("anchor_text"), rs.int("destination")))
+            .map(rs => Anchor(rs.int("source"), rs.int("destination"), rs.string("anchor_text")))
             .list()
-            .filter { t =>
-              val pageId = t._2
-              util.Arrays.binarySearch(pageIds, pageId) >= 0
-            }
+            .filter(a => util.Arrays.binarySearch(targets, a.destination) >= 0)
         }
-        val elapsed = System.currentTimeMillis() - t0
-        println(s"Fetching ${rows.length} rows for ${pageIds.length} destinations took $elapsed ms")
         currentBatch = rows.toArray
         offset += batchSize
       }
@@ -126,11 +120,13 @@ class Storage(fileName: String) extends Logging {
         }
       }
 
-      override def next(): (String, Int) = {
+      override def next(): Anchor = {
         if (!hasNext) {
           throw new NoSuchElementException("Iterator is empty")
         }
         val result = currentBatch(index)
+        total += 1
+        Progress.tick(total, "+", 100_000)
         index += 1
         result
       }
@@ -138,7 +134,7 @@ class Storage(fileName: String) extends Logging {
       // Initialize first batch
       fetchNextBatch()
 
-      override def nextOption(): Option[(String, Int)] = {
+      override def nextOption(): Option[Anchor] = {
         if (hasNext) {
           Some(currentBatch(index))
         } else {

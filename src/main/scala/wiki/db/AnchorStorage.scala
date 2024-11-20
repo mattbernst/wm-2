@@ -2,6 +2,7 @@ package wiki.db
 
 import scalikejdbc.*
 import wiki.extractor.types.AnchorCounter
+import wiki.extractor.util.Progress
 
 object AnchorStorage {
 
@@ -11,10 +12,15 @@ object AnchorStorage {
     * @param counter AnchorCounter containing accumulated counts
     */
   def write(counter: AnchorCounter): Unit = {
+    var total = 0
     DB.autoCommit { implicit session =>
-      val batches         = counter.getEntries().grouped(Storage.batchSqlSize)
+      val batches         = counter.getEntries().grouped(Storage.batchSqlSize * 3)
       val cols: SQLSyntax = sqls"""label, occurrence_count, occurrence_doc_count, link_count, link_doc_count"""
       batches.foreach { batch =>
+        batch.indices.foreach { _ =>
+          total += 1
+          Progress.tick(total, "+")
+        }
         val params: Seq[Seq[SQLSyntax]] = batch.map(
           t =>
             Seq(
