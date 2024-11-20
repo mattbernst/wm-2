@@ -5,6 +5,8 @@ import scalikejdbc.*
 import wiki.extractor.types.*
 import wiki.extractor.util.{FileHelpers, Logging}
 
+import java.util
+
 /**
   * A SQLite database storage writer and reader for representing and mining
   * extracted Wikipedia data.
@@ -70,18 +72,79 @@ class Storage(fileName: String) extends Logging {
     * Only includes articles and disambiguation pages. This is used to set up
     * the AnchorCounter data before processing raw text of each page.
     *
-    * @return Labels and destination page IDs
+    * This needs to be an iterator because memory requirements are excessive
+    * to fetch all results in one query.
+    *
+    * @param batchSize The number of page IDs to include in each DB query.
+    * @return An iterator of labels and destination page IDs
     */
-  def getLinkAnchors(): Seq[(String, Int)] = {
-    val included = page.getAnchorPages()
-    DB.autoCommit { implicit session =>
-      sql"""SELECT anchor_text, destination
-           FROM link
-           WHERE anchor_text > ''
-           ORDER BY anchor_text"""
-        .map(rs => (rs.string("anchor_text"), rs.int("destination")))
-        .list()
-        .filter(t => included.contains(t._2))
+  def getLinkAnchors(batchSize: Int = 5000): Iterator[(String, Int)] = {
+    // Need to get source pages and destination pages?
+    val targets = page.getAnchorPages()
+
+    new Iterator[(String, Int)] {
+      private var index                              = 0
+      private var offset                             = 0
+      private var currentBatch: Array[(String, Int)] = Array()
+
+      def fetchNextBatch(): Unit = {
+        val pageIds = targets.slice(offset, offset + batchSize)
+        val lower   = pageIds.headOption.getOrElse(Int.MaxValue)
+        val upper   = pageIds.lastOption.map(_ + 1).getOrElse(Int.MaxValue)
+        val t0      = System.currentTimeMillis()
+        val rows = DB.autoCommit { implicit session =>
+          sql"""SELECT anchor_text, destination
+             FROM link
+             WHERE destination >= $lower AND destination < $upper
+             AND anchor_text > ''
+             ORDER BY anchor_text
+             """
+            .map(rs => (rs.string("anchor_text"), rs.int("destination")))
+            .list()
+            .filter { t =>
+              val pageId = t._2
+              util.Arrays.binarySearch(pageIds, pageId) >= 0
+            }
+        }
+        val elapsed = System.currentTimeMillis() - t0
+        println(s"Fetching ${rows.length} rows for ${pageIds.length} destinations took $elapsed ms")
+        currentBatch = rows.toArray
+        offset += batchSize
+      }
+
+      override def hasNext: Boolean = {
+        if (index >= currentBatch.length) {
+          if (currentBatch.isEmpty || currentBatch.length < batchSize) {
+            false
+          } else {
+            fetchNextBatch()
+            index = 0
+            currentBatch.nonEmpty
+          }
+        } else {
+          true
+        }
+      }
+
+      override def next(): (String, Int) = {
+        if (!hasNext) {
+          throw new NoSuchElementException("Iterator is empty")
+        }
+        val result = currentBatch(index)
+        index += 1
+        result
+      }
+
+      // Initialize first batch
+      fetchNextBatch()
+
+      override def nextOption(): Option[(String, Int)] = {
+        if (hasNext) {
+          Some(currentBatch(index))
+        } else {
+          None
+        }
+      }
     }
   }
 

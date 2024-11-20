@@ -5,6 +5,7 @@ import wiki.extractor.types.*
 
 import java.util.Locale
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object PageStorage {
 
@@ -133,22 +134,22 @@ object PageStorage {
   }
 
   /**
-    * Get the set of page IDs for ARTICLE and DISAMBIGUATION pages. This is used
-    * in the Storage logic of getLinkAnchors because SQLite appears to be slow for
-    * the join.
+    * Get the page IDs for ARTICLE and DISAMBIGUATION pages. This is used to
+    * select all the relevant pages from the link table during anchor statistic
+    * generation.
     *
-    * @return
+    * @return A sorted array of page IDs
     */
-  def getAnchorPages(): mutable.Set[Int] = {
-    val result = mutable.Set[Int]()
+  def getAnchorPages(): Array[Int] = {
+    val result = ListBuffer[Int]()
     DB.autoCommit { implicit session =>
       Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(DISAMBIGUATION)).foreach { pt =>
         sql"""SELECT id FROM $table WHERE page_type=$pt"""
-          .foreach(rs => result.add(rs.int("id")))
+          .foreach(rs => result.append(rs.int("id")))
       }
     }
 
-    result
+    result.toArray.sorted
   }
 
   /**

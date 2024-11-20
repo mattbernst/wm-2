@@ -167,7 +167,7 @@ class XMLStructuredPageProcessor(
     * @return         All transclusions from inside double braces
     */
   private[extractor] def getTransclusions(wikiText: String): Seq[String] = {
-    val transclusions = new ListBuffer[String]
+    val transclusions = ListBuffer[String]()
     var startIndex    = -1
 
     wikiText.indices.foreach { i =>

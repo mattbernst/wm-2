@@ -20,12 +20,15 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
   }
 
   private def prepareAnchorCounter(): AnchorCounter = {
-    val ac = new AnchorCounter
-    Thread.sleep(20000)
-    val linkAnchors = db.getLinkAnchors()
-    var label       = linkAnchors.head._1
-    val buffer      = new ListBuffer[Int]
-    linkAnchors.foreach { t =>
+    val ac             = new AnchorCounter
+    val anchorIterator = db.getLinkAnchors()
+    var label = anchorIterator
+      .nextOption()
+      .map(_._1)
+      .getOrElse(throw new IndexOutOfBoundsException("No starting label found!"))
+
+    val buffer = ListBuffer[Int]()
+    anchorIterator.foreach { t =>
       // Keep appending destinations if still processing same label
       if (t._1 == label) {
         buffer.append(t._2)

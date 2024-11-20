@@ -26,8 +26,8 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     } else {
       PageMarkup.deserializeCompressed(tpm.pmz.get)
     }
-    val resolved = new ListBuffer[ResolvedLink]
-    val dead     = new ListBuffer[DeadLink]
+    val resolved = ListBuffer[ResolvedLink]()
+    val dead     = ListBuffer[DeadLink]()
     val src      = pm.pageId
     pm.parseResult
       .map(_.links)
