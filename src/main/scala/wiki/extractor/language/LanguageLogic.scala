@@ -2,7 +2,7 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
-import wiki.extractor.language.types.Snippet
+import wiki.extractor.language.types.{NGram, Snippet}
 import wiki.extractor.util.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -44,9 +44,26 @@ trait LanguageLogic {
     Snippet(firstParagraph = firstParagraph, firstSentence = firstSentence)
   }
 
-  // TODO: implement this after ngram generator is done
-  def wordNgrams(input: String) = {
-    "TODO"
+  /**
+    * Generate word ngrams and filter them against the "valid" set of ngrams.
+    * This is intended for use during document label counting, where the only
+    * labels we want to count are those that have been previously identified
+    * as anchor text from links.
+    *
+    * @param input A full document (e.g. a plain-text rendition of a WP entry)
+    * @param valid The set of valid strings to retain
+    * @return      An iterator of word-level ngrams as strings
+    */
+  def wordNgrams(input: String, valid: collection.Set[String]): Iterator[String] = {
+    ngrams(input).filter(s => valid.contains(s))
+  }
+
+  private[language] def ngrams(input: String): Iterator[String] = {
+    val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get())
+    ngg
+      .generate(input)
+      .iterator
+      .map(ngram => NGram.sliceString(input, ngram))
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]

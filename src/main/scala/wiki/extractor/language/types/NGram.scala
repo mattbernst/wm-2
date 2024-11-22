@@ -37,6 +37,9 @@ object NGram {
     * @return             Pieces of the original source string
     */
   def sliceString(sourceString: String, ngrams: Seq[NGram]): Seq[String] = {
-    ngrams.map(ngram => sourceString.slice(ngram.start, ngram.end))
+    ngrams.map(ngram => sliceString(sourceString, ngram))
   }
+
+  def sliceString(sourceString: String, ngram: NGram): String =
+    sourceString.slice(ngram.start, ngram.end)
 }
