@@ -2,6 +2,7 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
 import opennlp.tools.tokenize.{TokenizerME, TokenizerModel}
+import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.types.NGram
 import wiki.extractor.util.UnitSpec
 
@@ -38,8 +39,8 @@ class NGramGeneratorSpec extends UnitSpec {
       "endianness"
     )
 
-    val result  = ngg.generate(input)
-    val strings = NGram.sliceString(input, result).toList
+    val result  = ngg.generate(input).toList
+    val strings = NGram.sliceString(input, result)
 
     strings shouldBe expected
   }
@@ -81,8 +82,8 @@ class NGramGeneratorSpec extends UnitSpec {
       "endianness"
     )
 
-    val result  = ngg.generate(input)
-    val strings = NGram.sliceString(input, result).toList
+    val result  = ngg.generate(input).toList
+    val strings = NGram.sliceString(input, result)
 
     strings shouldBe expected
   }
@@ -128,10 +129,50 @@ class NGramGeneratorSpec extends UnitSpec {
       "cyclotron"
     )
 
-    val result  = ngg.generate(input)
-    val strings = NGram.sliceString(input, result).toList
+    val result  = ngg.generate(input).toList
+    val strings = NGram.sliceString(input, result)
 
     strings shouldBe expected
+  }
+
+  it should "indicate start-of-sentence in NGrams" in {
+    val ngg   = generator(2)
+    val input = "You knew their purpose, yet you made them. If you had scruples, you betrayed them."
+
+    val expected = List(
+      (true, "You"),
+      (true, "You knew"),
+      (false, "knew"),
+      (false, "knew their"),
+      (false, "their"),
+      (false, "their purpose"),
+      (false, "purpose"),
+      (false, "yet"),
+      (false, "yet you"),
+      (false, "you"),
+      (false, "you made"),
+      (false, "made"),
+      (false, "made them"),
+      (false, "them"),
+      (true, "If"),
+      (true, "If you"),
+      (false, "you"),
+      (false, "you had"),
+      (false, "had"),
+      (false, "had scruples"),
+      (false, "scruples"),
+      (false, "you"),
+      (false, "you betrayed"),
+      (false, "betrayed"),
+      (false, "betrayed them"),
+      (false, "them")
+    )
+
+    val result   = ngg.generate(input).toList
+    val strings  = NGram.sliceString(input, result)
+    val combined = result.map(_.isSentenceStart).zip(strings)
+
+    combined shouldBe expected
   }
 
   def generator(maxTokens: Int) = {

@@ -5,10 +5,11 @@ import opennlp.tools.tokenize.Tokenizer
 import opennlp.tools.util.Span
 import wiki.extractor.language.types.{CaseContext, NGram}
 
-class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, maxTokens: Int = 10) {
+class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, maxTokens: Int = 8) {
 
   /**
-    * Generate token-based ngrams of up to maxTokens tokens.
+    * Generate token-based ngrams of up to maxTokens tokens per ngram. The
+    * ngrams do not cross sentence boundaries.
     *
     * @param text Text of a document to convert to ngrams
     * @return     All ngrams generated from the input text
@@ -17,34 +18,36 @@ class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, m
     val ngramSpans = for {
       (line, lineStart) <- text.split("\n").zipWithIndex
       sentenceSpan      <- sentenceDetector.sentPosDetect(line)
-      sentence    = line.substring(sentenceSpan.getStart, sentenceSpan.getEnd)
-      tokenSpans  = tokenizer.tokenizePos(sentence)
-      caseContext = identifyCaseContext(sentence, tokenSpans)
-      i <- tokenSpans.indices
-      if !(tokenSpans(i).length == 1 &&
-        !sentence.charAt(tokenSpans(i).getStart).isLetterOrDigit)
-      j <- i to math.min(i + n, tokenSpans.length - 1)
-      if !(tokenSpans(j).length == 1 &&
-        !sentence.charAt(tokenSpans(j).getStart).isLetterOrDigit)
+      sentence                = line.substring(sentenceSpan.getStart, sentenceSpan.getEnd)
+      tokenSpans: Array[Span] = tokenizer.tokenizePos(sentence)
+      caseContext             = identifyCaseContext(sentence, tokenSpans)
+      left <- tokenSpans.indices
+      //  An ngram cannot start with a punctuation token
+      if !(tokenSpans(left).length == 1 &&
+        !sentence.charAt(tokenSpans(left).getStart).isLetterOrDigit)
+      right <- left.to(math.min(left + n, tokenSpans.length - 1))
+      //  An ngram cannot end with a punctuation token
+      if !(tokenSpans(right).length == 1 &&
+        !sentence.charAt(tokenSpans(right).getStart).isLetterOrDigit)
     } yield {
-      val globalStart = lineStart + sentenceSpan.getStart + tokenSpans(i).getStart
-      val globalEnd   = lineStart + sentenceSpan.getStart + tokenSpans(j).getEnd
-      val ngramStart  = tokenSpans(i).getStart
+      val globalStart = lineStart + sentenceSpan.getStart + tokenSpans(left).getStart
+      val globalEnd   = lineStart + sentenceSpan.getStart + tokenSpans(right).getEnd
+      val ngramStart  = tokenSpans(left).getStart
 
-      val tokenSpansLocalToNgram = (i to j).map { k =>
+      val tokenSpansLocalToNgram = (left.to(right)).map { k =>
         val tokenSpan = tokenSpans(k)
         new Span(
           tokenSpan.getStart - ngramStart,
           tokenSpan.getEnd - ngramStart
         )
-      }.toArray
+      }
 
       NGram(
         start = globalStart,
         end = globalEnd,
-        tokenSpans = tokenSpansLocalToNgram,
+        tokenSpans = tokenSpansLocalToNgram.toArray,
         caseContext = caseContext,
-        isSentenceStart = i == 0
+        isSentenceStart = left == 0
       )
     }
 
