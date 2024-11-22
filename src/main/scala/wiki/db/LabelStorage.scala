@@ -1,17 +1,17 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.extractor.types.AnchorCounter
+import wiki.extractor.types.LabelCounter
 import wiki.extractor.util.{DBLogging, Progress}
 
-object AnchorStorage {
+object LabelStorage {
 
   /**
-    * Write all the anchors and counts from the counter into the anchor table.
+    * Write all the labels and counts from the counter into the label table.
     *
-    * @param counter AnchorCounter containing accumulated counts
+    * @param counter LabelCounter containing accumulated counts
     */
-  def write(counter: AnchorCounter): Unit = {
+  def write(counter: LabelCounter): Unit = {
     var id = 0
     DB.autoCommit { implicit session =>
       val batches         = counter.getEntries().grouped(batchSize)
@@ -23,10 +23,10 @@ object AnchorStorage {
           Seq(
             sqls"${t._1}",
             sqls"$id",
-            sqls"${t._2(AnchorCounter.occurrenceCountIndex)}",
-            sqls"${t._2(AnchorCounter.occurrenceDocCountIndex)}",
-            sqls"${t._2(AnchorCounter.linkOccurrenceCountIndex)}",
-            sqls"${t._2(AnchorCounter.linkOccurrenceDocCountIndex)}"
+            sqls"${t._2(LabelCounter.occurrenceCountIndex)}",
+            sqls"${t._2(LabelCounter.occurrenceDocCountIndex)}",
+            sqls"${t._2(LabelCounter.linkOccurrenceCountIndex)}",
+            sqls"${t._2(LabelCounter.linkOccurrenceDocCountIndex)}"
           )
         }
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
@@ -36,12 +36,12 @@ object AnchorStorage {
   }
 
   /**
-    * Read the entire anchor table back as an AnchorCounter.
+    * Read the entire label table back as a LabelCounter.
     *
-    * @return An AnchorCounter containing all data from the anchor table
+    * @return A LabelCounter containing all data from the label table
     */
-  def read(): AnchorCounter = {
-    val counter = new AnchorCounter
+  def read(): LabelCounter = {
+    val counter = new LabelCounter
     var current = 0
     val end: Int = DB.autoCommit { implicit session =>
       sql"""SELECT MAX(id) AS max_id FROM $table"""
@@ -49,7 +49,7 @@ object AnchorStorage {
         .single()
         .flatten
     }.getOrElse {
-      DBLogging.warn("Did not find any IDs in anchor table")
+      DBLogging.warn("Did not find any IDs in label table")
       0
     }
 
@@ -74,8 +74,8 @@ object AnchorStorage {
   }
 
   /**
-    * Delete contents of anchor table. This will get called if the link
-    * anchor-counting phase needs to run again (in case data had been partially
+    * Delete contents of label table. This will get called if the link
+    * label-counting phase needs to run again (in case data had been partially
     * written).
     */
   def delete(): Unit = {
@@ -99,5 +99,5 @@ object AnchorStorage {
 
   private val batchSize = Storage.batchSqlSize * 3
 
-  private val table = Storage.table("anchor")
+  private val table = Storage.table("label")
 }

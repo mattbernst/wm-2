@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS anchor
+CREATE TABLE IF NOT EXISTS label
 (
     label                TEXT NOT NULL PRIMARY KEY,
     id                   INTEGER NOT NULL,

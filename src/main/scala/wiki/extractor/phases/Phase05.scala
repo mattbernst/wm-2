@@ -1,7 +1,7 @@
 package wiki.extractor.phases
 
 import wiki.db.Storage
-import wiki.extractor.types.{Anchor, AnchorCounter}
+import wiki.extractor.types.{Anchor, LabelCounter}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
 import scala.collection.mutable.ListBuffer
@@ -12,17 +12,17 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.deletePhase(number)
     db.phase.createPhase(number, s"Gathering link label statistics")
     db.createTableDefinitions(number)
-    db.anchor.delete()
+    db.label.delete()
     DBLogging.info("Collecting link label statistics from db")
-    val counter = prepareAnchorCounter()
+    val counter = prepareLabelCounter()
     DBLogging.info("Storing link label statistics to db")
-    db.anchor.write(counter)
+    db.label.write(counter)
     db.createIndexes(number)
     db.phase.completePhase(number)
   }
 
-  private def prepareAnchorCounter(): AnchorCounter = {
-    val counter        = new AnchorCounter
+  private def prepareLabelCounter(): LabelCounter = {
+    val counter        = new LabelCounter
     val anchorIterator = db.getLinkAnchors()
     var label = anchorIterator
       .nextOption()

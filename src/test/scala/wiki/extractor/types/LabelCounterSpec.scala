@@ -2,14 +2,14 @@ package wiki.extractor.types
 
 import wiki.extractor.util.UnitSpec
 
-class AnchorCounterSpec extends UnitSpec {
+class LabelCounterSpec extends UnitSpec {
   behavior of "setLinkCount"
 
   it should "initialize a label with counts" in {
     val label               = randomString()
     val linkOccurrenceCount = randomInt()
     val linkDocCount        = linkOccurrenceCount / 2
-    val ac                  = new AnchorCounter
+    val ac                  = new LabelCounter
 
     ac.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount)
@@ -20,7 +20,7 @@ class AnchorCounterSpec extends UnitSpec {
     val label               = randomString()
     val linkOccurrenceCount = randomInt()
     val linkDocCount        = linkOccurrenceCount / 2
-    val ac                  = new AnchorCounter
+    val ac                  = new LabelCounter
 
     ac.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
     ac.getlinkOccurrenceCount(label) shouldBe Some(linkOccurrenceCount)
@@ -34,14 +34,14 @@ class AnchorCounterSpec extends UnitSpec {
   behavior of "updateOccurrences"
 
   it should "throw when called for uninitialized label" in {
-    val ac = new AnchorCounter
+    val ac = new LabelCounter
     assertThrows[NoSuchElementException] {
       ac.updateOccurrences(Map("natural numbers" -> 1))
     }
   }
 
   it should "update doc count by 1 and occurrence count by N" in {
-    val ac = new AnchorCounter
+    val ac = new LabelCounter
     val l1 = randomString()
     val l2 = randomString()
 

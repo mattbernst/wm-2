@@ -70,7 +70,7 @@ class Storage(fileName: String) extends Logging {
   /**
     * Get links from the link table.
     * Only includes links to articles and disambiguation pages. This is used to
-    * set up the AnchorCounter data before processing raw text of each page.
+    * set up the LabelCounter data before processing raw text of each page.
     *
     * This needs to be an iterator because memory requirements are excessive
     * to fetch all results in one query.
@@ -206,8 +206,8 @@ class Storage(fileName: String) extends Logging {
     ConnectionPool.closeAll()
   }
 
-  val anchor: AnchorStorage.type             = AnchorStorage
   val depth: DepthStorage.type               = DepthStorage
+  val label: LabelStorage.type               = LabelStorage
   val link: LinkStorage.type                 = LinkStorage
   val log: LogStorage.type                   = LogStorage
   val namespace: NamespaceStorage.type       = NamespaceStorage

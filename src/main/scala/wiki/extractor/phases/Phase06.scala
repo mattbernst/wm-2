@@ -11,9 +11,9 @@ class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
   override def run(): Unit = {
     db.phase.deletePhase(number)
     db.phase.createPhase(number, s"Gathering page-level label statistics")
-    db.anchor.clearOccurrenceCounts()
+    db.label.clearOccurrenceCounts()
     DBLogging.info("Loading link anchor statistics from db")
-    val counter = db.anchor.read()
+    val counter = db.label.read()
     val ll      = LanguageLogic.getLanguageLogic(props.language.code)
   }
 

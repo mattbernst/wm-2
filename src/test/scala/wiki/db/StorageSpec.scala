@@ -152,16 +152,16 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     }
   }
 
-  behavior of "AnchorStorage"
+  behavior of "LabelStorage"
 
-  it should "write and read back an AnchorCounter" in {
-    val ac = new AnchorCounter
+  it should "write and read back a LabelCounter" in {
+    val ac = new LabelCounter
     ac.insert("cadmium", Array(randomInt(), randomInt(), randomInt(), randomInt()))
     ac.insert("ternary", Array(randomInt(), randomInt(), randomInt(), randomInt()))
 
-    storage.anchor.read() should not be ac
-    storage.anchor.write(ac)
-    storage.anchor.read() shouldBe ac
+    storage.label.read() should not be ac
+    storage.label.write(ac)
+    storage.label.read() shouldBe ac
   }
 
   override def afterAll(): Unit = {

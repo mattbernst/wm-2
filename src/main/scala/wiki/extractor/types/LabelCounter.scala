@@ -2,12 +2,12 @@ package wiki.extractor.types
 
 import scala.collection.mutable
 
-class AnchorCounter {
+class LabelCounter {
 
   /**
     * Set or update link occurrence count and link document count for a label.
     * This should be called using data from the link table to initialize the
-    * AnchorCounter before processing the raw text of pages.
+    * LabelCounter before processing the raw text of pages.
     *
     * @param label               A label attached to a link (e.g. its anchor_text)
     * @param linkOccurrenceCount The number of times this label is used as a link
@@ -19,8 +19,8 @@ class AnchorCounter {
       val counts = Array(0, 0, linkOccurrenceCount, linkDocCount)
       labelToCount.put(label, counts): Unit
     } else {
-      labelToCount(label)(AnchorCounter.linkOccurrenceCountIndex) += linkOccurrenceCount
-      labelToCount(label)(AnchorCounter.linkOccurrenceDocCountIndex) += linkDocCount
+      labelToCount(label)(LabelCounter.linkOccurrenceCountIndex) += linkOccurrenceCount
+      labelToCount(label)(LabelCounter.linkOccurrenceDocCountIndex) += linkDocCount
     }
   }
 
@@ -37,8 +37,8 @@ class AnchorCounter {
     */
   def updateOccurrences(input: Map[String, Int]): Unit = {
     input.toSeq.foreach { t =>
-      labelToCount(t._1)(AnchorCounter.occurrenceCountIndex) += t._2
-      labelToCount(t._1)(AnchorCounter.occurrenceDocCountIndex) += 1
+      labelToCount(t._1)(LabelCounter.occurrenceCountIndex) += t._2
+      labelToCount(t._1)(LabelCounter.occurrenceDocCountIndex) += 1
     }
   }
 
@@ -55,16 +55,16 @@ class AnchorCounter {
   }
 
   def getOccurrenceCount(label: String): Option[Int] =
-    labelToCount.get(label).map(a => a(AnchorCounter.occurrenceCountIndex))
+    labelToCount.get(label).map(a => a(LabelCounter.occurrenceCountIndex))
 
   def getOccurrenceDocCount(label: String): Option[Int] =
-    labelToCount.get(label).map(a => a(AnchorCounter.occurrenceDocCountIndex))
+    labelToCount.get(label).map(a => a(LabelCounter.occurrenceDocCountIndex))
 
   def getlinkOccurrenceCount(label: String): Option[Int] =
-    labelToCount.get(label).map(a => a(AnchorCounter.linkOccurrenceCountIndex))
+    labelToCount.get(label).map(a => a(LabelCounter.linkOccurrenceCountIndex))
 
   def getLinkOccurrenceDocCount(label: String): Option[Int] =
-    labelToCount.get(label).map(a => a(AnchorCounter.linkOccurrenceDocCountIndex))
+    labelToCount.get(label).map(a => a(LabelCounter.linkOccurrenceDocCountIndex))
 
   def getEntries(): Iterator[(String, Array[Int])] =
     labelToCount.iterator
@@ -72,10 +72,10 @@ class AnchorCounter {
   def getLabels(): collection.Set[String] =
     labelToCount.keySet
 
-  def canEqual(that: Any): Boolean = that.isInstanceOf[AnchorCounter]
+  def canEqual(that: Any): Boolean = that.isInstanceOf[LabelCounter]
 
   override def equals(that: Any): Boolean = that match {
-    case that: AnchorCounter =>
+    case that: LabelCounter =>
       that.canEqual(this) && {
         if (this.labelToCount.size != that.labelToCount.size) false
         else {
@@ -102,7 +102,7 @@ class AnchorCounter {
   private val labelToCount = mutable.Map[String, Array[Int]]()
 }
 
-object AnchorCounter {
+object LabelCounter {
   val occurrenceCountIndex: Int        = 0
   val occurrenceDocCountIndex: Int     = 1
   val linkOccurrenceCountIndex: Int    = 2
