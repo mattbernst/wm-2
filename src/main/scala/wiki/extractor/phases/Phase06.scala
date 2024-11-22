@@ -12,7 +12,7 @@ class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.deletePhase(number)
     db.phase.createPhase(number, s"Gathering page-level label statistics")
     db.label.clearOccurrenceCounts()
-    DBLogging.info("Loading link anchor statistics from db")
+    DBLogging.info("Loading link label statistics from db")
     val counter = db.label.read()
     val ll      = LanguageLogic.getLanguageLogic(props.language.code)
   }

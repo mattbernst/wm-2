@@ -162,6 +162,13 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.label.read() should not be ac
     storage.label.write(ac)
     storage.label.read() shouldBe ac
+
+    // Also support changes
+    ac.insert("ternary", Array(randomInt(), randomInt(), randomInt(), randomInt()))
+    ac.insert("zincate", Array(randomInt(), randomInt(), randomInt(), randomInt()))
+    storage.label.write(ac)
+
+    storage.label.read() shouldBe ac
   }
 
   override def afterAll(): Unit = {

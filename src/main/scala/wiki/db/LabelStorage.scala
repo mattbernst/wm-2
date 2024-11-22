@@ -30,7 +30,7 @@ object LabelStorage {
           )
         }
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT INTO $table ($cols) VALUES $values""".update()
+        sql"""INSERT OR REPLACE INTO $table ($cols) VALUES $values""".update()
       }
     }
   }
