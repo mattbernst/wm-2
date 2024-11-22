@@ -10,7 +10,6 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
 case class StructuredPage(page: Page, markup: PageMarkup)
@@ -60,7 +59,7 @@ class XMLStructuredPageProcessor(
         .get
 
       val pageType = if (redirect.nonEmpty) {
-        REDIRECT
+        PageType.REDIRECT
       } else {
         inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
       }
@@ -140,21 +139,21 @@ class XMLStructuredPageProcessor(
     */
   private[extractor] def inferPageType(wikiText: String, namespace: Namespace): PageType = {
     namespace.id match {
-      case SiteInfo.CATEGORY_KEY => CATEGORY
-      case SiteInfo.TEMPLATE_KEY => TEMPLATE
+      case SiteInfo.CATEGORY_KEY => PageType.CATEGORY
+      case SiteInfo.TEMPLATE_KEY => PageType.TEMPLATE
       case SiteInfo.MAIN_KEY =>
         val transclusions    = getTransclusions(wikiText)
         val lastTransclusion = transclusions.lastOption
         lastTransclusion.foreach(t => incrementTransclusion(t))
         if (lastTransclusion.exists(t => language.isDisambiguation(t))) {
-          DISAMBIGUATION
+          PageType.DISAMBIGUATION
         } else {
-          ARTICLE
+          PageType.ARTICLE
         }
 
       case _ =>
         // Distinguish more PageTypes based on namespaces?
-        UNHANDLED
+        PageType.UNHANDLED
     }
   }
 

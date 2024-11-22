@@ -60,10 +60,10 @@ class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, m
       identifyCaseContext(token)
     }
 
-    if (contexts.forall(_ == CaseContext.Upper)) CaseContext.Upper
-    else if (contexts.forall(_ == CaseContext.Lower)) CaseContext.Lower
-    else if (contexts.forall(c => c == CaseContext.Upper || c == CaseContext.UpperFirst)) CaseContext.UpperFirst
-    else CaseContext.Mixed
+    if (contexts.forall(_ == CaseContext.UPPER)) CaseContext.UPPER
+    else if (contexts.forall(_ == CaseContext.LOWER)) CaseContext.LOWER
+    else if (contexts.forall(c => c == CaseContext.UPPER || c == CaseContext.UPPER_FIRST)) CaseContext.UPPER_FIRST
+    else CaseContext.MIXED
   }
 
   private def identifyCaseContext(token: String): CaseContext = {
@@ -77,10 +77,10 @@ class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, m
         (newAllUpper, newAllLower, newUpperFirst)
     }
 
-    if (allUpper) CaseContext.Upper
-    else if (allLower) CaseContext.Lower
-    else if (upperFirst) CaseContext.UpperFirst
-    else CaseContext.Mixed
+    if (allUpper) CaseContext.UPPER
+    else if (allLower) CaseContext.LOWER
+    else if (upperFirst) CaseContext.UPPER_FIRST
+    else CaseContext.MIXED
   }
 
   require(maxTokens >= 1, "Cannot generate NGrams with less than 1 token")

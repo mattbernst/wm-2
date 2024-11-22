@@ -3,8 +3,8 @@ package wiki.extractor.language.types
 sealed trait CaseContext
 
 object CaseContext {
-  case object Lower      extends CaseContext
-  case object Upper      extends CaseContext
-  case object UpperFirst extends CaseContext
-  case object Mixed      extends CaseContext
+  case object LOWER       extends CaseContext
+  case object UPPER       extends CaseContext
+  case object UPPER_FIRST extends CaseContext
+  case object MIXED       extends CaseContext
 }

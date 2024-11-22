@@ -76,7 +76,7 @@ object PageStorage {
     * @return All redirects known in the page title
     */
   def readRedirects(): Seq[Redirection] = {
-    val redirectPageTypeId = PageTypes.bySymbol(REDIRECT)
+    val redirectPageTypeId = PageTypes.bySymbol(PageType.REDIRECT)
     DB.autoCommit { implicit session =>
       sql"""SELECT id, title, redirect_target FROM $table WHERE page_type=$redirectPageTypeId"""
         .map(r => Redirection(r.int("id"), r.string("title"), r.string("redirect_target")))
@@ -97,7 +97,7 @@ object PageStorage {
     */
   def readTitlePageMap(): mutable.Map[String, Int] = {
     val result   = mutable.Map[String, Int]()
-    val excluded = Seq(PageTypes.bySymbol(REDIRECT), PageTypes.bySymbol(UNPARSEABLE))
+    val excluded = Seq(PageTypes.bySymbol(PageType.REDIRECT), PageTypes.bySymbol(PageType.UNPARSEABLE))
     val rows = DB.autoCommit { implicit session =>
       sql"""SELECT id, title FROM $table WHERE page_type NOT IN ($excluded)"""
         .map(r => (r.string("title"), r.int("id")))
@@ -114,7 +114,7 @@ object PageStorage {
     * @return Page IDs keyed by page type
     */
   def getPagesForDepth(): mutable.Map[PageType, mutable.Set[Int]] = {
-    val included = Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(CATEGORY))
+    val included = Seq(PageTypes.bySymbol(PageType.ARTICLE), PageTypes.bySymbol(PageType.CATEGORY))
     val result   = mutable.Map[PageType, mutable.Set[Int]]()
 
     DB.autoCommit { implicit session =>
@@ -143,7 +143,7 @@ object PageStorage {
   def getAnchorPages(): Array[Int] = {
     val result = ListBuffer[Int]()
     DB.autoCommit { implicit session =>
-      Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(DISAMBIGUATION)).foreach { pt =>
+      Seq(PageTypes.bySymbol(PageType.ARTICLE), PageTypes.bySymbol(PageType.DISAMBIGUATION)).foreach { pt =>
         sql"""SELECT id FROM $table WHERE page_type=$pt"""
           .foreach(rs => result.append(rs.int("id")))
       }

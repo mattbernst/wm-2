@@ -2,7 +2,7 @@ package wiki.extractor
 
 import com.github.blemale.scaffeine.LoadingCache
 import wiki.db.{DepthSink, PageDepth, Storage}
-import wiki.extractor.types.{ARTICLE, CATEGORY, PageType}
+import wiki.extractor.types.PageType
 import wiki.extractor.util.Progress
 
 import scala.collection.mutable
@@ -51,8 +51,8 @@ class DepthProcessor(
 
       if (depth < depthLimit) {
         // Traverse deeper by way of non-redirecting children
-        val childCategories = nextDestinations.intersect(pageGroups(CATEGORY)).toSeq.sorted
-        val childArticles   = nextDestinations.intersect(pageGroups(ARTICLE)).toSeq.sorted
+        val childCategories = nextDestinations.intersect(pageGroups(PageType.CATEGORY)).toSeq.sorted
+        val childArticles   = nextDestinations.intersect(pageGroups(PageType.ARTICLE)).toSeq.sorted
         childArticles.foreach(id => markDepth(id, id :: route, depth + 1))
         childCategories.foreach(id => markDepth(id, id :: route, depth + 1))
       }

@@ -2,9 +2,12 @@ package wiki.db
 
 import scalikejdbc.*
 
-sealed trait PHASE_STATE
-case object CREATED   extends PHASE_STATE
-case object COMPLETED extends PHASE_STATE
+sealed trait PhaseState
+
+object PhaseState {
+  case object CREATED   extends PhaseState
+  case object COMPLETED extends PhaseState
+}
 
 object PhaseStorage {
 
@@ -17,7 +20,7 @@ object PhaseStorage {
   def createPhase(id: Int, description: String): Unit = {
     val startTs = System.currentTimeMillis()
     DB.autoCommit { implicit session =>
-      sql"""INSERT OR IGNORE INTO $table VALUES ($id, $description, $startTs, null, $CREATED)"""
+      sql"""INSERT OR IGNORE INTO $table VALUES ($id, $description, $startTs, null, ${PhaseState.CREATED})"""
         .update(): Unit
     }
   }
@@ -30,7 +33,7 @@ object PhaseStorage {
   def completePhase(id: Int): Unit = {
     val endTs = System.currentTimeMillis()
     DB.autoCommit { implicit session =>
-      sql"""UPDATE phase SET state=$COMPLETED, end_ts=$endTs WHERE id=$id"""
+      sql"""UPDATE phase SET state=${PhaseState.COMPLETED}, end_ts=$endTs WHERE id=$id"""
         .update(): Unit
     }
   }
@@ -47,15 +50,15 @@ object PhaseStorage {
     }
   }
 
-  def getPhaseState(id: Int): Option[PHASE_STATE] = {
+  def getPhaseState(id: Int): Option[PhaseState] = {
     val name = DB.autoCommit { implicit session =>
       sql"""SELECT state FROM $table WHERE id=$id"""
         .map(rs => rs.string("state"))
         .single()
     }
     name.map {
-      case "CREATED"   => CREATED
-      case "COMPLETED" => COMPLETED
+      case "CREATED"   => PhaseState.CREATED
+      case "COMPLETED" => PhaseState.COMPLETED
     }
   }
 

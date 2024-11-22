@@ -58,7 +58,7 @@ class PageSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
 
   // Mark page as UNPARSEABLE when Sweble fails to parse wikitext
   def markUnparseable(pageId: Int): Unit = {
-    db.page.updatePageType(pageId, UNPARSEABLE)
+    db.page.updatePageType(pageId, PageType.UNPARSEABLE)
   }
 
   /**

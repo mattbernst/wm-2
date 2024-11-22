@@ -25,7 +25,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
   behavior of "NamespaceStorage"
   it should "write and read back Namespace records" in {
-    val ns = Namespace(-1, FIRST_LETTER, "Category")
+    val ns = Namespace(-1, Casing.FIRST_LETTER, "Category")
     storage.namespace.read(ns.id) shouldBe None
     storage.namespace.write(ns)
     storage.namespace.read(ns.id) shouldBe Some(ns)
@@ -73,15 +73,15 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   it should "get CREATED for phase state of created phase" in {
     val id = randomInt()
     storage.phase.createPhase(id, s"test $id")
-    storage.phase.getPhaseState(id) shouldBe Some(CREATED)
+    storage.phase.getPhaseState(id) shouldBe Some(PhaseState.CREATED)
   }
 
   it should "update CREATED phase to COMPLETED" in {
     val id = randomInt()
     storage.phase.createPhase(id, s"test $id")
-    storage.phase.getPhaseState(id) shouldBe Some(CREATED)
+    storage.phase.getPhaseState(id) shouldBe Some(PhaseState.CREATED)
     storage.phase.completePhase(id)
-    storage.phase.getPhaseState(id) shouldBe Some(COMPLETED)
+    storage.phase.getPhaseState(id) shouldBe Some(PhaseState.COMPLETED)
   }
 
   behavior of "LogStorage"
@@ -177,14 +177,14 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   }
 
   private lazy val pages = {
-    val defaultNamespace  = Namespace(0, FIRST_LETTER, "")
-    val categoryNamespace = Namespace(14, FIRST_LETTER, "Category")
+    val defaultNamespace  = Namespace(id = 0, casing = Casing.FIRST_LETTER, name = "")
+    val categoryNamespace = Namespace(id = 14, casing = Casing.FIRST_LETTER, name = "Category")
     val now               = System.currentTimeMillis()
     Seq(
       Page(
         id = randomInt(),
         namespace = defaultNamespace,
-        pageType = ARTICLE,
+        pageType = PageType.ARTICLE,
         title = "Ann Arbor, Michigan",
         redirectTarget = None,
         lastEdited = now,
@@ -193,7 +193,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       Page(
         id = randomInt(),
         namespace = categoryNamespace,
-        pageType = ARTICLE,
+        pageType = PageType.ARTICLE,
         title = "Category:Mathematics",
         redirectTarget = None,
         lastEdited = now,
@@ -202,7 +202,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       Page(
         id = randomInt(),
         namespace = defaultNamespace,
-        pageType = REDIRECT,
+        pageType = PageType.REDIRECT,
         title = "AsciiArt",
         redirectTarget = Some("ASCII art"),
         lastEdited = now,
@@ -211,7 +211,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       Page(
         id = randomInt(),
         namespace = defaultNamespace,
-        pageType = ARTICLE,
+        pageType = PageType.ARTICLE,
         title = "ASCII art",
         redirectTarget = None,
         lastEdited = now,
@@ -220,7 +220,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       Page(
         id = randomInt(),
         namespace = categoryNamespace,
-        pageType = REDIRECT,
+        pageType = PageType.REDIRECT,
         title = "Category:Wikipedians who are not a Wikipedian",
         redirectTarget = Some("Category:Wikipedians who retain deleted categories on their userpages"),
         lastEdited = now,
@@ -229,7 +229,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       Page(
         id = randomInt(),
         namespace = categoryNamespace,
-        pageType = ARTICLE,
+        pageType = PageType.ARTICLE,
         title = "Category:Wikipedians who retain deleted categories on their userpages",
         redirectTarget = None,
         lastEdited = now,

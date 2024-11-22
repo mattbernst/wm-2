@@ -32,9 +32,9 @@ object WikipediaExtractor extends Logging {
       // Phase 1 runs with command line argument giving Wikipedia dump location
       if (phase == 1) {
         db.phase.getPhaseState(phase) match {
-          case Some(COMPLETED) =>
+          case Some(PhaseState.COMPLETED) =>
             logger.info(phases(index).finishedMessage)
-          case Some(CREATED) =>
+          case Some(PhaseState.CREATED) =>
             logger.warn(phases(index).incompleteMessage)
             phases(index).run(args)
           case None =>
@@ -45,9 +45,9 @@ object WikipediaExtractor extends Logging {
       // Subsequent phases do not use command line arguments
       else if (phase > 1) {
         db.phase.getPhaseState(phase) match {
-          case Some(COMPLETED) =>
+          case Some(PhaseState.COMPLETED) =>
             logger.info(phases(index).finishedMessage)
-          case Some(CREATED) =>
+          case Some(PhaseState.CREATED) =>
             logger.warn(phases(index).incompleteMessage)
             phases(index).run()
           case None =>
