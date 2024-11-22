@@ -1,15 +1,11 @@
 package wiki.extractor.language
+
 import opennlp.tools.sentdetect.SentenceDetectorME
-import upickle.default.*
+import opennlp.tools.tokenize.TokenizerME
+import wiki.extractor.language.types.Snippet
 import wiki.extractor.util.Logging
 
 import scala.util.{Failure, Success, Try}
-
-case class Snippet(firstParagraph: Option[String], firstSentence: Option[String])
-
-object Snippet {
-  implicit val rw: ReadWriter[Snippet] = macroRW
-}
 
 trait LanguageLogic {
 
@@ -47,6 +43,13 @@ trait LanguageLogic {
 
     Snippet(firstParagraph = firstParagraph, firstSentence = firstSentence)
   }
+
+  // TODO: implement this after ngram generator is done
+  def wordNgrams(input: String) = {
+    "TODO"
+  }
+
+  protected def tokenizer: ThreadLocal[TokenizerME]
 
   protected def sentenceDetector: ThreadLocal[SentenceDetectorME]
 }

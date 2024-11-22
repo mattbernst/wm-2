@@ -1,7 +1,7 @@
 package wiki.extractor.types
 
 import upickle.default.*
-import wiki.extractor.language.Snippet
+import wiki.extractor.language.types.Snippet
 
 // Links as extracted here match the page text exactly.
 // Properly casing the target and stripping sub-page sections happens later.

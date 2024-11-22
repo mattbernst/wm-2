@@ -1,5 +1,6 @@
 package wiki.extractor.language
 
+import wiki.extractor.language.types.Snippet
 import wiki.extractor.util.UnitSpec
 
 class LanguageLogicSpec extends UnitSpec {
@@ -7,7 +8,10 @@ class LanguageLogicSpec extends UnitSpec {
 
   it should "get the first sentence and the first paragraph" in {
     val input =
-      "Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29. Mr. Vinken is chairman of Elsevier N.V., the Dutch publishing group. Rudolph Agnew, 55 years old and former chairman of Consolidated Gold Fields PLC, was named a director of this British industrial conglomerate."
+      "Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29. " +
+        "Mr. Vinken is chairman of Elsevier N.V., the Dutch publishing group. " +
+        "Rudolph Agnew, 55 years old and former chairman of Consolidated Gold Fields PLC, " +
+        "was named a director of this British industrial conglomerate."
     val snippet = EnglishLanguageLogic.getSnippet(input)
     snippet.firstParagraph shouldBe Some(input)
     snippet.firstSentence shouldBe Some(
