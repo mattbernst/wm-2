@@ -2,7 +2,7 @@ package wiki.extractor.phases
 
 import wiki.db.{PageMarkupSource, Storage}
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{TypedPageMarkup, Worker}
+import wiki.extractor.types.{PageType, TypedPageMarkup, Worker}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 import wiki.extractor.{LabelAccumulator, PageLabelProcessor}
 
@@ -19,19 +19,21 @@ class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     val source                             = new PageMarkupSource(db)
     val accumulator                        = new LabelAccumulator(counter)
     val processor                          = new PageLabelProcessor(ll, goodLabels)
-    val workers                            = assignLinkWorkers(props.nWorkers, processor, source.getFromQueue _, accumulator)
+    val workers                            = assignLabelWorkers(props.nWorkers, processor, source.getFromQueue _, accumulator)
     DBLogging.info("Gathering page label statistics")
-    source.enqueueMarkup()
+    val relevantPages: Set[PageType] = Set(PageType.ARTICLE, PageType.DISAMBIGUATION)
+    source.enqueueMarkup(relevantPages)
     workers.foreach(_.thread.join())
     accumulator.stopWriting()
     accumulator.accumulatorThread.join()
 
-    DBLogging.info("Storing page label statistics to db")
+    val completed = accumulator.count
+    DBLogging.info(s"Storing page label statistics to db (processed $completed pages)")
 //    db.label.write(counter)
 //    db.phase.completePhase(number)
   }
 
-  private def assignLinkWorkers(
+  private def assignLabelWorkers(
     n: Int,
     processor: PageLabelProcessor,
     source: () => Option[TypedPageMarkup],

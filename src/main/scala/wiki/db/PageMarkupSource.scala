@@ -12,10 +12,11 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
     * Automatically chooses compressed or uncompressed table depending on which
     * has data.
     *
+    * @param relevantPages Page types to include in the queue
+    *
     */
-  def enqueueMarkup(): Unit = {
-    val relevantPages: Set[PageType] = Set(PageType.ARTICLE, PageType.CATEGORY, PageType.DISAMBIGUATION)
-    val max                          = Math.max(db.page.compressedMax, db.page.uncompressedMax)
+  def enqueueMarkup(relevantPages: Set[PageType]): Unit = {
+    val max = Math.max(db.page.compressedMax, db.page.uncompressedMax)
     val fetch: (Int, Int) => Seq[TypedPageMarkup] = if (db.page.usingCompression) {
       db.page.readMarkupSlice_Z
     } else {

@@ -19,8 +19,8 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
     */
   def enqueue(pageLabels: mutable.Map[String, Int]): Unit = {
     queue.put(QueueEntry(pageLabels))
-    linkCount += 1
-    Progress.tick(linkCount, "+", 10_000)
+    count += 1
+    Progress.tick(count, "+", 10_000)
   }
 
   def stopWriting(): Unit = this.synchronized {
@@ -73,7 +73,7 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
 
   private case class QueueEntry(data: mutable.Map[String, Int])
 
-  var linkCount: Int                       = 0
+  var count: Int                       = 0
   private var availableForWriting: Boolean = true
   private var finished: Boolean            = false
   private lazy val queue                   = new ArrayBlockingQueue[QueueEntry](queueSize)
