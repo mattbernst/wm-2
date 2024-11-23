@@ -1,5 +1,7 @@
 package wiki.extractor.util
 
+import scala.util.hashing.MurmurHash3
+
 object Text {
 
   /**
@@ -35,5 +37,17 @@ object Text {
     }
 
     accumulator.toString
+  }
+
+  /**
+   * Generate a 64-bit hash of the given string for fast comparison.
+   *
+   * @param text Input text to hash
+   * @return     A 64-bit hash
+   */
+  def longHash(text: String): Long = {
+    val hash1 = MurmurHash3.stringHash(text)
+    val hash2 = MurmurHash3.stringHash(text, seed = hash1)
+    (hash1.toLong << 32) | (hash2.toLong & 0xFFFFFFFFL)
   }
 }
