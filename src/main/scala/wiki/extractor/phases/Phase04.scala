@@ -14,7 +14,7 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
   override def run(): Unit = {
     db.phase.deletePhase(number)
     db.createTableDefinitions(number)
-    val rootPage = Config.props.language.rootPage
+    val rootPage = props.language.rootPage
     db.phase.createPhase(number, s"Mapping depth starting from '$rootPage'")
     DBLogging.info(s"Getting candidates for depth mapping")
     val pageGroups: mutable.Map[PageType, mutable.Set[Int]] = db.page.getPagesForDepth()
