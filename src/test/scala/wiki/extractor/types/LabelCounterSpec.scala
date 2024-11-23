@@ -2,6 +2,8 @@ package wiki.extractor.types
 
 import wiki.extractor.util.UnitSpec
 
+import scala.collection.mutable
+
 class LabelCounterSpec extends UnitSpec {
   behavior of "setLinkCount"
 
@@ -36,7 +38,7 @@ class LabelCounterSpec extends UnitSpec {
   it should "throw when called for uninitialized label" in {
     val ac = new LabelCounter
     assertThrows[NoSuchElementException] {
-      ac.updateOccurrences(Map("natural numbers" -> 1))
+      ac.updateOccurrences(mutable.Map("natural numbers" -> 1))
     }
   }
 
@@ -48,7 +50,7 @@ class LabelCounterSpec extends UnitSpec {
     ac.updateLinkCount(l1, 1, 1)
     ac.updateLinkCount(l2, 2, 2)
 
-    val updates = Map(l1 -> 3, l2 -> 2)
+    val updates = mutable.Map(l1 -> 3, l2 -> 2)
     ac.updateOccurrences(updates)
 
     ac.getOccurrenceCount(l1) shouldBe Some(3)

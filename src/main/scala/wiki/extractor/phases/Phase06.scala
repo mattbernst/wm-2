@@ -27,8 +27,8 @@ class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     accumulator.accumulatorThread.join()
 
     DBLogging.info("Storing page label statistics to db")
-    db.label.write(counter)
-    db.phase.completePhase(number)
+//    db.label.write(counter)
+//    db.phase.completePhase(number)
   }
 
   private def assignLinkWorkers(

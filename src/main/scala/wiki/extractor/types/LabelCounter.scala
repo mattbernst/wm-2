@@ -35,7 +35,7 @@ class LabelCounter {
     *
     * @param input A map of labels to occurrence counts for one page
     */
-  def updateOccurrences(input: Map[String, Int]): Unit = {
+  def updateOccurrences(input: mutable.Map[String, Int]): Unit = {
     input.toSeq.foreach { t =>
       labelToCount(t._1)(LabelCounter.occurrenceCountIndex) += t._2
       labelToCount(t._1)(LabelCounter.occurrenceDocCountIndex) += 1

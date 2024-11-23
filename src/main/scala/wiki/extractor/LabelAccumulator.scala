@@ -18,7 +18,7 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
     * @param pageLabels A map of valid labels to counts for one Wikipedia page
     */
   def enqueue(pageLabels: mutable.Map[String, Int]): Unit = {
-    queue.put(QueueEntry(pageLabels.toMap))
+    queue.put(QueueEntry(pageLabels))
     linkCount += 1
     Progress.tick(linkCount, "+", 10_000)
   }
@@ -71,7 +71,7 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
     }
   }
 
-  private case class QueueEntry(data: Map[String, Int])
+  private case class QueueEntry(data: mutable.Map[String, Int])
 
   var linkCount: Int                       = 0
   private var availableForWriting: Boolean = true
