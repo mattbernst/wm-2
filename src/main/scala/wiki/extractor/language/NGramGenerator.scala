@@ -5,6 +5,8 @@ import opennlp.tools.tokenize.Tokenizer
 import opennlp.tools.util.Span
 import wiki.extractor.language.types.{CaseContext, NGram}
 
+import scala.collection.mutable
+
 class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, maxTokens: Int = 8) {
 
   /**
@@ -52,6 +54,44 @@ class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, m
     }
 
     ngramSpans
+  }
+
+  def generateSimple(text: String): Array[String] = {
+    var j = 0
+    var k = 0
+
+    val result = mutable.ListBuffer[String]()
+    val lines = text.split('\n')
+    while (j < lines.length) {
+      val sentences = sentenceDetector.sentDetect(lines(j))
+      while (k < sentences.length) {
+        val tokens = tokenizer.tokenize(sentences(k))
+        var left = 0
+        while (left < tokens.length) {
+          var right = math.min(left + maxTokens, tokens.length - 1)
+          while (right >= left) {
+            val slice = tokens.slice(left, right)
+
+            if (slice.nonEmpty) {
+              val head = slice.head
+              val last = slice.last
+              // Skip ngrams beginning or ending with punctuation
+              val skip = head.length == 1 && !Character.isLetterOrDigit(head.head) ||
+                last.length == 1 && !Character.isLetterOrDigit(last.head)
+              if (!skip) {
+                result.append(slice.mkString(" "))
+              }
+            }
+            right -= 1
+          }
+          left += 1
+        }
+        k += 1
+      }
+      j += 1
+    }
+
+    result.toArray
   }
 
   private def identifyCaseContext(text: String, tokenSpans: Array[Span]): CaseContext = {

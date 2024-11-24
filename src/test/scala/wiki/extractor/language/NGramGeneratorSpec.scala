@@ -175,6 +175,15 @@ class NGramGeneratorSpec extends UnitSpec {
     combined shouldBe expected
   }
 
+  behavior of "generateSimple"
+
+  it should "directly generate string-ngrams" in {
+    val ngg   = generator(3)
+    val input = "The order of the memory bytes storing the bits varies; see endianness."
+    val result = ngg.generateSimple(input)
+    BlackWhite.pprintln(result)
+  }
+
   def generator(maxTokens: Int) = {
     val sd = {
       val inStream = new FileInputStream("opennlp/en/opennlp-en-ud-ewt-sentence-1.1-2.4.0.bin")
