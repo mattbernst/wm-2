@@ -4,10 +4,14 @@ import opennlp.tools.sentdetect.SentenceDetector
 import opennlp.tools.tokenize.Tokenizer
 import opennlp.tools.util.Span
 import wiki.extractor.language.types.{CaseContext, NGram}
+import wiki.extractor.util.Text
 
 import scala.collection.mutable
 
-class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, maxTokens: Int = 8) {
+class NGramGenerator(sentenceDetector: SentenceDetector,
+                     tokenizer: Tokenizer,
+                     maxTokens: Int = 8,
+                     allowedStrings: collection.Set[String] = collection.Set()) {
 
   /**
     * Generate token-based ngrams of up to maxTokens tokens per ngram. The
@@ -56,6 +60,7 @@ class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, m
     ngramSpans
   }
 
+
   def generateSimple(text: String): Array[String] = {
     var j = 0
     var k = 0
@@ -79,7 +84,10 @@ class NGramGenerator(sentenceDetector: SentenceDetector, tokenizer: Tokenizer, m
               val skip = head.length == 1 && !Character.isLetterOrDigit(head.head) ||
                 last.length == 1 && !Character.isLetterOrDigit(last.head)
               if (!skip) {
-                result.append(slice.mkString(" "))
+                val combined = slice.mkString(" ")
+                if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
+                  result.append(combined)
+                }
               }
             }
             right -= 1

@@ -55,15 +55,15 @@ trait LanguageLogic {
     * @return      An iterator of word-level ngrams as strings
     */
   def wordNgrams(input: String, valid: collection.Set[String]): Iterator[String] = {
-    ngrams(input).filter(s => valid.contains(s))
+    ngrams(input, valid)//.filter(s => valid.contains(s))
   }
 
-  private[language] def ngrams(input: String): Iterator[String] = {
-    val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get())
+  private[language] def ngrams(input: String, valid: collection.Set[String]): Iterator[String] = {
+    val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
     ngg
-      .generate(input)
+      .generateSimple(input)
       .iterator
-      .map(ngram => NGram.sliceString(input, ngram))
+      //.map(ngram => NGram.sliceString(input, ngram))
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]
