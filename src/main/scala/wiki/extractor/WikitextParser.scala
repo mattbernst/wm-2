@@ -43,11 +43,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
   }
 
   private[extractor] def processNodes(input: Array[WtNode]): ParseResult = {
-    // Exclude links to images, since there is no matching page to be found
-    val linksNoImages = excludeNodes[WtImageLink](input)
-    val internalLinks = extractNodes[WtInternalLink](linksNoImages)
-
-    val links = internalLinks.map { link =>
+    val links = extractNodes[WtInternalLink](input).map { link =>
       if (link.hasTitle) {
         Link(target = textualize(link.getTarget).trim, textualize(link.getTitle).trim)
       } else {
@@ -70,14 +66,14 @@ class WikitextParser(languageLogic: LanguageLogic) {
 
   private[extractor] def textualize(wtNode: WtNode): String = wtNode match {
     case node: WtText                           => node.getContent
+    case node: WtImageLink if node.hasTitle     => textualize(node.getTitle)
+    case node: WtImageLink if !node.hasTitle    => textualize(node.getTarget)
     case node: WtInternalLink if !node.hasTitle => textualize(node.getTarget)
     case node: WtInternalLink if node.hasTitle  => textualize(node.getTitle)
     case node: WtListItem                       => "\n" + node.iterator().asScala.map(textualize).mkString
 
     // All of these add noise to the text version of the page. Eliminate
-    // textualized image links, template noise, XML attributes, and
-    // WtTagExtensions (like citations).
-    case _: WtImageLink     => ""
+    // template noise, XML attributes, and WtTagExtensions (like citations).
     case _: WtTemplate      => ""
     case _: WtXmlAttributes => ""
     case _: WtTagExtension  => ""
