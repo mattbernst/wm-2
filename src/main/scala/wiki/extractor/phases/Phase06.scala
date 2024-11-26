@@ -29,8 +29,8 @@ class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
 
     val completed = accumulator.count
     DBLogging.info(s"Storing page label statistics to db (processed $completed pages)")
-//    db.label.write(counter)
-//    db.phase.completePhase(number)
+    db.label.write(counter)
+    db.phase.completePhase(number)
   }
 
   private def assignLabelWorkers(

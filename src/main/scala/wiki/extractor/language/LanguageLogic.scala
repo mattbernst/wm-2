@@ -2,7 +2,7 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
-import wiki.extractor.language.types.{NGram, Snippet}
+import wiki.extractor.language.types.Snippet
 import wiki.extractor.util.Logging
 
 import scala.util.{Failure, Success, Try}
@@ -54,16 +54,14 @@ trait LanguageLogic {
     * @param valid The set of valid strings to retain
     * @return      An iterator of word-level ngrams as strings
     */
-  def wordNgrams(input: String, valid: collection.Set[String]): Iterator[String] = {
-    ngrams(input, valid)//.filter(s => valid.contains(s))
-  }
+  def wordNgrams(input: String, valid: collection.Set[String]): Iterator[String] =
+    ngrams(input, valid)
 
   private[language] def ngrams(input: String, valid: collection.Set[String]): Iterator[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
     ngg
       .generateSimple(input)
       .iterator
-      //.map(ngram => NGram.sliceString(input, ngram))
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]

@@ -4,14 +4,14 @@ import opennlp.tools.sentdetect.SentenceDetector
 import opennlp.tools.tokenize.Tokenizer
 import opennlp.tools.util.Span
 import wiki.extractor.language.types.{CaseContext, NGram}
-import wiki.extractor.util.Text
 
 import scala.collection.mutable
 
-class NGramGenerator(sentenceDetector: SentenceDetector,
-                     tokenizer: Tokenizer,
-                     maxTokens: Int = 8,
-                     allowedStrings: collection.Set[String] = collection.Set()) {
+class NGramGenerator(
+  sentenceDetector: SentenceDetector,
+  tokenizer: Tokenizer,
+  maxTokens: Int = 10,
+  allowedStrings: collection.Set[String] = collection.Set()) {
 
   /**
     * Generate token-based ngrams of up to maxTokens tokens per ngram. The
@@ -60,18 +60,29 @@ class NGramGenerator(sentenceDetector: SentenceDetector,
     ngramSpans
   }
 
-
+  /**
+    *
+    * Generate strings composed of token-based ngrams of up to maxTokens tokens
+    * per ngram. The ngrams do not cross sentence boundaries. This is like
+    * generate but it uses imperative loops and skips extraneous operations in
+    * the interest of speed for bulk page processing. It also filters against
+    * allowedStrings here instead of forcing callers to do later filtering.
+    *
+    * @param text Text of a document to convert to ngrams
+    * @return All valid ngram-strings generated from the input text
+    */
   def generateSimple(text: String): Array[String] = {
     var j = 0
     var k = 0
 
     val result = mutable.ListBuffer[String]()
-    val lines = text.split('\n')
+    val lines  = text.split('\n')
     while (j < lines.length) {
       val sentences = sentenceDetector.sentDetect(lines(j))
       while (k < sentences.length) {
-        val tokens = tokenizer.tokenize(sentences(k))
-        var left = 0
+        val sentence = sentences(k)
+        val tokens   = tokenizer.tokenizePos(sentences(k))
+        var left     = 0
         while (left < tokens.length) {
           var right = math.min(left + maxTokens, tokens.length - 1)
           while (right >= left) {
@@ -81,10 +92,10 @@ class NGramGenerator(sentenceDetector: SentenceDetector,
               val head = slice.head
               val last = slice.last
               // Skip ngrams beginning or ending with punctuation
-              val skip = head.length == 1 && !Character.isLetterOrDigit(head.head) ||
-                last.length == 1 && !Character.isLetterOrDigit(last.head)
+              val skip = head.length == 1 && !Character.isLetterOrDigit(sentence.charAt(head.getStart)) ||
+                last.length == 1 && !Character.isLetterOrDigit(sentence.charAt(last.getEnd))
               if (!skip) {
-                val combined = slice.mkString(" ")
+                val combined = sentence.substring(head.getStart, last.getEnd)
                 if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
                   result.append(combined)
                 }

@@ -26,7 +26,7 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
     // N.B. if sliceSize is too small, this could accidentally terminate early
     // (if all IDs in range were irrelevant page types)
     val sliceSize = 20_000
-    while (j < max && j < 80000) {
+    while (j < max) {
       val entries = fetch(j, j + sliceSize)
       entries
         .filter(e => relevantPages.contains(e.pageType))

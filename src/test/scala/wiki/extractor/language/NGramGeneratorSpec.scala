@@ -178,10 +178,14 @@ class NGramGeneratorSpec extends UnitSpec {
   behavior of "generateSimple"
 
   it should "directly generate string-ngrams" in {
-    val ngg   = generator(3)
-    val input = "The order of the memory bytes storing the bits varies; see endianness."
-    val result = ngg.generateSimple(input)
-    BlackWhite.pprintln(result)
+    val ngg     = generator(3)
+    val input   = "The order of the memory bytes storing the bits varies; see endianness."
+    val result  = ngg.generateSimple(input).toList
+    val resultG = ngg.generate(input).toList
+    val strings = NGram.sliceString(input, resultG)
+
+    // Results are generated in a different order but otherwise match
+    result.sorted shouldBe strings.sorted
   }
 
   def generator(maxTokens: Int) = {

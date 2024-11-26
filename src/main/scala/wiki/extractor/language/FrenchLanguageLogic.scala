@@ -18,7 +18,7 @@ object FrenchLanguageLogic extends LanguageLogic {
     }
   }
 
-  override protected def tokenizer: ThreadLocal[TokenizerME] = new ThreadLocal[TokenizerME] {
+  protected val tokenizer: ThreadLocal[TokenizerME] = new ThreadLocal[TokenizerME] {
 
     override def initialValue(): TokenizerME = {
       val inStream = new FileInputStream("opennlp/fr/opennlp-fr-ud-gsd-tokens-1.1-2.4.0.bin")

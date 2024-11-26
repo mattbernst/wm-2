@@ -73,7 +73,7 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
 
   private case class QueueEntry(data: mutable.Map[String, Int])
 
-  var count: Int                       = 0
+  var count: Int                           = 0
   private var availableForWriting: Boolean = true
   private var finished: Boolean            = false
   private lazy val queue                   = new ArrayBlockingQueue[QueueEntry](queueSize)
