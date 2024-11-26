@@ -30,6 +30,7 @@ case class Language(
       code
     }
 
+    // Should be Locale.of(cc) for Java 19+, but that doesn't work before 19
     new Locale(cc)
   }
 
