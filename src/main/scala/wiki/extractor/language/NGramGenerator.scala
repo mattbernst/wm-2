@@ -72,13 +72,12 @@ class NGramGenerator(
     * @return All valid ngram-strings generated from the input text
     */
   def generateSimple(text: String): Array[String] = {
-    var j = 0
-    var k = 0
-
+    var j      = 0
     val result = mutable.ListBuffer[String]()
     val lines  = text.split('\n')
     while (j < lines.length) {
       val sentences = sentenceDetector.sentDetect(lines(j))
+      var k         = 0
       while (k < sentences.length) {
         val sentence = sentences(k)
         val tokens   = tokenizer.tokenizePos(sentences(k))
