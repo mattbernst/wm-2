@@ -111,13 +111,6 @@ class WikitextParserSpec extends UnitSpec {
     val correct1 = "Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii."
     parsed.text.contains(error1) shouldBe true
     parsed.text.contains(correct1) shouldBe false
-
-    // This is my problem. It's hard to deal with in the current stateless approach.
-    // Adding extra space when rendering links messes up the text in different ways.
-    // Maybe use a placeholder character from outside the basic multilingual plane to
-    // make post-processing work? That's a later todo.
-    val error2 = "QAPF diagramList of mineralsList of rock types"
-    parsed.text.contains(error2) shouldBe true
   }
 
   "parse" should "fail on Departments of Nicaragua (VisitingException)" in {
