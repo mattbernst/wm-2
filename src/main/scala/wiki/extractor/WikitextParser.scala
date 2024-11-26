@@ -43,7 +43,11 @@ class WikitextParser(languageLogic: LanguageLogic) {
   }
 
   private[extractor] def processNodes(input: Array[WtNode]): ParseResult = {
-    val links = extractNodes[WtInternalLink](input).map { link =>
+    // Exclude links to images, since there is no matching page to be found
+    val linksNoImages = excludeNodes[WtImageLink](input)
+    val internalLinks = extractNodes[WtInternalLink](linksNoImages)
+
+    val links = internalLinks.map { link =>
       if (link.hasTitle) {
         Link(target = textualize(link.getTarget).trim, textualize(link.getTitle).trim)
       } else {
@@ -85,6 +89,16 @@ class WikitextParser(languageLogic: LanguageLogic) {
     def collectNodes(node: WtNode): Array[T] = node match {
       case n: T          => Array(n)
       case other: WtNode => other.iterator().asScala.toArray.flatMap(collectNodes)
+      case _             => Array()
+    }
+
+    nodes.flatMap(collectNodes)
+  }
+
+  private[extractor] def excludeNodes[T <: WtNode: ClassTag](nodes: Array[WtNode]): Array[WtNode] = {
+    def collectNodes(node: WtNode): Array[WtNode] = node match {
+      case _: T          => Array() // Skip nodes of type T
+      case other: WtNode => Array(other)
       case _             => Array()
     }
 
