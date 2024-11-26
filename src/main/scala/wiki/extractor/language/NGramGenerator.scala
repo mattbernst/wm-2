@@ -3,6 +3,7 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.SentenceDetector
 import opennlp.tools.tokenize.Tokenizer
 import opennlp.tools.util.Span
+import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.types.{CaseContext, NGram}
 
 import scala.collection.mutable
@@ -16,6 +17,8 @@ class NGramGenerator(
   /**
     * Generate token-based ngrams of up to maxTokens tokens per ngram. The
     * ngrams do not cross sentence boundaries.
+    *
+    * TODO: reimplement this in terms of generateSimple
     *
     * @param text Text of a document to convert to ngrams
     * @return     All ngrams generated from the input text
@@ -80,24 +83,18 @@ class NGramGenerator(
       var k         = 0
       while (k < sentences.length) {
         val sentence = sentences(k)
-        val tokens   = tokenizer.tokenizePos(sentences(k))
-        var left     = 0
-        while (left < tokens.length) {
-          var right = math.min(left + maxTokens, tokens.length - 1)
+        val tokens   = tokenizer.tokenizePos(sentence)
+
+        var left = 0
+        while (left <= tokens.length) {
+          var right = math.min(left + maxTokens, tokens.length)
           while (right >= left) {
             val slice = tokens.slice(left, right)
 
             if (slice.nonEmpty) {
-              val head = slice.head
-              val last = slice.last
-              // Skip ngrams beginning or ending with punctuation
-              val skip = head.length == 1 && !Character.isLetterOrDigit(sentence.charAt(head.getStart)) ||
-                last.length == 1 && !Character.isLetterOrDigit(sentence.charAt(last.getEnd))
-              if (!skip) {
-                val combined = sentence.substring(head.getStart, last.getEnd)
-                if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
-                  result.append(combined)
-                }
+              val combined = sentence.substring(slice.head.getStart, slice.last.getEnd)
+              if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
+                result.append(combined)
               }
             }
             right -= 1
