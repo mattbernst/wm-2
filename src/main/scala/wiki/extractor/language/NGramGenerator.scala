@@ -70,21 +70,20 @@ class NGramGenerator(sentenceDetector: SentenceDetector,
     while (j < lines.length) {
       val sentences = sentenceDetector.sentDetect(lines(j))
       while (k < sentences.length) {
-        val tokens = tokenizer.tokenize(sentences(k))
+        val sentence = sentences(k)
+        val tokens = tokenizer.tokenizePos(sentence)
         var left = 0
         while (left < tokens.length) {
           var right = math.min(left + maxTokens, tokens.length - 1)
           while (right >= left) {
-            val slice = tokens.slice(left, right)
-
-            if (slice.nonEmpty) {
-              val head = slice.head
-              val last = slice.last
+            if (right > left) {
+              val head = tokens(left)
+              val last = tokens(right)
               // Skip ngrams beginning or ending with punctuation
-              val skip = head.length == 1 && !Character.isLetterOrDigit(head.head) ||
-                last.length == 1 && !Character.isLetterOrDigit(last.head)
+              val skip = head.length == 1 && !Character.isLetterOrDigit(sentence.charAt(head.getStart)) ||
+                last.length == 1 && !Character.isLetterOrDigit(sentence.charAt(last.getEnd))
               if (!skip) {
-                val combined = slice.mkString(" ")
+                val combined = sentence.substring(head.getStart, last.getEnd)
                 if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
                   result.append(combined)
                 }
