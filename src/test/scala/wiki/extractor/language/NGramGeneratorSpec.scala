@@ -135,6 +135,61 @@ class NGramGeneratorSpec extends UnitSpec {
     strings shouldBe expected
   }
 
+  it should "generate word based ngrams from a block of text" in {
+    val ngg   = generator(3)
+    val input = """Indigenous languages of Canada:
+                  |
+                  |    Abenaki, 10 speakers
+                  |    Dane-zaa, 300 speakers
+                  |    Cayuga, 360 speakers
+                  |    Delaware (Munsee), fewer than 10 speakers""".stripMargin
+    val expected = List(
+      "Indigenous",
+      "Indigenous languages",
+      "Indigenous languages of",
+      "languages",
+      "languages of",
+      "languages of Canada",
+      "of",
+      "of Canada",
+      "Canada",
+      "Abenaki",
+      "Abenaki, 10",
+      "10",
+      "10 speakers",
+      "speakers",
+      "Dane",
+      "Dane-zaa",
+      "-zaa",
+      "-zaa, 300",
+      "300",
+      "300 speakers",
+      "speakers",
+      "Cayuga",
+      "Cayuga, 360",
+      "360",
+      "360 speakers",
+      "speakers",
+      "Delaware",
+      "Delaware (Munsee",
+      "Munsee",
+      "fewer",
+      "fewer than",
+      "fewer than 10",
+      "than",
+      "than 10",
+      "than 10 speakers",
+      "10",
+      "10 speakers",
+      "speakers"
+    )
+
+    val result  = ngg.generate(input).toList
+    val strings = NGram.sliceString(input, result)
+
+    strings shouldBe expected
+  }
+
   it should "indicate start-of-sentence in NGrams" in {
     val ngg   = generator(2)
     val input = "You knew their purpose, yet you made them. If you had scruples, you betrayed them."
@@ -177,21 +232,59 @@ class NGramGeneratorSpec extends UnitSpec {
 
   behavior of "generateSimple"
 
-  // TODO fixme after cleaning up ngg.generate
-  ignore should "directly generate string-ngrams" in {
-    val ngg     = generator(3)
-    val input   = "The order of the memory bytes storing the bits varies; see endianness."
-    val result  = ngg.generateSimple(input).toList
-    val resultG = ngg.generate(input).toList
-    val strings = NGram.sliceString(input, resultG)
+  it should "directly generate string-ngrams" in {
+    val ngg   = generator(3)
+    val input = "The order of the memory bytes storing the bits varies; see endianness."
+    val expected = List(
+      "The order of",
+      "The order",
+      "The",
+      "order of the",
+      "order of",
+      "order",
+      "of the memory",
+      "of the",
+      "of",
+      "the memory bytes",
+      "the memory",
+      "the",
+      "memory bytes storing",
+      "memory bytes",
+      "memory",
+      "bytes storing the",
+      "bytes storing",
+      "bytes",
+      "storing the bits",
+      "storing the",
+      "storing",
+      "the bits varies",
+      "the bits",
+      "the",
+      "bits varies;",
+      "bits varies",
+      "bits",
+      "varies; see",
+      "varies;",
+      "varies",
+      "; see endianness",
+      "; see",
+      ";",
+      "see endianness.",
+      "see endianness",
+      "see",
+      "endianness.",
+      "endianness",
+      "."
+    )
+    val result = ngg.generateSimple(input).toList
 
-    // Results are generated in a different order but otherwise match
-    result.sorted shouldBe strings.sorted
+    result shouldBe expected
   }
 
-  it should "handle block of text" in {
-    val ngg   = generator(10)
-    val input = """Ando (Japanese: 安藤) is a common Japan surname. Notable people with this name are listed below.
+  it should "filter results by allowed strings" in {
+    val ngg         = generator(10)
+    val nggFiltered = generator(10, collection.Set("figure skater", "Ando", "Japanese"))
+    val input       = """Ando (Japanese: 安藤) is a common Japan surname. Notable people with this name are listed below.
                   |
                   |Momofuku Ando - founder and chairman of Nissin Food Products
                   |Tadao Ando - architect
@@ -207,237 +300,29 @@ class NGramGeneratorSpec extends UnitSpec {
                   |Tomoyasu Ando
                   |
                   |Category:Japanese-language surnames""".stripMargin
+
+    val resultRaw      = ngg.generateSimple(input).toList
+    val resultFiltered = nggFiltered.generateSimple(input).toList
+
     val expected = List(
-      "Ando (Japanese: 安藤) is a common Japan",
-      "Ando (Japanese: 安藤) is a common",
-      "Ando (Japanese: 安藤) is a",
-      "Ando (Japanese: 安藤) is",
-      "Ando (Japanese: 安藤)",
-      "Ando (Japanese: 安藤",
-      "Ando (Japanese:",
-      "Ando (Japanese",
-      "Ando (",
       "Ando",
-      "(Japanese: 安藤) is a common Japan surname",
-      "(Japanese: 安藤) is a common Japan",
-      "(Japanese: 安藤) is a common",
-      "(Japanese: 安藤) is a",
-      "(Japanese: 安藤) is",
-      "(Japanese: 安藤)",
-      "(Japanese: 安藤",
-      "(Japanese:",
-      "(Japanese",
-      "(",
-      "Japanese: 安藤) is a common Japan surname.",
-      "Japanese: 安藤) is a common Japan surname",
-      "Japanese: 安藤) is a common Japan",
-      "Japanese: 安藤) is a common",
-      "Japanese: 安藤) is a",
-      "Japanese: 安藤) is",
-      "Japanese: 安藤)",
-      "Japanese: 安藤",
-      "Japanese:",
       "Japanese",
-      ": 安藤) is a common Japan surname.",
-      ": 安藤) is a common Japan surname",
-      ": 安藤) is a common Japan",
-      ": 安藤) is a common",
-      ": 安藤) is a",
-      ": 安藤) is",
-      ": 安藤)",
-      ": 安藤",
-      ":",
-      "安藤) is a common Japan surname.",
-      "安藤) is a common Japan surname",
-      "安藤) is a common Japan",
-      "安藤) is a common",
-      "安藤) is a",
-      "安藤) is",
-      "安藤)",
-      "安藤",
-      ") is a common Japan surname.",
-      ") is a common Japan surname",
-      ") is a common Japan",
-      ") is a common",
-      ") is a",
-      ") is",
-      ")",
-      "is a common Japan surname.",
-      "is a common Japan surname",
-      "is a common Japan",
-      "is a common",
-      "is a",
-      "is",
-      "a common Japan surname.",
-      "a common Japan surname",
-      "a common Japan",
-      "a common",
-      "a",
-      "common Japan surname.",
-      "common Japan surname",
-      "common Japan",
-      "common",
-      "Japan surname.",
-      "Japan surname",
-      "Japan",
-      "surname.",
-      "surname",
-      ".",
-      "Notable people with this name are listed below.",
-      "Notable people with this name are listed below",
-      "Notable people with this name are listed",
-      "Notable people with this name are",
-      "Notable people with this name",
-      "Notable people with this",
-      "Notable people with",
-      "Notable people",
-      "Notable",
-      "people with this name are listed below.",
-      "people with this name are listed below",
-      "people with this name are listed",
-      "people with this name are",
-      "people with this name",
-      "people with this",
-      "people with",
-      "people",
-      "with this name are listed below.",
-      "with this name are listed below",
-      "with this name are listed",
-      "with this name are",
-      "with this name",
-      "with this",
-      "with",
-      "this name are listed below.",
-      "this name are listed below",
-      "this name are listed",
-      "this name are",
-      "this name",
-      "this",
-      "name are listed below.",
-      "name are listed below",
-      "name are listed",
-      "name are",
-      "name",
-      "are listed below.",
-      "are listed below",
-      "are listed",
-      "are",
-      "listed below.",
-      "listed below",
-      "listed",
-      "below.",
-      "below",
-      ".",
-      "Momofuku Ando - founder and chairman of Nissin Food Products",
-      "Momofuku Ando - founder and chairman of Nissin Food",
-      "Momofuku Ando - founder and chairman of Nissin",
-      "Momofuku Ando - founder and chairman of",
-      "Momofuku Ando - founder and chairman",
-      "Momofuku Ando - founder and",
-      "Momofuku Ando - founder",
-      "Momofuku Ando -",
-      "Momofuku Ando",
-      "Momofuku",
-      "Ando - founder and chairman of Nissin Food Products",
-      "Ando - founder and chairman of Nissin Food",
-      "Ando - founder and chairman of Nissin",
-      "Ando - founder and chairman of",
-      "Ando - founder and chairman",
-      "Ando - founder and",
-      "Ando - founder",
-      "Ando -",
       "Ando",
-      "- founder and chairman of Nissin Food Products",
-      "- founder and chairman of Nissin Food",
-      "- founder and chairman of Nissin",
-      "- founder and chairman of",
-      "- founder and chairman",
-      "- founder and",
-      "- founder",
-      "-",
-      "founder and chairman of Nissin Food Products",
-      "founder and chairman of Nissin Food",
-      "founder and chairman of Nissin",
-      "founder and chairman of",
-      "founder and chairman",
-      "founder and",
-      "founder",
-      "and chairman of Nissin Food Products",
-      "and chairman of Nissin Food",
-      "and chairman of Nissin",
-      "and chairman of",
-      "and chairman",
-      "and",
-      "chairman of Nissin Food Products",
-      "chairman of Nissin Food",
-      "chairman of Nissin",
-      "chairman of",
-      "chairman",
-      "of Nissin Food Products",
-      "of Nissin Food",
-      "of Nissin",
-      "of",
-      "Nissin Food Products",
-      "Nissin Food",
-      "Nissin",
-      "Food Products",
-      "Food",
-      "Products",
-      "Tadao Ando - architect",
-      "Tadao Ando -",
-      "Tadao Ando",
-      "Tadao",
-      "Ando - architect",
-      "Ando -",
       "Ando",
-      "- architect",
-      "-",
-      "architect",
-      "Sportspeople",
-      "Miki Ando - figure skater",
-      "Miki Ando - figure",
-      "Miki Ando -",
-      "Miki Ando",
-      "Miki",
-      "Ando - figure skater",
-      "Ando - figure",
-      "Ando -",
       "Ando",
-      "- figure skater",
-      "- figure",
-      "-",
       "figure skater",
-      "figure",
-      "skater",
-      "Footballers",
-      "Kozue Ando",
-      "Kozue",
       "Ando",
-      "Shunsuke Ando",
-      "Shunsuke",
       "Ando",
-      "Masahiro Ando",
-      "Masahiro",
       "Ando",
-      "Jun Ando",
-      "Jun",
       "Ando",
-      "Tomoyasu Ando",
-      "Tomoyasu",
-      "Ando",
-      "Category:Japanese-language surnames",
-      "Category:Japanese-language",
-      "Category:Japanese",
-      "-language surnames",
-      "-language",
-      "surnames"
+      "Ando"
     )
 
-    val result = ngg.generateSimple(input).toList
-    result shouldBe expected
+    resultRaw.length should be > resultFiltered.length
+    resultFiltered shouldBe expected
   }
 
-  def generator(maxTokens: Int) = {
+  def generator(maxTokens: Int, allowedStrings: collection.Set[String] = collection.Set()) = {
     val sd = {
       val inStream = new FileInputStream("opennlp/en/opennlp-en-ud-ewt-sentence-1.1-2.4.0.bin")
       val model    = new SentenceModel(inStream)
@@ -453,6 +338,11 @@ class NGramGeneratorSpec extends UnitSpec {
       result
     }
 
-    new NGramGenerator(sd, tokenizer, maxTokens)
+    new NGramGenerator(
+      sentenceDetector = sd,
+      tokenizer = tokenizer,
+      maxTokens = maxTokens,
+      allowedStrings = allowedStrings
+    )
   }
 }

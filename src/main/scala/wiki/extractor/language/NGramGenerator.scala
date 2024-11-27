@@ -15,16 +15,26 @@ class NGramGenerator(
 
   /**
     * Generate token-based ngrams of up to maxTokens tokens per ngram. The
-    * ngrams do not cross sentence boundaries.
-    *
-    * TODO: reimplement this in terms of generateSimple
+    * ngrams do not cross sentence boundaries. Errors from the OpenNLP
+    * sentence detection model can prevent some valid ngrams from being
+    * generated (see docstring on generateSimple).
     *
     * @param text Text of a document to convert to ngrams
     * @return     All ngrams generated from the input text
     */
   def generate(text: String): Array[NGram] = {
+    // Calculate the starting position of each line in the original text
+    val lines = text.split("\n")
+    val lineStarts = lines
+      .foldLeft(List(0)) {
+        case (acc, line) =>
+          // Next line starts after current line plus newline character
+          acc :+ (acc.last + line.length + 1)
+      }
+      .dropRight(1) // Drop the last element as it's the position after the last line
+
     val ngramSpans = for {
-      (line, lineStart) <- text.split("\n").zipWithIndex
+      (line, lineStart) <- lines.zip(lineStarts)
       sentenceSpan      <- sentenceDetector.sentPosDetect(line)
       sentence                = line.substring(sentenceSpan.getStart, sentenceSpan.getEnd)
       tokenSpans: Array[Span] = tokenizer.tokenizePos(sentence)
@@ -66,22 +76,22 @@ class NGramGenerator(
     *
     * Generate strings composed of token-based ngrams of up to maxTokens tokens
     * per ngram. The ngrams do not cross line boundaries.
-   *
-   * The original ngram generation logic in Milne's code split the code into
-   * sentences before splitting them into tokens. This probably reduced the
-   * computational load and also reduced the false positives by not allowing
-   * a sentence-ending punctuation mark to be confused with punctuation
-   * internal to a named entity.
-   *
-   * However, the OpenNLP sentence detection model frequently mis-detects the
-   * end of a sentence when it encounters a period in a named entity as in
-   * "James T. Kirk is the captain of the fictional starship Enterprise."
-   * (where it mistakenly finds two sentences, "James T." and
-   * "Kirk is the captain of the fictional starship Enterprise.)
-   *
-   * These extra sentence splits can prevent detection of named entities
-   * containing punctuation and have therefore been removed from this
-   * implementation.
+    *
+    * The original ngram generation logic in Milne's code split the code into
+    * sentences before splitting them into tokens. This probably reduced the
+    * computational load and also reduced the false positives by not allowing
+    * a sentence-ending punctuation mark to be confused with punctuation
+    * internal to a named entity.
+    *
+    * However, the OpenNLP sentence detection model frequently mis-detects the
+    * end of a sentence when it encounters a period in a named entity as in
+    * "James T. Kirk is the captain of the fictional starship Enterprise."
+    * (where it mistakenly finds two sentences, "James T." and
+    * "Kirk is the captain of the fictional starship Enterprise.)
+    *
+    * These extra sentence splits can prevent detection of named entities
+    * containing punctuation and have therefore been removed from this
+    * implementation.
     *
     * @param text Text of a document to convert to ngrams
     * @return All valid ngram-strings generated from the input text
