@@ -3,7 +3,6 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.SentenceDetector
 import opennlp.tools.tokenize.Tokenizer
 import opennlp.tools.util.Span
-import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.types.{CaseContext, NGram}
 
 import scala.collection.mutable
@@ -66,10 +65,23 @@ class NGramGenerator(
   /**
     *
     * Generate strings composed of token-based ngrams of up to maxTokens tokens
-    * per ngram. The ngrams do not cross sentence boundaries. This is like
-    * generate but it uses imperative loops and skips extraneous operations in
-    * the interest of speed for bulk page processing. It also filters against
-    * allowedStrings here instead of forcing callers to do later filtering.
+    * per ngram. The ngrams do not cross line boundaries.
+   *
+   * The original ngram generation logic in Milne's code split the code into
+   * sentences before splitting them into tokens. This probably reduced the
+   * computational load and also reduced the false positives by not allowing
+   * a sentence-ending punctuation mark to be confused with punctuation
+   * internal to a named entity.
+   *
+   * However, the OpenNLP sentence detection model frequently mis-detects the
+   * end of a sentence when it encounters a period in a named entity as in
+   * "James T. Kirk is the captain of the fictional starship Enterprise."
+   * (where it mistakenly finds two sentences, "James T." and
+   * "Kirk is the captain of the fictional starship Enterprise.)
+   *
+   * These extra sentence splits can prevent detection of named entities
+   * containing punctuation and have therefore been removed from this
+   * implementation.
     *
     * @param text Text of a document to convert to ngrams
     * @return All valid ngram-strings generated from the input text
@@ -79,30 +91,26 @@ class NGramGenerator(
     val result = mutable.ListBuffer[String]()
     val lines  = text.split('\n')
     while (j < lines.length) {
-      val sentences = sentenceDetector.sentDetect(lines(j))
-      var k         = 0
-      while (k < sentences.length) {
-        val sentence = sentences(k)
-        val tokens   = tokenizer.tokenizePos(sentence)
+      val line   = lines(j)
+      val tokens = tokenizer.tokenizePos(line)
 
-        var left = 0
-        while (left <= tokens.length) {
-          var right = math.min(left + maxTokens, tokens.length)
-          while (right >= left) {
-            val slice = tokens.slice(left, right)
+      var left = 0
+      while (left <= tokens.length) {
+        var right = math.min(left + maxTokens, tokens.length)
+        while (right >= left) {
+          val slice = tokens.slice(left, right)
 
-            if (slice.nonEmpty) {
-              val combined = sentence.substring(slice.head.getStart, slice.last.getEnd)
-              if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
-                result.append(combined)
-              }
+          if (slice.nonEmpty) {
+            val combined = line.substring(slice.head.getStart, slice.last.getEnd)
+            if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
+              result.append(combined)
             }
-            right -= 1
           }
-          left += 1
+          right -= 1
         }
-        k += 1
+        left += 1
       }
+
       j += 1
     }
 
