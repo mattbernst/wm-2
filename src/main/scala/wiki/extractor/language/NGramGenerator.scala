@@ -73,9 +73,10 @@ class NGramGenerator(
   }
 
   /**
-    *
     * Generate strings composed of token-based ngrams of up to maxTokens tokens
-    * per ngram. The ngrams do not cross line boundaries.
+    * per ngram. The ngrams do not cross line boundaries. This fast alternative
+    * to "generate" is only used for bulk processing the pages of a Wikipedia
+    * dump.
     *
     * The original ngram generation logic in Milne's code split the code into
     * sentences before splitting them into tokens. This probably reduced the
@@ -96,7 +97,7 @@ class NGramGenerator(
     * @param text Text of a document to convert to ngrams
     * @return All valid ngram-strings generated from the input text
     */
-  def generateSimple(text: String): Array[String] = {
+  def generateFast(text: String): Array[String] = {
     var j      = 0
     val result = mutable.ListBuffer[String]()
     val lines  = text.split('\n')

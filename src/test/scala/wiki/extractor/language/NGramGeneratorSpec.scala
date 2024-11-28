@@ -230,7 +230,7 @@ class NGramGeneratorSpec extends UnitSpec {
     combined shouldBe expected
   }
 
-  behavior of "generateSimple"
+  behavior of "generateFast"
 
   it should "directly generate string-ngrams" in {
     val ngg   = generator(3)
@@ -276,7 +276,7 @@ class NGramGeneratorSpec extends UnitSpec {
       "endianness",
       "."
     )
-    val result = ngg.generateSimple(input).toList
+    val result = ngg.generateFast(input).toList
 
     result shouldBe expected
   }
@@ -301,8 +301,8 @@ class NGramGeneratorSpec extends UnitSpec {
                   |
                   |Category:Japanese-language surnames""".stripMargin
 
-    val resultRaw      = ngg.generateSimple(input).toList
-    val resultFiltered = nggFiltered.generateSimple(input).toList
+    val resultRaw      = ngg.generateFast(input).toList
+    val resultFiltered = nggFiltered.generateFast(input).toList
 
     val expected = List(
       "Ando",

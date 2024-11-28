@@ -60,7 +60,7 @@ trait LanguageLogic {
   private[language] def ngrams(input: String, valid: collection.Set[String]): Iterator[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
     ngg
-      .generateSimple(input)
+      .generateFast(input)
       .iterator
   }
 
