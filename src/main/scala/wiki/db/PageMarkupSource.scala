@@ -12,10 +12,11 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
     * Automatically chooses compressed or uncompressed table depending on which
     * has data.
     *
+    * @param relevantPages Page types to include in the queue
+    *
     */
-  def enqueueMarkup(): Unit = {
-    val relevantPages: Set[PageType] = Set(ARTICLE, CATEGORY, DISAMBIGUATION)
-    val max                          = Math.max(db.page.compressedMax, db.page.uncompressedMax)
+  def enqueueMarkup(relevantPages: Set[PageType]): Unit = {
+    val max = Math.max(db.page.compressedMax, db.page.uncompressedMax)
     val fetch: (Int, Int) => Seq[TypedPageMarkup] = if (db.page.usingCompression) {
       db.page.readMarkupSlice_Z
     } else {
@@ -31,11 +32,15 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
         .filter(e => relevantPages.contains(e.pageType))
         .foreach(e => queue.put(e))
       j += sliceSize
+      // Shorten poll time after first entries have been added to queue.
+      // Without this, the source can time out getting the first slice.
+      pollTime = 3L
     }
   }
 
   def getFromQueue(): Option[TypedPageMarkup] =
-    Option(queue.poll(3, TimeUnit.SECONDS))
+    Option(queue.poll(pollTime, TimeUnit.SECONDS))
 
+  private var pollTime   = 30L
   private lazy val queue = new ArrayBlockingQueue[TypedPageMarkup](queueSize)
 }

@@ -5,8 +5,11 @@ import wiki.extractor.util.Text
 import scala.xml.*
 
 sealed trait Casing
-case object FIRST_LETTER   extends Casing
-case object CASE_SENSITIVE extends Casing
+
+object Casing {
+  case object FIRST_LETTER   extends Casing
+  case object CASE_SENSITIVE extends Casing
+}
 
 case class Namespace(id: Int, casing: Casing, name: String)
 
@@ -54,8 +57,8 @@ object SiteInfo {
   }
 
   def caseToCasing(input: String): Casing = input match {
-    case "first-letter"   => FIRST_LETTER
-    case "case-sensitive" => CASE_SENSITIVE
+    case "first-letter"   => Casing.FIRST_LETTER
+    case "case-sensitive" => Casing.CASE_SENSITIVE
   }
 
   private def sliceAndValidate(tag: String, xml: String): String = {

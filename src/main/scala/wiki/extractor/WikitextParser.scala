@@ -45,9 +45,10 @@ class WikitextParser(languageLogic: LanguageLogic) {
   private[extractor] def processNodes(input: Array[WtNode]): ParseResult = {
     val links = extractNodes[WtInternalLink](input).map { link =>
       if (link.hasTitle) {
-        Link(target = textualize(link.getTarget), Some(textualize(link.getTitle)))
+        Link(target = textualize(link.getTarget).trim, textualize(link.getTitle).trim)
       } else {
-        Link(target = textualize(link.getTarget), anchorText = None)
+        val target = textualize(link.getTarget).trim
+        Link(target = target, anchorText = target)
       }
     }
 
@@ -65,13 +66,14 @@ class WikitextParser(languageLogic: LanguageLogic) {
 
   private[extractor] def textualize(wtNode: WtNode): String = wtNode match {
     case node: WtText                           => node.getContent
+    case node: WtImageLink if node.hasTitle     => textualize(node.getTitle)
+    case node: WtImageLink if !node.hasTitle    => textualize(node.getTarget)
     case node: WtInternalLink if !node.hasTitle => textualize(node.getTarget)
     case node: WtInternalLink if node.hasTitle  => textualize(node.getTitle)
+    case node: WtListItem                       => "\n" + node.iterator().asScala.map(textualize).mkString
 
     // All of these add noise to the text version of the page. Eliminate
-    // textualized image links, template noise, XML attributes, and
-    // WtTagExtensions (like citations).
-    case _: WtImageLink     => ""
+    // template noise, XML attributes, and WtTagExtensions (like citations).
     case _: WtTemplate      => ""
     case _: WtXmlAttributes => ""
     case _: WtTagExtension  => ""
@@ -83,6 +85,16 @@ class WikitextParser(languageLogic: LanguageLogic) {
     def collectNodes(node: WtNode): Array[T] = node match {
       case n: T          => Array(n)
       case other: WtNode => other.iterator().asScala.toArray.flatMap(collectNodes)
+      case _             => Array()
+    }
+
+    nodes.flatMap(collectNodes)
+  }
+
+  private[extractor] def excludeNodes[T <: WtNode: ClassTag](nodes: Array[WtNode]): Array[WtNode] = {
+    def collectNodes(node: WtNode): Array[WtNode] = node match {
+      case _: T          => Array() // Skip nodes of type T
+      case other: WtNode => Array(other)
       case _             => Array()
     }
 

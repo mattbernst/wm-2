@@ -1,55 +1,29 @@
 package wiki.extractor.language
 import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
+import opennlp.tools.tokenize.{TokenizerME, TokenizerModel}
 
 import java.io.FileInputStream
 
 object FrenchLanguageLogic extends LanguageLogic {
 
-  /**
-    * Use heuristics to get the first paragraph and first sentence of content
-    * from a potentially large input string representing a plain-text version
-    * of a Wikipedia page.
-    *
-    * Heuristic: Get groups of sentences separated by newlines. The first
-    * multi-sentence group is the first paragraph. The first sentence is taken
-    * from the first paragraph. If there are no multi-sentence groups, but there
-    * are single-sentence groups, then the first paragraph is None and the first
-    * sentence is the first sentence from the input. If there are no sentences
-    * at all, then both firstParagraph and firstSentence are None.
-    *
-    * @param input Text to process for extraction
-    * @return A snippet of extracted text content
-    */
-  override def getSnippet(input: String): Snippet = {
-    val lines = input.split('\n')
-
-    val firstParaGroup = lines.iterator
-      .map(chunk => sentenceDetector.get().sentDetect(chunk))
-      .find(_.length > 1)
-
-    val firstParagraph = firstParaGroup.map(_.mkString(" "))
-    val firstSentence = firstParaGroup
-      .flatMap(_.headOption)
-      .orElse {
-        lines.iterator
-          .map(chunk => sentenceDetector.get().sentDetect(chunk))
-          .find(_.nonEmpty)
-          .map(_.head)
-      }
-
-    Snippet(firstParagraph = firstParagraph, firstSentence = firstSentence)
-  }
-
-  // N.B. Central OpenNLP only offers sentence detector models for a few languages:
-  // https://opennlp.apache.org/models.html (fr, de, en, it, nl)
-  // Other languages will need third party models or another approach.
   // This needs to be a ThreadLocal because OpenNLP is not thread-safe
-  private val sentenceDetector = new ThreadLocal[SentenceDetectorME] {
+  protected val sentenceDetector: ThreadLocal[SentenceDetectorME] = new ThreadLocal[SentenceDetectorME] {
 
     override def initialValue(): SentenceDetectorME = {
-      val inStream = new FileInputStream("opennlp/fr/opennlp-1.0-1.9.3fr-ud-ftb-sentence-1.0-1.9.3.bin")
+      val inStream = new FileInputStream("opennlp/fr/opennlp-fr-ud-gsd-sentence-1.1-2.4.0.bin")
       val model    = new SentenceModel(inStream)
       val result   = new SentenceDetectorME(model)
+      inStream.close()
+      result
+    }
+  }
+
+  protected val tokenizer: ThreadLocal[TokenizerME] = new ThreadLocal[TokenizerME] {
+
+    override def initialValue(): TokenizerME = {
+      val inStream = new FileInputStream("opennlp/fr/opennlp-fr-ud-gsd-tokens-1.1-2.4.0.bin")
+      val model    = new TokenizerModel(inStream)
+      val result   = new TokenizerME(model)
       inStream.close()
       result
     }

@@ -2,8 +2,10 @@ package wiki.db
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
-import wiki.extractor.types.{Namespace, Page, PageTypes}
-import wiki.extractor.util.{FileHelpers, Logging}
+import wiki.extractor.types.*
+import wiki.extractor.util.{FileHelpers, Logging, Progress}
+
+import java.util
 
 /**
   * A SQLite database storage writer and reader for representing and mining
@@ -65,8 +67,81 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
-  def closeAll(): Unit = {
-    ConnectionPool.closeAll()
+  /**
+    * Get links from the link table.
+    * Only includes links to articles and disambiguation pages. This is used to
+    * set up the LabelCounter data before processing raw text of each page.
+    *
+    * This needs to be an iterator because memory requirements are excessive
+    * to fetch all results in one query.
+    *
+    * @return An iterator of Anchors
+    */
+  def getLinkAnchors(): Iterator[Anchor] = {
+    val batchSize = Storage.batchSqlSize
+    val targets   = page.getAnchorPages()
+
+    new Iterator[Anchor] {
+      private var total                       = 0
+      private var index                       = 0
+      private var offset                      = 0
+      private var currentBatch: Array[Anchor] = Array()
+
+      def fetchNextBatch(): Unit = {
+        val pageIds = targets.slice(offset, offset + batchSize)
+        val lower   = pageIds.headOption.getOrElse(Int.MaxValue)
+        val upper   = pageIds.lastOption.map(_ + 1).getOrElse(Int.MaxValue)
+        val rows = DB.autoCommit { implicit session =>
+          sql"""SELECT source, destination, anchor_text
+             FROM link
+             WHERE source >= $lower AND source < $upper
+             AND anchor_text > ''
+             ORDER BY anchor_text
+             """
+            .map(rs => Anchor(rs.int("source"), rs.int("destination"), rs.string("anchor_text")))
+            .list()
+            .filter(a => util.Arrays.binarySearch(targets, a.destination) >= 0)
+        }
+        currentBatch = rows.toArray
+        offset += batchSize
+      }
+
+      override def hasNext: Boolean = {
+        if (index >= currentBatch.length) {
+          if (currentBatch.isEmpty || currentBatch.length < batchSize) {
+            false
+          } else {
+            fetchNextBatch()
+            index = 0
+            currentBatch.nonEmpty
+          }
+        } else {
+          true
+        }
+      }
+
+      override def next(): Anchor = {
+        if (!hasNext) {
+          throw new NoSuchElementException("Iterator is empty")
+        }
+        val result = currentBatch(index)
+        total += 1
+        Progress.tick(total, "+", 100_000)
+        index += 1
+        result
+      }
+
+      // Initialize first batch
+      fetchNextBatch()
+
+      override def nextOption(): Option[Anchor] = {
+        if (hasNext) {
+          Some(currentBatch(index))
+        } else {
+          None
+        }
+      }
+    }
   }
 
   // Create tables for multiple phases at once
@@ -127,7 +202,12 @@ class Storage(fileName: String) extends Logging {
     }
   }
 
+  def closeAll(): Unit = {
+    ConnectionPool.closeAll()
+  }
+
   val depth: DepthStorage.type               = DepthStorage
+  val label: LabelStorage.type               = LabelStorage
   val link: LinkStorage.type                 = LinkStorage
   val log: LogStorage.type                   = LogStorage
   val namespace: NamespaceStorage.type       = NamespaceStorage

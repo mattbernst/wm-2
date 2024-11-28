@@ -58,7 +58,7 @@ class PageSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
 
   // Mark page as UNPARSEABLE when Sweble fails to parse wikitext
   def markUnparseable(pageId: Int): Unit = {
-    db.page.updatePageType(pageId, UNPARSEABLE)
+    db.page.updatePageType(pageId, PageType.UNPARSEABLE)
   }
 
   /**
@@ -70,7 +70,7 @@ class PageSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
   private def write(): Unit = {
     val unwritten: Seq[QueueEntry] = {
       var emptied = false
-      val buffer  = new ListBuffer[QueueEntry]
+      val buffer  = ListBuffer[QueueEntry]()
       while (!emptied && buffer.size < Storage.batchSqlSize) {
         Option(queue.poll(3, TimeUnit.SECONDS)) match {
           case Some(entry) => buffer.append(entry)

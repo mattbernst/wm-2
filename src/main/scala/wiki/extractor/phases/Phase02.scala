@@ -2,7 +2,7 @@ package wiki.extractor.phases
 
 import wiki.db.Storage
 import wiki.extractor.TitleFinder
-import wiki.extractor.types.{DANGLING_REDIRECT, Redirection}
+import wiki.extractor.types.{PageType, Redirection}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
 class Phase02(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
@@ -51,8 +51,8 @@ class Phase02(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     * @param input Dangling redirect pages that need to be marked
     */
   private def markDanglingRedirects(input: Seq[Redirection]): Unit = {
-    input.foreach(r => db.page.updatePageType(r.pageId, DANGLING_REDIRECT))
-    DBLogging.info(s"Marked ${input.length} pages as $DANGLING_REDIRECT")
+    input.foreach(r => db.page.updatePageType(r.pageId, PageType.DANGLING_REDIRECT))
+    DBLogging.info(s"Marked ${input.length} pages as ${PageType.DANGLING_REDIRECT}")
   }
 
   override def number: Int = 2

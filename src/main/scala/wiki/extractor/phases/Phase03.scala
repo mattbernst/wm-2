@@ -2,7 +2,7 @@ package wiki.extractor.phases
 
 import wiki.db.{LinkSink, PageMarkupSource, Storage}
 import wiki.extractor.PageMarkupLinkProcessor
-import wiki.extractor.types.{SiteInfo, TypedPageMarkup, Worker}
+import wiki.extractor.types.{PageType, SiteInfo, TypedPageMarkup, Worker}
 import wiki.extractor.util.{Config, ConfiguredProperties}
 
 class Phase03(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
@@ -18,15 +18,16 @@ class Phase03(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.executeUnsafely("DROP TABLE IF EXISTS dead_link;")
     db.createTableDefinitions(number)
     val source   = new PageMarkupSource(db)
-    val titleMap = db.page.readTitleToPage()
+    val titleMap = db.page.readTitleToPage(props.language.locale)
     val categoryName = db.namespace
       .read(SiteInfo.CATEGORY_KEY)
       .map(_.name)
       .getOrElse(throw new NoSuchElementException("Could not find CATEGORY_KEY in namespace table"))
-    val processor = new PageMarkupLinkProcessor(titleMap, Config.props.language, categoryName)
-    val sink      = new LinkSink(db)
-    val workers   = assignLinkWorkers(Config.props.nWorkers, processor, source.getFromQueue _, sink)
-    source.enqueueMarkup()
+    val processor                    = new PageMarkupLinkProcessor(titleMap, props.language, categoryName)
+    val sink                         = new LinkSink(db)
+    val workers                      = assignLinkWorkers(props.nWorkers, processor, source.getFromQueue _, sink)
+    val relevantPages: Set[PageType] = Set(PageType.ARTICLE, PageType.CATEGORY, PageType.DISAMBIGUATION)
+    source.enqueueMarkup(relevantPages)
     workers.foreach(_.thread.join())
     sink.stopWriting()
     sink.writerThread.join()

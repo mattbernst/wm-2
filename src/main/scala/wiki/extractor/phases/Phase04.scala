@@ -14,7 +14,7 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
   override def run(): Unit = {
     db.phase.deletePhase(number)
     db.createTableDefinitions(number)
-    val rootPage = Config.props.language.rootPage
+    val rootPage = props.language.rootPage
     db.phase.createPhase(number, s"Mapping depth starting from '$rootPage'")
     DBLogging.info(s"Getting candidates for depth mapping")
     val pageGroups: mutable.Map[PageType, mutable.Set[Int]] = db.page.getPagesForDepth()
@@ -30,7 +30,8 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     val sink           = new DepthSink(db)
     var completedCount = 0
 
-    val maxDepth = 31
+    // Keep this shallow until I understand where it's actually needed
+    val maxDepth = 9
     1.until(maxDepth).foreach { depthLimit =>
       val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, depthLimit)
       processor.markDepths(rootPage)
@@ -43,6 +44,6 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.completePhase(number)
   }
 
-  override val incompleteMessage: String = s"Phase $number incomplete -- restarting"
+  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
   override def number: Int               = 4
 }

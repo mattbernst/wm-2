@@ -10,7 +10,6 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
 case class StructuredPage(page: Page, markup: PageMarkup)
@@ -60,7 +59,7 @@ class XMLStructuredPageProcessor(
         .get
 
       val pageType = if (redirect.nonEmpty) {
-        REDIRECT
+        PageType.REDIRECT
       } else {
         inferPageType(wikiText = text.getOrElse(""), namespace = namespace)
       }
@@ -140,21 +139,21 @@ class XMLStructuredPageProcessor(
     */
   private[extractor] def inferPageType(wikiText: String, namespace: Namespace): PageType = {
     namespace.id match {
-      case SiteInfo.CATEGORY_KEY => CATEGORY
-      case SiteInfo.TEMPLATE_KEY => TEMPLATE
+      case SiteInfo.CATEGORY_KEY => PageType.CATEGORY
+      case SiteInfo.TEMPLATE_KEY => PageType.TEMPLATE
       case SiteInfo.MAIN_KEY =>
         val transclusions    = getTransclusions(wikiText)
         val lastTransclusion = transclusions.lastOption
         lastTransclusion.foreach(t => incrementTransclusion(t))
         if (lastTransclusion.exists(t => language.isDisambiguation(t))) {
-          DISAMBIGUATION
+          PageType.DISAMBIGUATION
         } else {
-          ARTICLE
+          PageType.ARTICLE
         }
 
       case _ =>
         // Distinguish more PageTypes based on namespaces?
-        UNHANDLED
+        PageType.UNHANDLED
     }
   }
 
@@ -167,7 +166,7 @@ class XMLStructuredPageProcessor(
     * @return         All transclusions from inside double braces
     */
   private[extractor] def getTransclusions(wikiText: String): Seq[String] = {
-    val transclusions = new ListBuffer[String]
+    val transclusions = ListBuffer[String]()
     var startIndex    = -1
 
     wikiText.indices.foreach { i =>
@@ -187,17 +186,8 @@ class XMLStructuredPageProcessor(
     lastTransclusions.put(transclusion, count + 1): Unit
   }
 
-  private val parser: WikitextParser = {
-    Try(LanguageLogic.logicForLanguage(language.code)) match {
-      case Success(ll) =>
-        new WikitextParser(ll)
-      case Failure(ex: NoSuchElementException) =>
-        logger.error(s"No LanguageLogic defined for language code '${language.code}'")
-        throw ex
-      case Failure(ex) =>
-        throw ex
-    }
-  }
+  private val parser: WikitextParser =
+    new WikitextParser(LanguageLogic.getLanguageLogic(language.code))
 
   // Counting transclusions that end a page can be useful to find the
   // most common disambiguation transclusions for configuring the

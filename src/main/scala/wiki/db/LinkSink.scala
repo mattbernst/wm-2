@@ -53,9 +53,9 @@ class LinkSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
   private def write(): Unit = {
     val unwritten: Seq[QueueEntry] = {
       var emptied = false
-      val buffer  = new ListBuffer[QueueEntry]
+      val buffer  = ListBuffer[QueueEntry]()
       while (!emptied && buffer.size < queueSize) {
-        Option(queue.poll(100, TimeUnit.MILLISECONDS)) match {
+        Option(queue.poll(3, TimeUnit.SECONDS)) match {
           case Some(entry) => buffer.append(entry)
           case None        => emptied = true
         }

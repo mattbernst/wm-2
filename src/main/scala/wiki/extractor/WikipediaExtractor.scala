@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.db.*
-import wiki.extractor.phases.{Phase01, Phase02, Phase03, Phase04}
+import wiki.extractor.phases.*
 import wiki.extractor.util.{Config, DBLogging, Logging}
 
 object WikipediaExtractor extends Logging {
@@ -10,46 +10,52 @@ object WikipediaExtractor extends Logging {
     DBLogging.initDb(db)
     init()
 
-    lazy val phase01 = new Phase01(db, Config.props)
-    lazy val phase02 = new Phase02(db, Config.props)
-    lazy val phase03 = new Phase03(db, Config.props)
-    lazy val phase04 = new Phase04(db, Config.props)
+    // TODO: add db storage for configured properties so that only phase 1
+    // needs environment variables set.
+    val configuredProperties = Config.props
 
-    db.phase.getPhaseState(1) match {
-      case Some(COMPLETED) =>
-        logger.info(phase01.finishedMessage)
-      case Some(CREATED) =>
-        logger.warn(phase01.incompleteMessage)
-        phase01.run(args)
-      case None =>
-        phase01.run(args)
-    }
-    db.phase.getPhaseState(2) match {
-      case Some(COMPLETED) =>
-        logger.info(phase02.finishedMessage)
-      case Some(CREATED) =>
-        logger.warn(phase02.incompleteMessage)
-        phase02.run()
-      case None =>
-        phase02.run()
-    }
-    db.phase.getPhaseState(3) match {
-      case Some(COMPLETED) =>
-        logger.info(phase03.finishedMessage)
-      case Some(CREATED) =>
-        logger.warn(phase03.incompleteMessage)
-        phase03.run()
-      case None =>
-        phase03.run()
-    }
-    db.phase.getPhaseState(4) match {
-      case Some(COMPLETED) =>
-        logger.info(phase04.finishedMessage)
-      case Some(CREATED) =>
-        logger.warn(phase04.incompleteMessage)
-        phase04.run()
-      case None =>
-        phase04.run()
+    val phases = Array(
+      new Phase01(db, Config.props),
+      new Phase02(db, configuredProperties),
+      new Phase03(db, configuredProperties),
+      new Phase04(db, configuredProperties),
+      new Phase05(db, configuredProperties),
+      new Phase06(db, configuredProperties)
+    )
+
+    // Update lastPhase whenever adding a new phase
+    assert(phases.length == db.phase.lastPhase)
+
+    phases.indices.foreach { index =>
+      val phase = index + 1
+
+      // Phase 1 runs with command line argument giving Wikipedia dump location
+      if (phase == 1) {
+        db.phase.getPhaseState(phase) match {
+          case Some(PhaseState.COMPLETED) =>
+            logger.info(phases(index).finishedMessage)
+          case Some(PhaseState.CREATED) =>
+            logger.warn(phases(index).incompleteMessage)
+            phases(index).run(args)
+          case None =>
+            phases(index).run(args)
+        }
+      }
+
+      // Subsequent phases do not use command line arguments
+      else if (phase > 1) {
+        db.phase.getPhaseState(phase) match {
+          case Some(PhaseState.COMPLETED) =>
+            logger.info(phases(index).finishedMessage)
+          case Some(PhaseState.CREATED) =>
+            logger.warn(phases(index).incompleteMessage)
+            phases(index).run()
+          case None =>
+            phases(index).run()
+        }
+      } else {
+        throw new IndexOutOfBoundsException(s"Invalid phase/index $phase/$index")
+      }
     }
 
     db.closeAll()

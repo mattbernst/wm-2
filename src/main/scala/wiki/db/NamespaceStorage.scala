@@ -1,7 +1,7 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.extractor.types.{CASE_SENSITIVE, Casing, FIRST_LETTER, Namespace}
+import wiki.extractor.types.{Casing, Namespace}
 
 object NamespaceStorage {
 
@@ -32,8 +32,8 @@ object NamespaceStorage {
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM $table WHERE id=$id""".map { rs =>
         val casing: Casing = rs.string("casing") match {
-          case "FIRST_LETTER"   => FIRST_LETTER
-          case "CASE_SENSITIVE" => CASE_SENSITIVE
+          case "FIRST_LETTER"   => Casing.FIRST_LETTER
+          case "CASE_SENSITIVE" => Casing.CASE_SENSITIVE
         }
         Namespace(id = rs.int("id"), casing = casing, name = rs.string("name"))
       }.single()

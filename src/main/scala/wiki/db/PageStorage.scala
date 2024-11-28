@@ -3,7 +3,9 @@ package wiki.db
 import scalikejdbc.*
 import wiki.extractor.types.*
 
+import java.util.Locale
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object PageStorage {
 
@@ -74,7 +76,7 @@ object PageStorage {
     * @return All redirects known in the page title
     */
   def readRedirects(): Seq[Redirection] = {
-    val redirectPageTypeId = PageTypes.bySymbol(REDIRECT)
+    val redirectPageTypeId = PageTypes.bySymbol(PageType.REDIRECT)
     DB.autoCommit { implicit session =>
       sql"""SELECT id, title, redirect_target FROM $table WHERE page_type=$redirectPageTypeId"""
         .map(r => Redirection(r.int("id"), r.string("title"), r.string("redirect_target")))
@@ -95,7 +97,7 @@ object PageStorage {
     */
   def readTitlePageMap(): mutable.Map[String, Int] = {
     val result   = mutable.Map[String, Int]()
-    val excluded = Seq(PageTypes.bySymbol(REDIRECT), PageTypes.bySymbol(UNPARSEABLE))
+    val excluded = Seq(PageTypes.bySymbol(PageType.REDIRECT), PageTypes.bySymbol(PageType.UNPARSEABLE))
     val rows = DB.autoCommit { implicit session =>
       sql"""SELECT id, title FROM $table WHERE page_type NOT IN ($excluded)"""
         .map(r => (r.string("title"), r.int("id")))
@@ -112,7 +114,7 @@ object PageStorage {
     * @return Page IDs keyed by page type
     */
   def getPagesForDepth(): mutable.Map[PageType, mutable.Set[Int]] = {
-    val included = Seq(PageTypes.bySymbol(ARTICLE), PageTypes.bySymbol(CATEGORY))
+    val included = Seq(PageTypes.bySymbol(PageType.ARTICLE), PageTypes.bySymbol(PageType.CATEGORY))
     val result   = mutable.Map[PageType, mutable.Set[Int]]()
 
     DB.autoCommit { implicit session =>
@@ -129,6 +131,25 @@ object PageStorage {
     }
 
     result
+  }
+
+  /**
+    * Get the page IDs for ARTICLE and DISAMBIGUATION pages. This is used to
+    * select all the relevant pages from the link table during anchor statistic
+    * generation.
+    *
+    * @return A sorted array of page IDs
+    */
+  def getAnchorPages(): Array[Int] = {
+    val result = ListBuffer[Int]()
+    DB.autoCommit { implicit session =>
+      Seq(PageTypes.bySymbol(PageType.ARTICLE), PageTypes.bySymbol(PageType.DISAMBIGUATION)).foreach { pt =>
+        sql"""SELECT id FROM $table WHERE page_type=$pt"""
+          .foreach(rs => result.append(rs.int("id")))
+      }
+    }
+
+    result.toArray.sorted
   }
 
   /**
@@ -164,11 +185,11 @@ object PageStorage {
     *
     * @return A map of page titles to page IDs
     */
-  def readTitleToPage(): mutable.Map[String, Int] = {
+  def readTitleToPage(locale: Locale): mutable.Map[String, Int] = {
     val result = mutable.Map[String, Int]()
     DB.autoCommit { implicit session =>
       sql"""SELECT * FROM title_to_page"""
-        .foreach(rs => result.put(rs.string("title").toLowerCase, rs.int("page_id")): Unit)
+        .foreach(rs => result.put(rs.string("title").toLowerCase(locale), rs.int("page_id")): Unit)
     }
     result
   }
