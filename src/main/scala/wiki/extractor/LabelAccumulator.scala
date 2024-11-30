@@ -17,11 +17,8 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
     *
     * @param pageLabels A map of valid labels to counts for one Wikipedia page
     */
-  def enqueue(pageLabels: mutable.Map[String, Int]): Unit = {
+  def enqueue(pageLabels: mutable.Map[String, Int]): Unit =
     queue.put(QueueEntry(pageLabels))
-    count += 1
-    Progress.tick(count, "+", 10_000)
-  }
 
   def stopWriting(): Unit = this.synchronized {
     availableForWriting = false
@@ -50,8 +47,12 @@ class LabelAccumulator(counter: LabelCounter, queueSize: Int = Storage.batchSqlS
       val buffer  = ListBuffer[QueueEntry]()
       while (!emptied && buffer.size < queueSize / 2) {
         Option(queue.poll(3, TimeUnit.SECONDS)) match {
-          case Some(entry) => buffer.append(entry)
-          case None        => emptied = true
+          case Some(entry) =>
+            count += 1
+            Progress.tick(count, "+", 10_000)
+            buffer.append(entry)
+          case None =>
+            emptied = true
         }
       }
 
