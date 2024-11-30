@@ -33,7 +33,7 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
       .map(_.links)
       .getOrElse(Seq())
       .foreach { link =>
-        val dst        = link.target.replace("&nbsp;", " ")
+        val dst        = link.target
         val key        = keyFromTarget(link.target)
         val anchorText = cleanAnchor(link.anchorText)
         titleMap.get(key) match {
@@ -118,7 +118,6 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     val k = input
       .split('#')
       .headOption
-      .map(_.replace("&nbsp;", " "))
       .map(_.replace('_', ' '))
       .map(_.trim)
       .getOrElse("")
