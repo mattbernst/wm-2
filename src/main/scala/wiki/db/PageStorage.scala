@@ -48,8 +48,8 @@ object PageStorage {
   def getCompletedPageIds(): mutable.Set[Int] = {
     val result = mutable.Set[Int]()
     DB.autoCommit { implicit session =>
-      sql"""SELECT page_id FROM page_markup""".foreach(rs => result.add(rs.int("page_id")): Unit)
-      sql"""SELECT page_id FROM page_markup_z""".foreach(rs => result.add(rs.int("page_id")): Unit)
+      sql"""SELECT page_id FROM markup""".foreach(rs => result.add(rs.int("page_id")): Unit)
+      sql"""SELECT page_id FROM markup_z""".foreach(rs => result.add(rs.int("page_id")): Unit)
     }
     result
   }
@@ -204,7 +204,7 @@ object PageStorage {
   }
 
   /**
-    * Write page markup to the page_markup table. The page_markup table contains
+    * Write page markup to the markup table. The markup table contains
     * the raw markup for each page along with a parsed derivative. This is
     * stored in a separate table because it is so much larger than the other
     * page data.
@@ -225,21 +225,21 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO page_markup ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO markup ($cols) VALUES $values""".update()
       }
     }
   }
 
   /**
     * Get the page markup data for a single page (if it exists) from the
-    * page_markup table.
+    * markup table.
     *
     * @param pageId The numeric ID for the corresponding page
     * @return       The stored markup, if it exists
     */
   def readMarkup(pageId: Int): Option[PageMarkup] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM page_markup WHERE page_id=$pageId""".map { rs =>
+      sql"""SELECT * FROM markup WHERE page_id=$pageId""".map { rs =>
         val pm = PageMarkup_U(rs.int("page_id"), rs.stringOpt("markup"), rs.stringOpt("parsed"))
         PageMarkup.deserializeUncompressed(pm)
       }.single()
@@ -247,7 +247,7 @@ object PageStorage {
   }
 
   /**
-    * Read multiple rows from page_markup, all IDs between start and end.
+    * Read multiple rows from markup, all IDs between start and end.
     * Also get page type by joining to page table.
     *
     * @param start Starting page ID
@@ -256,8 +256,8 @@ object PageStorage {
     */
   def readMarkupSlice(start: Int, end: Int): Seq[TypedPageMarkup] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT page_type, page_markup.* FROM
-           $table, page_markup
+      sql"""SELECT page_type, markup.* FROM
+           $table, markup
            WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
         val pmu = PageMarkup_U(rs.int("page_id"), rs.stringOpt("markup"), rs.stringOpt("parsed"))
         TypedPageMarkup(Some(pmu), None, PageTypes.byNumber(rs.int("page_type")))
@@ -266,7 +266,7 @@ object PageStorage {
   }
 
   /**
-    * Read multiple rows from page_markup_z, all IDs between start and end.
+    * Read multiple rows from markup_z, all IDs between start and end.
     *  Also get page type by joining to page table.
     *
     * @param start Starting page ID
@@ -275,8 +275,8 @@ object PageStorage {
     */
   def readMarkupSlice_Z(start: Int, end: Int): Seq[TypedPageMarkup] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT page_type, page_markup_z.* FROM
-           $table, page_markup_z
+      sql"""SELECT page_type, markup_z.* FROM
+           $table, markup_z
            WHERE page.id=page_id AND page_id >= $start AND page_id < $end""".map { rs =>
         val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytes("data"))
         TypedPageMarkup(None, Some(pmz), PageTypes.byNumber(rs.int("page_type")))
@@ -286,14 +286,14 @@ object PageStorage {
 
   /**
     * Get the page markup data for a single page (if it exists) from the
-    * page_markup_z table.
+    * markup_z table.
     *
     * @param pageId The numeric ID for the corresponding page
     * @return       The stored markup, if it exists
     */
   def readMarkup_Z(pageId: Int): Option[PageMarkup] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM page_markup_z WHERE page_id=$pageId""".map { rs =>
+      sql"""SELECT * FROM markup_z WHERE page_id=$pageId""".map { rs =>
         val pmz = PageMarkup_Z(rs.int("page_id"), rs.bytes("data"))
         PageMarkup.deserializeCompressed(pmz)
       }.single()
@@ -301,11 +301,11 @@ object PageStorage {
   }
 
   /**
-    * Write compressed page markup and parsed data the page_markup_z table.
+    * Write compressed page markup and parsed data the markup_z table.
     * Writing in compressed form significantly reduces the disk space required
     * for the database and may be faster than standard uncompressed storage
     * on systems with relatively slow disks. The downside is that the
-    * page_markup_z data is not human-readable.
+    * markup_z data is not human-readable.
     *
     * @param input One or more PageMarkup_Z entries to write
     */
@@ -322,14 +322,14 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO page_markup_z ($cols) VALUES $values""".update()
+        sql"""INSERT OR IGNORE INTO markup_z ($cols) VALUES $values""".update()
       }
     }
   }
 
   lazy val compressedMax: Int = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM page_markup_z"""
+      sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM markup_z"""
         .map(rs => rs.int("m"))
         .list()
         .head
@@ -338,7 +338,7 @@ object PageStorage {
 
   lazy val uncompressedMax: Int = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM page_markup"""
+      sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM markup"""
         .map(rs => rs.int("m"))
         .list()
         .head
@@ -346,9 +346,9 @@ object PageStorage {
   }
 
   lazy val usingCompression: Boolean = {
-    val err1 = "Same page counts for page_markup and page_markup_z. Did extraction run?"
+    val err1 = "Same page counts for markup and markup_z. Did extraction run?"
     require(compressedMax != uncompressedMax, err1)
-    val err2 = "Both page_markup and page_markup_z have entries. This should not happen."
+    val err2 = "Both markup and markup_z have entries. This should not happen."
     require(compressedMax == 0 || uncompressedMax == 0, err2)
     compressedMax > uncompressedMax
   }

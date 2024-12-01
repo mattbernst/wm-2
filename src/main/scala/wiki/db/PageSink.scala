@@ -9,15 +9,14 @@ import scala.collection.mutable.ListBuffer
 
 /**
   * A writer with an internal buffer that continually buffers Pages and
-  * markup, then writes them in batches to the page and page_markup or
-  * page_markup_z database tables. Since it is optimized for write speed while
-  * processing a new dump file, it sets SQLite pragmas that are unsafe for
-  * general use.
+  * markup, then writes them in batches to the page and markup or markup_z
+  * database tables. Since it is optimized for write speed while processing
+  * a new dump file, it sets SQLite pragmas that are unsafe for general use.
   *
   * The caller can choose between markup readability (for debugging and
   * spelunking) and compact storage by supplying either string PageMarkup_U
-  * data for the page_markup table or compressed binary PageMarkup_Z data
-  * for the page_markup_z table.
+  * data for the markup table or compressed binary PageMarkup_Z data
+  * for the markup_z table.
   *
   * @param db        A database storage writer
   * @param queueSize The maximum number of pages enqueued before writing

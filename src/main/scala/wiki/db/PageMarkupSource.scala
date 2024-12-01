@@ -8,7 +8,7 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
 
   /**
     * Continually enqueue PageMarkup into the internal queue until all relevant
-    * page_markup or page_markup_z entries have been read from the database.
+    * markup or markup_z entries have been read from the database.
     * Automatically chooses compressed or uncompressed table depending on which
     * has data.
     *
