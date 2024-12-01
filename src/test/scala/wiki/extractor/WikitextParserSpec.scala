@@ -113,6 +113,31 @@ class WikitextParserSpec extends UnitSpec {
     parsed.text.contains(correct1) shouldBe false
   }
 
+  it should "produce readable plain text from tables" in {
+    val title = "List of cat breeds"
+    val markup =
+      """This page lists [[breed]]s of [[domestic cat]]s. The list includes breeds that are old traditional breeds, and also rare breeds or new breeds that are still being developed. Please see individual articles for more information.{{-}}
+        |
+        |==Breeds==
+        |{|class="wikitable sortable"
+        |!Breed!!Country!!Origin!!Body type!!Coat!!Pattern!!class="unsortable"|Image
+        ||-
+        ||[[Abyssinian cat]]||Egypt||Natural||Oriental||Short||Ticked||[[File:Gustav chocolate.jpg|100px]]
+        ||-
+        ||[[Aegean cat]]||Greece||Natural/Standard||||Semi-long|| Bi- or tri-colored ||[[File:Aegean cat.jpg|100px]]""".stripMargin
+
+    val parsed = parser.parseMarkup(title, markup).get
+    val expectedText =
+      """This page lists breed of domestic cat. The list includes breeds that are old traditional breeds, and also rare breeds or new breeds that are still being developed. Please see individual articles for more information.
+        |
+        |Breeds
+        |: Breed : Country : Origin : Body type : Coat : Pattern : Image
+        || Abyssinian cat | Egypt | Natural | Oriental | Short | Ticked | File:Gustav chocolate.jpg
+        || Aegean cat | Greece | Natural/Standard | ||Semi-long|| Bi- or tri-colored ||File:Aegean cat.jpg""".stripMargin
+
+    parsed.text shouldBe expectedText
+  }
+
   "parse" should "fail on Departments of Nicaragua (VisitingException)" in {
     val title  = "Departments of Nicaragua"
     val markup = FileHelpers.readTextFile("src/test/resources/departments_of_nicaragua.wikitext")

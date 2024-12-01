@@ -5,30 +5,30 @@ Chemically, mafic rocks are on the other side of the rock spectrum from the fels
 
 Mafic lava, before cooling, has a low viscosity, in comparison to felsic lava, due to the lower silica content in mafic magma. Water and other volatiles can more easily and gradually escape from mafic lava, so eruptions of volcanoes made of mafic lavas are less explosively violent than felsic-lava eruptions. Most mafic-lava volcanoes are shield volcano, like those in Hawaii.
 
-Rock texture
-Name of mafic rock
-Pegmatitic
-Gabbro pegmatite
-Coarse grained (phaneritic)
-Gabbro
-Coarse grained and porphyritic
-Porphyritic gabbro
-Medium grained
-Diabase or Dolerite, Microgabbro
-Fine grained (aphanitic)
-Basalt
-Fine grained and porphyritic
-Porphyritic basalt
-Pyroclastic
-Basalt tuff or breccia
-Vesicular
-Vesicular basalt
-Amygdaloidal
-Amygdaloidal basalt
-Many small vesicles
-Scoria
-Glassy texture
-Tachylyte, sideromelane, palagonite
+: Rock texture
+: Name of mafic rock
+| Pegmatitic
+| Gabbro pegmatite
+| Coarse grained (phaneritic)
+| Gabbro
+| Coarse grained and porphyritic
+| Porphyritic gabbro
+| Medium grained
+| Diabase or Dolerite, Microgabbro
+| Fine grained (aphanitic)
+| Basalt
+| Fine grained and porphyritic
+| Porphyritic basalt
+| Pyroclastic
+| Basalt tuff or breccia
+| Vesicular
+| Vesicular basalt
+| Amygdaloidal
+| Amygdaloidal basalt
+| Many small vesicles
+| Scoria
+| Glassy texture
+| Tachylyte, sideromelane, palagonite
 
 See also
 

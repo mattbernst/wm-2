@@ -2,6 +2,7 @@ package wiki.extractor
 
 import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
+import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{Link, ParseResult}
 import wiki.extractor.util.DBLogging
@@ -71,6 +72,8 @@ class WikitextParser(languageLogic: LanguageLogic) {
     case node: WtInternalLink if !node.hasTitle => textualize(node.getTarget)
     case node: WtInternalLink if node.hasTitle  => textualize(node.getTitle)
     case node: WtListItem                       => "\n" + node.iterator().asScala.map(textualize).mkString
+    case node: WtTableHeader                    => " : " + node.iterator().asScala.map(textualize).mkString
+    case node: WtTableCell                      => " | " + node.iterator().asScala.map(textualize).mkString
 
     // All of these add noise to the text version of the page. Eliminate
     // template noise, XML attributes, and WtTagExtensions (like citations).
