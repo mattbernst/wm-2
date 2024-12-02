@@ -24,7 +24,7 @@ object WikipediaExtractor extends Logging {
     )
 
     // Update lastPhase whenever adding a new phase
-    assert(phases.length == db.phase.lastPhase)
+    assert(phases.length == db.phase.lastPhase, "The number of phases does not match lastPhase.")
 
     phases.indices.foreach { index =>
       val phase = index + 1

@@ -95,7 +95,6 @@ class Storage(fileName: String) extends Logging {
           sql"""SELECT source, destination, anchor_text
              FROM link
              WHERE source >= $lower AND source < $upper
-             AND anchor_text > ''
              ORDER BY anchor_text
              """
             .map(rs => Anchor(rs.int("source"), rs.int("destination"), rs.string("anchor_text")))

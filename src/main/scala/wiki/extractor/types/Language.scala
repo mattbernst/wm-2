@@ -48,6 +48,17 @@ case class Language(
     normalizedDisambiguationPrefixes.contains(tHead)
   }
 
+  // Normally this is based on the language code, but in the case of the Simple
+  // English Wikipedia it's "simple".
+  val currentWikiPrefix: String = {
+    val prefix = if (code == "en_simple") {
+      "simple"
+    } else {
+      code
+    }
+    s":$prefix:"
+  }
+
   private val normalizedDisambiguationPrefixes: Set[String] =
     disambiguationPrefixes.map(_.toLowerCase(locale)).toSet
 }

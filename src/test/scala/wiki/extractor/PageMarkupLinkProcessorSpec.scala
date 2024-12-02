@@ -44,28 +44,6 @@ class PageMarkupLinkProcessorSpec extends UnitSpec {
     lp.keyFromTarget("Coordination_chemistry") shouldBe "coordination chemistry"
   }
 
-  behavior of "cleanAnchor"
-
-  it should "trim whitespace" in {
-    lp.cleanAnchor("Medera ") shouldBe "Medera"
-  }
-
-  it should "remove matching-language prefix" in {
-    lp.cleanAnchor(":en:Dzongkha") shouldBe "Dzongkha"
-  }
-
-  it should "remove matching-language prefix and trim" in {
-    lp.cleanAnchor(":en: n-Butanol") shouldBe "n-Butanol"
-  }
-
-  it should "strip section heading destination" in {
-    lp.cleanAnchor("Alchemy#Hellenistic Egypt") shouldBe "Alchemy"
-  }
-
-  it should "replace underscores with spaces" in {
-    lp.cleanAnchor("Coordination_chemistry") shouldBe "Coordination chemistry"
-  }
-
   private lazy val lp = new PageMarkupLinkProcessor(mutable.Map(), language, "Category")
 
   private lazy val language = Language(
