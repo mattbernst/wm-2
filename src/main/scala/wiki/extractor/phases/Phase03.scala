@@ -3,9 +3,9 @@ package wiki.extractor.phases
 import wiki.db.{LinkSink, PageMarkupSource, Storage}
 import wiki.extractor.PageMarkupLinkProcessor
 import wiki.extractor.types.{PageType, SiteInfo, TypedPageMarkup, Worker}
-import wiki.extractor.util.{Config, ConfiguredProperties}
+import wiki.extractor.util.ConfiguredProperties
 
-class Phase03(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
+class Phase03(db: Storage) extends Phase(db: Storage) {
 
   /**
     * Resolve links to destinations in link table (or add entry to dead_link,
@@ -46,6 +46,9 @@ class Phase03(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     }
   }
 
-  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
+  private lazy val props: ConfiguredProperties =
+    db.configuration.readConfiguredPropertiesOptimistic()
+
   override def number: Int               = 3
+  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 }

@@ -7,20 +7,19 @@ import wiki.extractor.util.{Config, DBLogging, Logging}
 object WikipediaExtractor extends Logging {
 
   def main(args: Array[String]): Unit = {
+    // Initialize database with name passed as first command line argument,
+    // if first command line argument ends in ".db". Otherwise, the name will
+    // be automatically generated from the environmental configuration.
+    val db = database(args.headOption)
     DBLogging.initDb(db)
-    init()
-
-    // TODO: add db storage for configured properties so that only phase 1
-    // needs environment variables set.
-    val configuredProperties = Config.props
 
     val phases = Array(
-      new Phase01(db, Config.props),
-      new Phase02(db, configuredProperties),
-      new Phase03(db, configuredProperties),
-      new Phase04(db, configuredProperties),
-      new Phase05(db, configuredProperties),
-      new Phase06(db, configuredProperties)
+      new Phase01(db),
+      new Phase02(db),
+      new Phase03(db),
+      new Phase04(db),
+      new Phase05(db),
+      new Phase06(db)
     )
 
     // Update lastPhase whenever adding a new phase
@@ -38,6 +37,10 @@ object WikipediaExtractor extends Logging {
             logger.warn(phases(index).incompleteMessage)
             phases(index).run(args)
           case None =>
+            // First run only: initialize the database and store the
+            // environmental configuration to it.
+            init(db)
+            db.configuration.write(Config.props)
             phases(index).run(args)
         }
       }
@@ -62,10 +65,16 @@ object WikipediaExtractor extends Logging {
   }
 
   // Initialize system tables before running any extraction
-  private def init(): Unit = {
+  private def init(db: Storage): Unit = {
     db.createTableDefinitions(0)
   }
 
-  private val db: Storage =
-    new Storage(fileName = Config.props.language.code + "_wiki.db")
+  private def database(diskFileName: Option[String]): Storage = {
+    diskFileName match {
+      case Some(fileName) if fileName.endsWith(".db") =>
+        new Storage(fileName = fileName)
+      case _ =>
+        new Storage(fileName = Config.props.language.code + "_wiki.db")
+    }
+  }
 }

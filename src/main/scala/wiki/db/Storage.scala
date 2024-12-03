@@ -205,14 +205,15 @@ class Storage(fileName: String) extends Logging {
     ConnectionPool.closeAll()
   }
 
-  val depth: DepthStorage.type               = DepthStorage
-  val label: LabelStorage.type               = LabelStorage
-  val link: LinkStorage.type                 = LinkStorage
-  val log: LogStorage.type                   = LogStorage
-  val namespace: NamespaceStorage.type       = NamespaceStorage
-  val page: PageStorage.type                 = PageStorage
-  val phase: PhaseStorage.type               = PhaseStorage
-  val transclusion: TransclusionStorage.type = TransclusionStorage
+  val configuration: ConfigurationStorage.type = ConfigurationStorage
+  val depth: DepthStorage.type                 = DepthStorage
+  val label: LabelStorage.type                 = LabelStorage
+  val link: LinkStorage.type                   = LinkStorage
+  val log: LogStorage.type                     = LogStorage
+  val namespace: NamespaceStorage.type         = NamespaceStorage
+  val page: PageStorage.type                   = PageStorage
+  val phase: PhaseStorage.type                 = PhaseStorage
+  val transclusion: TransclusionStorage.type   = TransclusionStorage
 
   private lazy val namespaceCache: LoadingCache[Int, Namespace] =
     Scaffeine()

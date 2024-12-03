@@ -7,7 +7,7 @@ import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
 import scala.collection.mutable.ListBuffer
 
-class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
+class Phase05(db: Storage) extends Phase(db: Storage) {
 
   override def run(): Unit = {
     db.phase.deletePhase(number)
@@ -54,7 +54,9 @@ class Phase05(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     counter
   }
 
-  override def number: Int = 5
+  private lazy val props: ConfiguredProperties =
+    db.configuration.readConfiguredPropertiesOptimistic()
 
+  override def number: Int               = 5
   override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 }

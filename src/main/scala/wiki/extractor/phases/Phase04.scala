@@ -4,11 +4,11 @@ import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.{DepthSink, Storage}
 import wiki.extractor.DepthProcessor
 import wiki.extractor.types.PageType
-import wiki.extractor.util.{Config, ConfiguredProperties, DBLogging}
+import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
 import scala.collection.mutable
 
-class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
+class Phase04(db: Storage) extends Phase(db: Storage) {
 
   // Assign a page depth to categories and articles
   override def run(): Unit = {
@@ -44,6 +44,9 @@ class Phase04(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     db.phase.completePhase(number)
   }
 
-  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
+  private lazy val props: ConfiguredProperties =
+    db.configuration.readConfiguredPropertiesOptimistic()
+
   override def number: Int               = 4
+  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 }

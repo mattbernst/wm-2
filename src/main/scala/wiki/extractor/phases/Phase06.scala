@@ -6,7 +6,7 @@ import wiki.extractor.types.{PageType, TypedPageMarkup, Worker}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 import wiki.extractor.{LabelAccumulator, PageLabelProcessor}
 
-class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
+class Phase06(db: Storage) extends Phase(db: Storage) {
 
   override def run(): Unit = {
     db.phase.deletePhase(number)
@@ -44,7 +44,9 @@ class Phase06(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     }
   }
 
-  override def number: Int = 6
+  private lazy val props: ConfiguredProperties =
+    db.configuration.readConfiguredPropertiesOptimistic()
 
+  override def number: Int               = 6
   override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 }

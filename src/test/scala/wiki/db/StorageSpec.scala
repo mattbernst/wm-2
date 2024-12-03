@@ -4,7 +4,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.slf4j.event.Level
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.extractor.util.{ConfiguredProperties, FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
 
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
@@ -169,6 +169,25 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.label.write(ac)
 
     storage.label.read() shouldBe ac
+  }
+
+  behavior of "ConfigurationStorage"
+
+  it should "write and read back ConfiguredProperties" in {
+    val props = ConfiguredProperties(
+      language = Language(
+        code = "en_simple",
+        name = "English (simple)",
+        disambiguationPrefixes = List("dab", "disambiguation", "disambig", "geodis"),
+        rootPage = "Kevin Bacon"
+      ),
+      nWorkers = 12,
+      compressMarkup = true
+    )
+
+    storage.configuration.readConfiguredProperties() shouldBe None
+    storage.configuration.write(props)
+    storage.configuration.readConfiguredProperties() shouldBe Some(props)
   }
 
   override def afterAll(): Unit = {
