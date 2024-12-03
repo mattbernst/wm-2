@@ -37,15 +37,13 @@ object WikipediaExtractor extends Logging {
             logger.warn(phases(index).incompleteMessage)
             phases(index).run(args)
           case None =>
-            // First run only: initialize the database and store the
-            // environmental configuration to it.
-            init(db)
+            // First run only: store the environmental configuration to DB.
             db.configuration.write(Config.props)
             phases(index).run(args)
         }
       }
 
-      // Subsequent phases do not use command line arguments
+      // Subsequent phases do not use the Wikipedia dump
       else if (phase > 1) {
         db.phase.getPhaseState(phase) match {
           case Some(PhaseState.COMPLETED) =>
@@ -64,17 +62,19 @@ object WikipediaExtractor extends Logging {
     db.closeAll()
   }
 
-  // Initialize system tables before running any extraction
-  private def init(db: Storage): Unit = {
-    db.createTableDefinitions(0)
-  }
-
   private def database(diskFileName: Option[String]): Storage = {
     diskFileName match {
       case Some(fileName) if fileName.endsWith(".db") =>
         new Storage(fileName = fileName)
       case _ =>
-        new Storage(fileName = Config.props.language.code + "_wiki.db")
+        val result = new Storage(fileName = Config.props.language.code + "_wiki.db")
+        init(result)
+        result
     }
+  }
+
+  // Initialize system tables before running any extraction
+  private def init(db: Storage): Unit = {
+    db.createTableDefinitions(0)
   }
 }

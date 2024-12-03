@@ -25,7 +25,9 @@ class Phase05(db: Storage) extends Phase(db: Storage) {
   private def prepareLabelCounter(): LabelCounter = {
     val anchorLogic    = new AnchorLogic(props.language)
     val counter        = new LabelCounter
-    val anchorIterator = db.getLinkAnchors()
+    val anchorIterator = db
+      .getLinkAnchors()
+      .filter(a => anchorLogic.cleanAnchor(a.text).nonEmpty)
     var label = anchorIterator
       .nextOption()
       .map(_.text)
@@ -33,7 +35,6 @@ class Phase05(db: Storage) extends Phase(db: Storage) {
 
     val buffer = ListBuffer[Anchor]()
     anchorIterator
-      .filter(a => anchorLogic.cleanAnchor(a.text).nonEmpty)
       .foreach { anchor =>
         // Keep appending destinations if still processing same label
         if (anchor.text == label) {
