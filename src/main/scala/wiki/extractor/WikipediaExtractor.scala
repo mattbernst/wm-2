@@ -19,7 +19,8 @@ object WikipediaExtractor extends Logging {
       new Phase03(db),
       new Phase04(db),
       new Phase05(db),
-      new Phase06(db)
+      new Phase06(db),
+      new Phase07(db)
     )
 
     // Update lastPhase whenever adding a new phase
@@ -65,6 +66,7 @@ object WikipediaExtractor extends Logging {
   private def database(diskFileName: Option[String]): Storage = {
     diskFileName match {
       case Some(fileName) if fileName.endsWith(".db") =>
+        // TODO check existence
         new Storage(fileName = fileName)
       case _ =>
         val result = new Storage(fileName = Config.props.language.code + "_wiki.db")

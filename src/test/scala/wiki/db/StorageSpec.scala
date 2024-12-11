@@ -190,6 +190,25 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.configuration.readConfiguredProperties() shouldBe Some(props)
   }
 
+  behavior of "SenseStorage"
+
+  it should "write and read back senses for a label" in {
+    val labelId = randomInt()
+    val sense = Sense(
+      labelId = labelId,
+      destinationCounts = Map(
+        randomInt() -> 3,
+        randomInt() -> 2
+      )
+    )
+
+    storage.sense.read(labelId) shouldBe None
+
+    storage.sense.write(Seq(sense))
+
+    storage.sense.read(labelId) shouldBe Some(sense)
+  }
+
   override def afterAll(): Unit = {
     super.afterAll()
     FileHelpers.deleteFileIfExists(testDbName)

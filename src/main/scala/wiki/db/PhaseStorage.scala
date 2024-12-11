@@ -62,6 +62,6 @@ object PhaseStorage {
     }
   }
 
-  val lastPhase: Int = 6
+  val lastPhase: Int = 7
   private val table  = Storage.table("phase")
 }

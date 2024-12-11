@@ -4,6 +4,8 @@ import scalikejdbc.*
 import wiki.extractor.types.LabelCounter
 import wiki.extractor.util.{DBLogging, Progress}
 
+import scala.collection.mutable
+
 object LabelStorage {
 
   /**
@@ -43,15 +45,7 @@ object LabelStorage {
   def read(): LabelCounter = {
     val counter = new LabelCounter
     var current = 0
-    val end: Int = DB.autoCommit { implicit session =>
-      sql"""SELECT MAX(id) AS max_id FROM $table"""
-        .map(rs => rs.intOpt("max_id"))
-        .single()
-        .flatten
-    }.getOrElse {
-      DBLogging.warn("Did not find any IDs in label table")
-      0
-    }
+    val end     = maxLabelId()
 
     while (current < end) {
       DB.autoCommit { implicit session =>
@@ -71,6 +65,36 @@ object LabelStorage {
     }
 
     counter
+  }
+
+  /**
+    * Read back all labels that could be found in wiki pages. Labels that
+    * could not be found in pages were either too long or fell victim to the
+    * process of converting wiki markup into plain text.
+    *
+    * @return A map of labels to label IDs
+    */
+  def readKnownLabels(): mutable.Map[String, Int] = {
+    val result  = mutable.Map[String, Int]()
+    var current = 0
+    val end     = maxLabelId()
+
+    while (current < end) {
+      DB.autoCommit { implicit session =>
+        sql"""SELECT id, label, occurrence_count FROM $table
+             WHERE id >= $current AND id < ${current + batchSize}""".foreach { rs =>
+          val id              = rs.int("id")
+          val label           = rs.string("label")
+          val occurrenceCount = rs.int("occurrence_count")
+          if (occurrenceCount > 0) {
+            result.put(label, id): Unit
+          }
+        }
+      }
+      current += batchSize
+    }
+
+    result
   }
 
   /**
@@ -94,6 +118,18 @@ object LabelStorage {
     DB.autoCommit { implicit session =>
       sql"""UPDATE $table SET occurrence_count=0, occurrence_doc_count=0"""
         .update(): Unit
+    }
+  }
+
+  private def maxLabelId(): Int = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT MAX(id) AS max_id FROM $table"""
+        .map(rs => rs.intOpt("max_id"))
+        .single()
+        .flatten
+    }.getOrElse {
+      DBLogging.warn("Did not find any IDs in label table")
+      0
     }
   }
 
