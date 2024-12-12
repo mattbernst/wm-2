@@ -73,7 +73,8 @@ class Storage(fileName: String) extends Logging {
     * set up the LabelCounter data before processing raw text of each page.
     *
     * This needs to be an iterator because memory requirements are excessive
-    * to fetch all results in one query.
+    * to fetch all results in one query. It needs elements from the page table
+    * and the link table.
     *
     * @return An iterator of Anchors
     */
@@ -91,6 +92,9 @@ class Storage(fileName: String) extends Logging {
         val pageIds = targets.slice(offset, offset + batchSize)
         val lower   = pageIds.headOption.getOrElse(Int.MaxValue)
         val upper   = pageIds.lastOption.map(_ + 1).getOrElse(Int.MaxValue)
+        if (pageIds.length < batchSize) {
+          println(s"SHORTFALL $offset ${pageIds.length} $batchSize")
+        }
         val rows = DB.autoCommit { implicit session =>
           sql"""SELECT source, destination, anchor_text
              FROM link
@@ -205,14 +209,16 @@ class Storage(fileName: String) extends Logging {
     ConnectionPool.closeAll()
   }
 
-  val depth: DepthStorage.type               = DepthStorage
-  val label: LabelStorage.type               = LabelStorage
-  val link: LinkStorage.type                 = LinkStorage
-  val log: LogStorage.type                   = LogStorage
-  val namespace: NamespaceStorage.type       = NamespaceStorage
-  val page: PageStorage.type                 = PageStorage
-  val phase: PhaseStorage.type               = PhaseStorage
-  val transclusion: TransclusionStorage.type = TransclusionStorage
+  val configuration: ConfigurationStorage.type = ConfigurationStorage
+  val depth: DepthStorage.type                 = DepthStorage
+  val label: LabelStorage.type                 = LabelStorage
+  val link: LinkStorage.type                   = LinkStorage
+  val log: LogStorage.type                     = LogStorage
+  val namespace: NamespaceStorage.type         = NamespaceStorage
+  val page: PageStorage.type                   = PageStorage
+  val phase: PhaseStorage.type                 = PhaseStorage
+  val sense: SenseStorage.type                 = SenseStorage
+  val transclusion: TransclusionStorage.type   = TransclusionStorage
 
   private lazy val namespaceCache: LoadingCache[Int, Namespace] =
     Scaffeine()

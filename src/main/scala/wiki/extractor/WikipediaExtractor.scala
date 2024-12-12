@@ -2,25 +2,27 @@ package wiki.extractor
 
 import wiki.db.*
 import wiki.extractor.phases.*
-import wiki.extractor.util.{Config, DBLogging, Logging}
+import wiki.extractor.util.{Config, DBLogging, FileHelpers, Logging}
+
+import java.nio.file.NoSuchFileException
 
 object WikipediaExtractor extends Logging {
 
   def main(args: Array[String]): Unit = {
+    // Initialize database with name passed as first command line argument,
+    // if first command line argument ends in ".db". Otherwise, the name will
+    // be automatically generated from the environmental configuration.
+    val db = database(args.headOption)
     DBLogging.initDb(db)
-    init()
-
-    // TODO: add db storage for configured properties so that only phase 1
-    // needs environment variables set.
-    val configuredProperties = Config.props
 
     val phases = Array(
-      new Phase01(db, Config.props),
-      new Phase02(db, configuredProperties),
-      new Phase03(db, configuredProperties),
-      new Phase04(db, configuredProperties),
-      new Phase05(db, configuredProperties),
-      new Phase06(db, configuredProperties)
+      new Phase01(db),
+      new Phase02(db),
+      new Phase03(db),
+      new Phase04(db),
+      new Phase05(db),
+      new Phase06(db),
+      new Phase07(db)
     )
 
     // Update lastPhase whenever adding a new phase
@@ -38,11 +40,13 @@ object WikipediaExtractor extends Logging {
             logger.warn(phases(index).incompleteMessage)
             phases(index).run(args)
           case None =>
+            // First run only: store the environmental configuration to DB.
+            db.configuration.write(Config.props)
             phases(index).run(args)
         }
       }
 
-      // Subsequent phases do not use command line arguments
+      // Subsequent phases do not use the Wikipedia dump
       else if (phase > 1) {
         db.phase.getPhaseState(phase) match {
           case Some(PhaseState.COMPLETED) =>
@@ -61,11 +65,23 @@ object WikipediaExtractor extends Logging {
     db.closeAll()
   }
 
-  // Initialize system tables before running any extraction
-  private def init(): Unit = {
-    db.createTableDefinitions(0)
+  private def database(diskFileName: Option[String]): Storage = {
+    diskFileName match {
+      case Some(fileName) if fileName.endsWith(".db") =>
+        if (FileHelpers.isFileReadable(fileName)) {
+          new Storage(fileName = fileName)
+        } else {
+          throw new NoSuchFileException(s"Database file $fileName does not exist or is not readable")
+        }
+      case _ =>
+        val result = new Storage(fileName = Config.props.language.code + "_wiki.db")
+        init(result)
+        result
+    }
   }
 
-  private val db: Storage =
-    new Storage(fileName = Config.props.language.code + "_wiki.db")
+  // Initialize system tables before running any extraction
+  private def init(db: Storage): Unit = {
+    db.createTableDefinitions(0)
+  }
 }

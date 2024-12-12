@@ -4,18 +4,14 @@ import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
 import wiki.db.{PageSink, Storage}
 import wiki.extractor.types.{SiteInfo, Worker}
-import wiki.extractor.util.{ConfiguredProperties, DBLogging, Logging}
+import wiki.extractor.util.{Config, DBLogging, Logging}
 import wiki.extractor.{XMLSource, XMLStructuredPageProcessor}
 
 import java.io.{BufferedInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import scala.io.{BufferedSource, Source}
 
-class Phase01(db: Storage, props: ConfiguredProperties)
-    extends Phase(db: Storage, props: ConfiguredProperties)
-    with Logging {
-
-  override val incompleteMessage: String = s"Phase $number incomplete -- resuming"
+class Phase01(db: Storage) extends Phase(db: Storage) with Logging {
 
   /**
     * Extract a Wikipedia dump into structured data (first pass). This phase
@@ -150,5 +146,7 @@ class Phase01(db: Storage, props: ConfiguredProperties)
     }
   }
 
-  override def number: Int = 1
+  private lazy val props                 = Config.props
+  override def number: Int               = 1
+  override val incompleteMessage: String = s"Phase $number incomplete -- resuming"
 }

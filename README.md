@@ -27,10 +27,10 @@ of disk space on storage-constrained systems like entry level laptops. It is muc
 from .bz2.
 
 ### Running extraction
-Run the Makefile `extract` target with `dumpfile` (pointing to your input data) set appropriately, like so:
+Run the Makefile `extract` target with `input` (pointing to your input data) set appropriately, like so:
 
 ```
-make extract dumpfile=/Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml
+make extract input=/Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml
 ```
 
 The equivalent sbt command is

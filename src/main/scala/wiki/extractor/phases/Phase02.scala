@@ -3,11 +3,9 @@ package wiki.extractor.phases
 import wiki.db.Storage
 import wiki.extractor.TitleFinder
 import wiki.extractor.types.{PageType, Redirection}
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.util.DBLogging
 
-class Phase02(db: Storage, props: ConfiguredProperties) extends Phase(db: Storage, props: ConfiguredProperties) {
-
-  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
+class Phase02(db: Storage) extends Phase(db: Storage) {
 
   /**
     * Resolve title_to_page mapping and index the new table.
@@ -55,5 +53,6 @@ class Phase02(db: Storage, props: ConfiguredProperties) extends Phase(db: Storag
     DBLogging.info(s"Marked ${input.length} pages as ${PageType.DANGLING_REDIRECT}")
   }
 
-  override def number: Int = 2
+  override def number: Int               = 2
+  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 }

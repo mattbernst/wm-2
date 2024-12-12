@@ -5,7 +5,6 @@ import wiki.extractor.util.{DBLogging, Progress}
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 /**
   * A writer with an internal buffer that continually buffers Pages and
@@ -69,7 +68,7 @@ class PageSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
   private def write(): Unit = {
     val unwritten: Seq[QueueEntry] = {
       var emptied = false
-      val buffer  = ListBuffer[QueueEntry]()
+      val buffer  = mutable.ListBuffer[QueueEntry]()
       while (!emptied && buffer.size < Storage.batchSqlSize) {
         Option(queue.poll(3, TimeUnit.SECONDS)) match {
           case Some(entry) => buffer.append(entry)

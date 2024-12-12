@@ -1,6 +1,7 @@
 package wiki.db
 
 import scalikejdbc.*
+import wiki.extractor.types.GroupedLinks
 
 case class ResolvedLink(source: Int, destination: Int, anchorText: String)
 case class DeadLink(source: Int, destination: String, anchorText: String)
@@ -93,6 +94,35 @@ object LinkStorage {
       sql"""SELECT * FROM $table WHERE destination=$id"""
         .map(toResolvedLink)
         .list()
+    }
+  }
+
+  def getGroupedLinks(): GroupedLinks = {
+    val n            = countGroupedLinks()
+    val labels       = Array.ofDim[String](n)
+    val destinations = Array.ofDim[Int](n)
+    val counts       = Array.ofDim[Int](n)
+    var j            = 0
+    DB.autoCommit { implicit session =>
+      sql"""SELECT anchor_text, destination, count(destination) FROM $table GROUP BY destination
+           ORDER BY anchor_text""".foreach { rs =>
+        labels(j) = rs.string("anchor_text")
+        destinations(j) = rs.int("destination")
+        counts(j) = rs.int("count(destination)")
+        j += 1
+      }
+    }
+
+    GroupedLinks(size = n, labels = labels, destinations = destinations, counts = counts)
+  }
+
+  private def countGroupedLinks(): Int = {
+    DB.autoCommit { implicit session =>
+      sql"""WITH grouped AS (SELECT anchor_text, destination, count(destination) FROM $table GROUP BY destination)
+           SELECT count(*) FROM grouped"""
+        .map(rs => rs.int("count(*)"))
+        .single()
+        .getOrElse(0)
     }
   }
 

@@ -1,8 +1,13 @@
 package wiki.extractor.util
 
+import upickle.default.*
 import wiki.extractor.types.Language
 
 case class ConfiguredProperties(language: Language, nWorkers: Int, compressMarkup: Boolean)
+
+object ConfiguredProperties {
+  implicit val rw: ReadWriter[ConfiguredProperties] = macroRW
+}
 
 object Config extends Logging {
 

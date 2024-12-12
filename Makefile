@@ -12,13 +12,13 @@ build:
 	sbt assembly
 
 extract: build
-	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(dumpfile)
+	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
 # This only works with Oracle Java 21 or later. On my machine it reduces the
 # 2 hour and 25 minute extraction time to 2 hours and 10 minutes.
 GRAAL_JAVA_OPTS := $(JAVA_OPTS) -XX:+UnlockExperimentalVMOptions -XX:+UseGraalJIT
 extract-graal: build
-	java $(GRAAL_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(dumpfile)
+	java $(GRAAL_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
 P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=10000MB,filename=extraction.jfr
 # Profile extraction with Flight Recorder for analysis with JDK
@@ -26,7 +26,7 @@ P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+Unloc
 # https://www.oracle.com/java/technologies/jdk-mission-control.html
 # https://github.com/openjdk/jmc
 extract-with-profiling: build
-	java $(P_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(dumpfile)
+	java $(P_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
 format:
 	sbt scalafmtAll
