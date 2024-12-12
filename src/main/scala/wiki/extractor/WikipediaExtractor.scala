@@ -2,7 +2,9 @@ package wiki.extractor
 
 import wiki.db.*
 import wiki.extractor.phases.*
-import wiki.extractor.util.{Config, DBLogging, Logging}
+import wiki.extractor.util.{Config, DBLogging, FileHelpers, Logging}
+
+import java.nio.file.NoSuchFileException
 
 object WikipediaExtractor extends Logging {
 
@@ -66,8 +68,11 @@ object WikipediaExtractor extends Logging {
   private def database(diskFileName: Option[String]): Storage = {
     diskFileName match {
       case Some(fileName) if fileName.endsWith(".db") =>
-        // TODO check existence
-        new Storage(fileName = fileName)
+        if (FileHelpers.isFileReadable(fileName)) {
+          new Storage(fileName = fileName)
+        } else {
+          throw new NoSuchFileException(s"Database file $fileName does not exist or is not readable")
+        }
       case _ =>
         val result = new Storage(fileName = Config.props.language.code + "_wiki.db")
         init(result)

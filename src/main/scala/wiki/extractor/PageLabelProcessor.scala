@@ -14,9 +14,6 @@ class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: collection.Se
     * converted to a sequence of token based ngrams which are then filtered against
     * goodLabels before their counts get added up in the return map.
     *
-    * TODO? See if whitespace handling in plain-text conversion can
-    * be improved to match more labels.
-    *
     * @param tpm PageMarkup data, including plain text version of page
     * @return    A map of valid labels to counts from within the page
     */

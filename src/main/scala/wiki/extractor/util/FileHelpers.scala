@@ -1,7 +1,7 @@
 package wiki.extractor.util
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{FileSystems, Files, Path, Paths}
+import java.nio.file.*
 import java.util.stream
 import scala.io.Source
 import scala.jdk.CollectionConverters.*
@@ -47,5 +47,12 @@ object FileHelpers extends Logging {
     } else {
       logger.warn(s"Could not delete file $fileName because it does not exist.")
     }
+  }
+
+  def isFileReadable(fileName: String): Boolean = {
+    Try {
+      val path = Paths.get(fileName)
+      Files.exists(path) && Files.isReadable(path)
+    }.getOrElse(false)
   }
 }
