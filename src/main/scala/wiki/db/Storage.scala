@@ -74,7 +74,7 @@ class Storage(fileName: String) extends Logging {
     *
     * This needs to be an iterator because memory requirements are excessive
     * to fetch all results in one query. It needs elements from the page table
-   * and the link table.
+    * and the link table.
     *
     * @return An iterator of Anchors
     */

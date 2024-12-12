@@ -54,8 +54,7 @@ object SenseStorage {
     val destinationCounts = DB.autoCommit { implicit session =>
       sql"""SELECT destination, n FROM $table WHERE label_id=$labelId""".map { r =>
         (r.int("destination"), r.int("n"))
-      }.list()
-        .toMap
+      }.list().toMap
     }
     if (destinationCounts.isEmpty) {
       None

@@ -2,11 +2,11 @@ package wiki.extractor.phases
 
 import wiki.db.{SenseSink, Storage}
 import wiki.extractor.AnchorLogic
-import wiki.extractor.types.{Anchor, Sense}
+import wiki.extractor.types.Sense
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
+import java.util
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 class Phase07(db: Storage) extends Phase(db: Storage) {
 
@@ -26,47 +26,53 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     * @param targets Valid labels mapped to their label IDs
     */
   private def countSenses(targets: mutable.Map[String, Int]): Unit = {
-    val anchorLogic     = new AnchorLogic(props.language)
-    val sink: SenseSink = new SenseSink(db)
+    val anchorLogic = new AnchorLogic(props.language)
+    DBLogging.info("Loading relevant pages from db")
+    val anchorPages = db.page.getAnchorPages()
+    DBLogging.info("Loading grouped links from db")
+    val groupedLinks = db.link.getGroupedLinks()
+    val sink         = new SenseSink(db)
 
-    val anchorIterator = db
-      .getLinkAnchors()
-      .filter(a => anchorLogic.cleanAnchor(a.text).nonEmpty)
+    groupedLinks.labels.mapInPlace(l => anchorLogic.cleanAnchor(l))
+    val transitions = changes(groupedLinks.labels)
+    if (transitions.isEmpty) {
+      DBLogging.error(s"Did not find any link groups to process")
+    } else {
+      var left  = 0
+      var right = 0
+      var j     = 0
+      while (j < transitions.length) {
+        right = transitions(j)
+        val slice = groupedLinks
+          .slice(left, right)
+          .filter(e => targets.contains(e.label))
+          .filter(e => util.Arrays.binarySearch(anchorPages, e.destination) >= 0)
 
-    var label = anchorIterator
-      .nextOption()
-      .map(_.text)
-      .getOrElse(throw new IndexOutOfBoundsException("No starting label found!"))
-
-    val buffer = ListBuffer[Anchor]()
-    anchorIterator.foreach { anchor =>
-      // Keep appending destinations if still processing same label
-      if (anchor.text == label) {
-        buffer.append(anchor)
-      } else {
-        if (targets.contains(label)) {
-          // Get a sense-to-count map for the just-finished label
-          val destinationCounts: Map[Int, Int] = buffer.toArray
-            .groupBy(_.destination)
-            .view
-            .mapValues(anchors => anchors.length)
+        if (slice.nonEmpty) {
+          val labelId = targets(slice.head.label)
+          val destinationCounts = slice
+            .map(e => (e.destination, e.count))
             .toMap
-
-          if (destinationCounts.nonEmpty) {
-            val sense = Sense(labelId = targets(label), destinationCounts = destinationCounts)
-            sink.addSense(sense)
-          }
+          sink.addSense(Sense(labelId = labelId, destinationCounts = destinationCounts))
         }
 
-        // Clear buffer, update label, append latest
-        buffer.clear()
-        label = anchor.text
-        buffer.append(anchor)
+        j += 1
+        left = right
       }
     }
 
     sink.stopWriting()
     sink.writerThread.join()
+  }
+
+  private def changes(arr: Array[String]): Array[Int] = {
+    if (arr.isEmpty) Array.empty
+    else {
+      arr.zipWithIndex
+        .sliding(2)
+        .collect { case Array((a, _), (b, idx)) if a != b => idx }
+        .toArray
+    }
   }
 
   private lazy val props: ConfiguredProperties =
