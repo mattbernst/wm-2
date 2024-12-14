@@ -92,9 +92,7 @@ class Storage(fileName: String) extends Logging {
         val pageIds = targets.slice(offset, offset + batchSize)
         val lower   = pageIds.headOption.getOrElse(Int.MaxValue)
         val upper   = pageIds.lastOption.map(_ + 1).getOrElse(Int.MaxValue)
-        if (pageIds.length < batchSize) {
-          println(s"SHORTFALL $offset ${pageIds.length} $batchSize")
-        }
+
         val rows = DB.autoCommit { implicit session =>
           sql"""SELECT source, destination, anchor_text
              FROM link

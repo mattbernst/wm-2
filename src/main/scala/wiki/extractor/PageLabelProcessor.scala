@@ -11,8 +11,8 @@ class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: collection.Se
   /**
     * Get a count of all valid labels that could be extracted from the plain
     * text version of a Wikipedia page. The plain text version of the page gets
-    * converted to a sequence of token based ngrams which are then filtered against
-    * goodLabels before their counts get added up in the return map.
+    * converted to a sequence of token based ngrams which are then filtered
+    * against goodLabels before their counts get added up in the return map.
     *
     * @param tpm PageMarkup data, including plain text version of page
     * @return    A map of valid labels to counts from within the page

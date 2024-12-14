@@ -52,16 +52,14 @@ trait LanguageLogic {
     *
     * @param input A full document (e.g. a plain-text rendition of a WP entry)
     * @param valid The set of valid strings to retain
-    * @return      An iterator of word-level ngrams as strings
+    * @return      An array of word-level ngrams as strings
     */
-  def wordNgrams(input: String, valid: collection.Set[String]): Iterator[String] =
+  def wordNgrams(input: String, valid: collection.Set[String]): Array[String] =
     ngrams(input, valid)
 
-  private[language] def ngrams(input: String, valid: collection.Set[String]): Iterator[String] = {
+  private[language] def ngrams(input: String, valid: collection.Set[String]): Array[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
-    ngg
-      .generateFast(input)
-      .iterator
+    ngg.generateFast(input)
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]

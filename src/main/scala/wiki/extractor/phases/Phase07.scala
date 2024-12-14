@@ -23,6 +23,8 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
   }
 
   /**
+    * Count the number of valid senses for labels.
+    *
     * @param targets Valid labels mapped to their label IDs
     */
   private def countSenses(targets: mutable.Map[String, Int]): Unit = {
@@ -33,6 +35,8 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val groupedLinks = db.link.getGroupedLinks()
     val sink         = new SenseSink(db)
 
+    // Clean anchors in-place. Bad anchors become empty strings,
+    // and will not match anything in targets.
     groupedLinks.labels.mapInPlace(l => anchorLogic.cleanAnchor(l))
     val transitions = changes(groupedLinks.labels)
     if (transitions.isEmpty) {
@@ -43,14 +47,14 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
       var j     = 0
       while (j < transitions.length) {
         right = transitions(j)
-        val slice = groupedLinks
+        val cleanSlice = groupedLinks
           .slice(left, right)
           .filter(e => targets.contains(e.label))
           .filter(e => util.Arrays.binarySearch(anchorPages, e.destination) >= 0)
 
-        if (slice.nonEmpty) {
-          val labelId = targets(slice.head.label)
-          val destinationCounts = slice
+        if (cleanSlice.nonEmpty) {
+          val labelId = targets(cleanSlice.head.label)
+          val destinationCounts = cleanSlice
             .map(e => (e.destination, e.count))
             .toMap
           sink.addSense(Sense(labelId = labelId, destinationCounts = destinationCounts))

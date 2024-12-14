@@ -97,6 +97,17 @@ object LinkStorage {
     }
   }
 
+  /**
+    * Get labels along with their per-destination counts. These per-destination
+    * counts show the relative likelihood of labels used in different semantic
+    * senses.
+    *
+    * The data is returned as a structure of arrays to minimize the memory
+    * overhead.
+    *
+    * @return Grouped links containing parallel arrays of labels, destinations,
+    *         and counts
+    */
   def getGroupedLinks(): GroupedLinks = {
     val n            = countGroupedLinks()
     val labels       = Array.ofDim[String](n)

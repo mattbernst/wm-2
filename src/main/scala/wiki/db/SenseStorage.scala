@@ -12,8 +12,7 @@ object SenseStorage {
     */
   def write(input: Seq[Sense]): Unit = {
     if (input.nonEmpty) {
-      //val batches = input.grouped(Storage.batchSqlSize)
-      val batches = input.grouped(1)
+      val batches = input.grouped(Storage.batchSqlSize)
       DB.autoCommit { implicit session =>
         val cols: SQLSyntax = sqls"""label_id, destination, n"""
         batches.foreach { batch =>
@@ -37,15 +36,43 @@ object SenseStorage {
   /**
     * Read label senses from the sense table, if the label referenced by ID
     * has senses stored. The senses are the particular destination pages
-    * associated with the label. For example, the senses for "Mercury"
-    * (label ID 488460) include:
-    *
-    * 19694: Mercury (planet)
-    * 19726: Mercury (programming language)
-    * 37417: Mercury (mythology)
+    * associated with the label.
     *
     * Some senses are more common than others. The sense table counts how many
     * times the label is used in association with each of its senses.
+    *
+    * For example, the senses for "mercury" and "Mercury" include:
+    *
+    * sqlite> SELECT label.label, page.title, page.id, n FROM label, page, sense
+    * WHERE label_id=label.id AND page.id=destination AND label.label LIKE 'mercury'
+    * ORDER BY n;
+    *
+    * label    title                                            id        n
+    * -------  -----------------------------------------------  --------  ----
+    * Mercury  BSA Mercury Air Rifle                            33325935  1
+    * mercury  Mercury hydride                                  37012116  1
+    * Mercury  USS Mercury (ID-3012)                            12812537  2
+    * Mercury  Mercury Club                                     23616501  2
+    * Mercury  Norton Mercury                                   68128798  3
+    * Mercury  Mercury (Duquesnoy)                              65344995  3
+    * Mercury  Mercury (RemObjects BASIC programming language)  70564140  3
+    * Mercury  Russian corvette Merkury                         66990534  4
+    * Mercury  Mercury (crystallography)                        65059134  5
+    * Mercury  Russian brig Merkurii                            21511891  7
+    * Mercury  Pittsburgh Mercury                               43534037  9
+    * mercury  Mercury regulation in the United States          31080818  15
+    * Mercury  Mercury Park Lane                                1450020   32
+    * Mercury  Geology of Mercury                               2090039   47
+    * Mercury  Mercury, Nevada                                  1455516   56
+    * Mercury  The Mercury (Hobart)                             3596130   229
+    * Mercury  Mercury (mythology)                              37417     953
+    * Mercury  Mercury (planet)                                 19694     2078
+    * mercury  Mercury (element)                                18617142  3082
+    *
+    * Note that the most common sense for lower-case mercury is the element while
+    * that for capitalized Mercury is the planet Mercury. When disambiguating
+    * senses, the caller needs to be sure to check for both forms on
+    * beginning-of-sentence ngrams.
     *
     * @param labelId The numeric ID of the label
     * @return Senses for the label, if found in the table
