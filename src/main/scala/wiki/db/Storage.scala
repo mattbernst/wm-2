@@ -68,6 +68,15 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
+    * Try to get a single Page from storage by ID.
+    *
+    * @param pageId Numeric ID for page to retrieve
+    * @return The full page record for the ID, if retrievable
+    */
+  def getPage(pageId: Int): Option[Page] =
+    getPages(Seq(pageId)).headOption
+
+  /**
     * Get links from the link table.
     * Only includes links to articles and disambiguation pages. This is used to
     * set up the LabelCounter data before processing raw text of each page.

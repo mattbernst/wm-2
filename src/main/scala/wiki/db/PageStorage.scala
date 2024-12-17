@@ -140,10 +140,20 @@ object PageStorage {
     *
     * @return A sorted array of page IDs
     */
-  def getAnchorPages(): Array[Int] = {
-    val result = ListBuffer[Int]()
+  def getAnchorPages(): Array[Int] =
+    getPagesByTypes(Seq(PageType.ARTICLE, PageType.DISAMBIGUATION))
+
+  /**
+    * Get all page IDs for the given types of pages.
+    *
+    * @param types Symbolic page types to get IDs for
+    * @return A sorted array of page IDs matching the given types
+    */
+  def getPagesByTypes(types: Seq[PageType]): Array[Int] = {
+    val result       = ListBuffer[Int]()
+    val numericTypes = types.map(t => PageTypes.bySymbol(t))
     DB.autoCommit { implicit session =>
-      Seq(PageTypes.bySymbol(PageType.ARTICLE), PageTypes.bySymbol(PageType.DISAMBIGUATION)).foreach { pt =>
+      numericTypes.foreach { pt =>
         sql"""SELECT id FROM $table WHERE page_type=$pt"""
           .foreach(rs => result.append(rs.int("id")))
       }
@@ -231,11 +241,26 @@ object PageStorage {
   }
 
   /**
+    * Get the page markup data for a single page (if it exists) from whichever
+    * table this database is using.
+    *
+    * @param pageId The numeric ID for the corresponding page
+    * @return       The stored markup, if it exists
+    */
+  def readMarkupAuto(pageId: Int): Option[PageMarkup] = {
+    if (usingCompression) {
+      readMarkup_Z(pageId)
+    } else {
+      readMarkup(pageId)
+    }
+  }
+
+  /**
     * Get the page markup data for a single page (if it exists) from the
     * markup table.
     *
     * @param pageId The numeric ID for the corresponding page
-    * @return       The stored markup, if it exists
+    * @return The stored markup, if it exists
     */
   def readMarkup(pageId: Int): Option[PageMarkup] = {
     DB.autoCommit { implicit session =>

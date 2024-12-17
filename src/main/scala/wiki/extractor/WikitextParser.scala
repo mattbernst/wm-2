@@ -39,6 +39,23 @@ class WikitextParser(languageLogic: LanguageLogic) {
     }
   }
 
+  /**
+    * Recursively extract all nodes of type T into a flattened array.
+    *
+    * @param nodes Nodes that have been parsed from wikitext
+    * @tparam T The node type to extract
+    * @return All nodes of type T
+    */
+  def extractNodes[T <: WtNode: ClassTag](nodes: Array[WtNode]): Array[T] = {
+    def collectNodes(node: WtNode): Array[T] = node match {
+      case n: T          => Array(n)
+      case other: WtNode => other.iterator().asScala.toArray.flatMap(collectNodes)
+      case _             => Array()
+    }
+
+    nodes.flatMap(collectNodes)
+  }
+
   private[extractor] def parse(title: String, markup: String): Array[WtNode] = {
     parser.parseArticle(markup, title).iterator().asScala.toArray
   }
@@ -82,16 +99,6 @@ class WikitextParser(languageLogic: LanguageLogic) {
     case _: WtTagExtension  => ""
 
     case other: WtNode => other.iterator().asScala.map(textualize).mkString
-  }
-
-  private[extractor] def extractNodes[T <: WtNode: ClassTag](nodes: Array[WtNode]): Array[T] = {
-    def collectNodes(node: WtNode): Array[T] = node match {
-      case n: T          => Array(n)
-      case other: WtNode => other.iterator().asScala.toArray.flatMap(collectNodes)
-      case _             => Array()
-    }
-
-    nodes.flatMap(collectNodes)
   }
 
   private[extractor] def excludeNodes[T <: WtNode: ClassTag](nodes: Array[WtNode]): Array[WtNode] = {
