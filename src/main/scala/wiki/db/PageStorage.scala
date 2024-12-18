@@ -163,6 +163,25 @@ object PageStorage {
   }
 
   /**
+    * Count all page IDs for the given types of pages.
+    *
+    * @param types Symbolic page types to get IDs for
+    * @return A count of how many pages exist with the given types
+    */
+  def countPagesByTypes(types: Seq[PageType]): Int = {
+    var total        = 0
+    val numericTypes = types.map(t => PageTypes.bySymbol(t))
+    DB.autoCommit { implicit session =>
+      numericTypes.foreach { pt =>
+        sql"""SELECT count(*) AS ct FROM $table WHERE page_type=$pt"""
+          .foreach(rs => total += rs.int("ct"))
+      }
+    }
+
+    total
+  }
+
+  /**
     * Write the flattened TitleFinder data into title_to_page. This table gives
     * a direct mapping from every title to its destination page ID.
     *

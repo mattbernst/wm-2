@@ -2,7 +2,6 @@ package wiki.extractor
 
 import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
-import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{Link, ParseResult}
 import wiki.extractor.util.DBLogging

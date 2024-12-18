@@ -1,8 +1,7 @@
 package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
-import org.sweble.wikitext.parser.nodes.{WtImageLink, WtListItem, WtOrderedList}
-import pprint.PPrinter.BlackWhite
+import org.sweble.wikitext.parser.nodes.WtListItem
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.Link
 import wiki.extractor.util.{FileHelpers, UnitSpec}

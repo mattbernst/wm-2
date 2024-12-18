@@ -2,7 +2,6 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
 import opennlp.tools.tokenize.{TokenizerME, TokenizerModel}
-import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.types.NGram
 import wiki.extractor.util.UnitSpec
 

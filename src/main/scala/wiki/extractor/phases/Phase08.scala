@@ -14,24 +14,24 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     *  - Topic detector test set
     *
     *  The article set only contains PageType.ARTICLE
-   *
-   *  We need to implement data extraction for train and test. The Context is
-   *  also part of this.
-   *
-   *  Implement equivalent of Context with:
-   *  getRelatednessTo
-   *  getQuality
-   *  constructor (including isDate)
-   *  The Milne papers say things like
-   *  "The context is obtained by gathering all concepts that relate to
-   *  unambiguous labels within the document." However, looking at the
-   *  Context.java this appears to be incorrect. The Context is actually
-   *  initialized with *all* labels, retaining the top N candidates after sorting/weighting.
-   *
-   *  Also need to implement ArticleComparer getRelatedness (without-ml path only)
-   *  e.g. def getRelatedness(a, b) = getRelatednessNoML(a, b)
-   *  see also setPageLinkFeatures where googleMeasure, vectorMeasure, union, intersectionProportion get set
-   *  We're going to always implement these features for page links in AND page links out
+    *
+    *  We need to implement data extraction for train and test. The Context is
+    *  also part of this.
+    *
+    *  Implement equivalent of Context with:
+    *  getRelatednessTo
+    *  getQuality
+    *  constructor (including isDate)
+    *  The Milne papers say things like
+    *  "The context is obtained by gathering all concepts that relate to
+    *  unambiguous labels within the document." However, looking at the
+    *  Context.java this appears to be incorrect. The Context is actually
+    *  initialized with *all* labels, retaining the top N candidates after sorting/weighting.
+    *
+    *  Also need to implement ArticleComparer getRelatedness (without-ml path only)
+    *  e.g. def getRelatedness(a, b) = getRelatednessNoML(a, b)
+    *  see also setPageLinkFeatures where googleMeasure, vectorMeasure, union, intersectionProportion get set
+    *  We're going to always implement these features for page links in AND page links out
     */
   override def run(): Unit = {
     db.phase.deletePhase(number)
