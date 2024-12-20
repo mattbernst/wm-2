@@ -58,5 +58,51 @@ class ArticleComparerSpec extends UnitSpec {
     ArticleComparer.googleMeasure(a, b, articleCount) should be < 0.79
   }
 
+  behavior of "ArticleComparer.cosineSimilarity"
+
+  it should "return 1.0 when vectors are identical" in {
+    val vectorA = Array(1.0, 2.0, 3.0)
+    val vectorB = Array(1.0, 2.0, 3.0)
+
+    ArticleComparer.cosineSimilarity(vectorA, vectorB) shouldBe 1.0
+  }
+
+  it should "return -1.0 when vectors are opposite" in {
+    val vectorA = Array(1.0, 2.0, 3.0)
+    val vectorB = Array(-1.0, -2.0, -3.0)
+
+    ArticleComparer.cosineSimilarity(vectorA, vectorB) shouldBe -1.0
+  }
+
+  it should "return 0.0 when vectors are orthogonal" in {
+    val vectorA = Array(1.0, 0.0)
+    val vectorB = Array(0.0, 1.0)
+
+    ArticleComparer.cosineSimilarity(vectorA, vectorB) shouldBe 0.0
+  }
+
+  it should "handle zero-length vectors correctly" in {
+    val vectorA = Array[Double]()
+    val vectorB = Array[Double]()
+
+    ArticleComparer.cosineSimilarity(vectorA, vectorB) shouldBe 0.0
+  }
+
+  it should "throw an exception when input vectors have different lengths" in {
+    val vectorA = Array(1.0, 2.0, 3.0)
+    val vectorB = Array(4.0)
+
+    assertThrows[IllegalArgumentException] {
+      ArticleComparer.cosineSimilarity(vectorA, vectorB)
+    }
+  }
+
+  it should "return 0.0 when one of the input vectors is a zero vector" in {
+    val vectorA = Array(1.0, 2.0, 3.0)
+    val vectorB = Array(0.0, 0.0, 0.0)
+
+    ArticleComparer.cosineSimilarity(vectorA, vectorB) shouldBe 0.0
+  }
+
   private lazy val articleCount = 500_000
 }

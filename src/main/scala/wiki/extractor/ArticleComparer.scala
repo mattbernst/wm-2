@@ -4,8 +4,6 @@ import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.{Comparison, PageType, VectorPair}
 
-import scala.collection.mutable
-
 class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
   /**
@@ -29,6 +27,23 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     })
   }
 
+  /**
+    * Calculates similarity metrics between two Wikipedia articles using their link structures.
+    *
+    * For a pair of article IDs, computes four different similarity measures:
+    * - Vector similarity (cosine) using weighted in-links
+    * - Vector similarity (cosine) using weighted out-links
+    * - Normalized Google distance using in-links
+    * - Normalized Google distance using out-links
+    *
+    * The vector similarities are calculated using LF-IAF (Link Frequency-Inverse Article Frequency)
+    * weights. The Google distance measures are normalized to distribute results more evenly
+    * across the [0,1] range using a pre-computed lower limit.
+    *
+    * @param a Page ID of the first Wikipedia article
+    * @param b Page ID of the second Wikipedia article
+    * @return A Comparison containing all four similarity measures
+    */
   private def makeComparison(a: Int, b: Int): Comparison = {
     val linksAIn  = inLinkCache.get(a)
     val linksBIn  = inLinkCache.get(b)
@@ -38,18 +53,32 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     val ilvm = makeVectors(linksAIn, linksBIn, distinctLinkInCountCache)
     val olvm = makeVectors(linksAOut, linksBOut, distinctLinkOutCountCache)
 
+    // The Google measure needs to be normalized using googleMeasureLowerLimit;
+    // otherwise, all results are crammed into the upper portion of the 0-1
+    // range.
+    val inGoogleMeasure = {
+      val original = ArticleComparer.googleMeasure(linksAIn, linksBIn, articleCount)
+      (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
+    }
+
+    val outGoogleMeasure = {
+      val original = ArticleComparer.googleMeasure(linksAOut, linksBOut, articleCount)
+      (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
+    }
+
     Comparison(
-      inLinkVectorMeasure = ???,
-      outLinkVectorMeasure = ???,
-      inLinkGoogleMeasure = ArticleComparer.googleMeasure(linksAIn, linksBIn, articleCount),
-      outLinkGoogleMeasure = ArticleComparer.googleMeasure(linksAOut, linksBOut, articleCount)
+      inLinkVectorMeasure = ArticleComparer.cosineSimilarity(ilvm.vectorA, ilvm.vectorB),
+      outLinkVectorMeasure = ArticleComparer.cosineSimilarity(olvm.vectorA, olvm.vectorB),
+      inLinkGoogleMeasure = inGoogleMeasure,
+      outLinkGoogleMeasure = outGoogleMeasure
     )
   }
 
   /**
-    * Generate vectors of link weights between a pair of link sequences.
-    * Only links that appear in both sequences will be processed, since
-    * only common links contribute to the cosine similarity calculation later.
+    * Generate vectors of link weights between a pair of link sequences
+    * originating from a pair of Wikipedia pages. Only links that appear in
+    * both sequences will be processed, since only common links contribute
+    * to the cosine similarity calculation later.
     *
     * The links for A and B should both come from in-links or both come from
     * out-links. Calculating the relatedness with vectors constructed from
@@ -57,7 +86,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     * relatedness between articles.
     *
     * The link weights are assigned by an analog of TF-IDF referred to as
-    * "LF-IAF" in section 3.1.1 of "An open-source toolkit for mining Wikipedia"
+    * LF-IAF in section 3.1.1 of "An open-source toolkit for mining Wikipedia"
     *
     * The Milne implementation in ArticleComparer.java had a special case not
     * mentioned in the paper: it added special high-weight links between link
@@ -158,6 +187,15 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
   private lazy val articleCount: Int =
     db.page.countPagesByTypes(Seq(PageType.ARTICLE))
+
+  // This extreme-case value is used to scale googleMeasure results, which tend
+  // to go well above 0.5 when even a single link is found in common. This is
+  // used to scale results to fill the full 0-1 range.
+  private lazy val googleMeasureLowerLimit = {
+    val nTerms = math.min(articleCount - 1, 100_000)
+    val links  = 0.until(nTerms).toArray
+    ArticleComparer.googleMeasure(links, links.take(1), articleCount)
+  }
 }
 
 object ArticleComparer {
@@ -180,10 +218,7 @@ object ArticleComparer {
     * Note that for a realistic (large) articleCount, this measure is 0 when
     * the links are completely non-overlapping but abruptly reaches > 0.5 when
     * links have even one match. That is because the original Google definition
-    * was tuned for a different use case. TODO?: normalize this measure to
-    * scale it to the actual range (e.g. set a lower range equal to 1 link
-    * matched out of 1000). Otherwise, this dominates cosine similarity when
-    * all the measures are averaged.
+    * was tuned for a different use case.
     *
     * @param linksA       Links into or out of article A
     * @param linksB       Links into or out of article B
@@ -216,6 +251,40 @@ object ArticleComparer {
     }
   }
 
+  /**
+    * Calculate cosine similarity between the input vectors.
+    *
+    * @param vectorA The first vector
+    * @param vectorB The second vector
+    * @return        A cosine similarity measure, ranging from -1 to 1
+    */
+  def cosineSimilarity(vectorA: Array[Double], vectorB: Array[Double]): Double = {
+    require(vectorA.length == vectorB.length)
+
+    var dotProduct        = 0.0
+    var magnitudeASquared = 0.0
+    var magnitudeBSquared = 0.0
+    var j                 = 0
+
+    while (j < vectorA.length) {
+      val a = vectorA(j)
+      val b = vectorB(j)
+
+      dotProduct += a * b
+      magnitudeASquared += a * a
+      magnitudeBSquared += b * b
+
+      j += 1
+    }
+
+    if (magnitudeASquared == 0 || magnitudeBSquared == 0) {
+      0.0
+    } else {
+      dotProduct / math.sqrt(magnitudeASquared * magnitudeBSquared)
+    }
+  }
+
+  // TODO remove?
   def intersectionProportion(linksA: Array[Int], linksB: Array[Int]): Double = {
     val u = countUnion(linksA, linksB)
     if (u == 0) {
@@ -225,9 +294,9 @@ object ArticleComparer {
     }
   }
 
-  private def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int =
-    linksA.toSet.intersect(linksB.toSet).size
-
   private def countUnion(linksA: Array[Int], linksB: Array[Int]): Int =
     linksA.toSet.union(linksB.toSet).size
+
+  private def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int =
+    linksA.toSet.intersect(linksB.toSet).size
 }
