@@ -1,8 +1,10 @@
 package wiki.extractor.phases
 
+import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
-import wiki.extractor.ArticleSelection
+import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 import wiki.extractor.language.LanguageLogic
+import wiki.extractor.types.Sense
 import wiki.extractor.util.ConfiguredProperties
 
 class Phase08(db: Storage) extends Phase(db: Storage) {
@@ -35,10 +37,13 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     */
   override def run(): Unit = {
     db.phase.deletePhase(number)
-    db.phase.createPhase(number, s"Building title_to_page map")
+    db.phase.createPhase(number, s"Building training/test data")
     val ll       = LanguageLogic.getLanguageLogic(props.language.code)
-    val selector = new ArticleSelection(db, ll)
-    val sizes    = Seq(1000, 500, 500)
+    val selector = new ArticleSelector(db, ll)
+
+    // Training articles, disambiguation-test articles, topic-test articles
+    val sizes = Seq(1000, 500, 500)
+
     val res = selector
       .extractSets(
         sizes = sizes,
@@ -48,8 +53,45 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
         minWordCount = 200,
         maxWordCount = 4000
       )
+
+    // Generate features from the subsets of articles
+
     //db.phase.completePhase(number)
   }
+
+  private def articleToFeatures(pageId: Int) = {
+    val minSenseProbability = 0.01
+
+    // Identify ambiguous-sense links from article
+    val links = db.link
+      .getBySource(pageId)
+      .distinctBy(rl => (rl.anchorText, rl.destination))
+
+    // For each link, we need to determine if it is ambiguous or not.
+    val ambiguousLinks = links.filter { link =>
+      val sense = senseCache.get(link.destination)
+      // An ambiguous label must have multiple senses and must not be totally
+      // dominated by the commonest sense
+      sense.senseCounts.size > 1 &&
+      sense.commonness(sense.commonestSense) < 1.0 - minSenseProbability
+    }
+
+    // Generate context from article
+
+    // Use context to resolve ambiguous links. Each ambiguous link where
+    // the sense.priorProbability >= minSenseProbability becomes a row in
+    // the training data set.
+  }
+
+  private lazy val senseCache: LoadingCache[Int, Sense] =
+    Scaffeine()
+      .maximumSize(1_000_000)
+      .build(loader = (destinationId: Int) => {
+        db.sense.getSenseByDestinationId(destinationId).get
+      })
+
+  private lazy val contextualizer =
+    new Contextualizer(new ArticleComparer(db), db, props.language)
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()

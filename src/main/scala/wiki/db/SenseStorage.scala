@@ -17,7 +17,7 @@ object SenseStorage {
         val cols: SQLSyntax = sqls"""label_id, destination, n"""
         batches.foreach { batch =>
           val params: Seq[Seq[SQLSyntax]] = batch.flatMap { sense =>
-            sense.destinationCounts.map {
+            sense.senseCounts.map {
               case (destination, count) =>
                 Seq(
                   sqls"${sense.labelId}",
@@ -77,7 +77,7 @@ object SenseStorage {
     * @param labelId The numeric ID of the label
     * @return Senses for the label, if found in the table
     */
-  def read(labelId: Int): Option[Sense] = {
+  def getSenseByLabelId(labelId: Int): Option[Sense] = {
     val destinationCounts = DB.autoCommit { implicit session =>
       sql"""SELECT destination, n FROM $table WHERE label_id=$labelId""".map { r =>
         (r.int("destination"), r.int("n"))
@@ -86,8 +86,27 @@ object SenseStorage {
     if (destinationCounts.isEmpty) {
       None
     } else {
-      Some(Sense(labelId = labelId, destinationCounts = destinationCounts))
+      Some(Sense(labelId = labelId, senseCounts = destinationCounts))
     }
+  }
+
+  /**
+    * Read label senses from the sense table, if the destination referenced by
+    * ID has senses stored. This is needed during the disambiguation training
+    * data extraction process to classify links to a destination as ambiguous
+    * or unambiguous.
+    *
+    * @param destinationId The numeric ID of the destination
+    * @return Senses for the label, if found in the table
+    */
+  def getSenseByDestinationId(destinationId: Int): Option[Sense] = {
+    val label = DB.autoCommit { implicit session =>
+      sql"""SELECT label_id FROM $table WHERE destination=$destinationId"""
+        .map(r => r.int("label_id"))
+        .single()
+    }
+
+    label.flatMap(labelId => getSenseByLabelId(labelId))
   }
 
   private val table = Storage.table("sense")

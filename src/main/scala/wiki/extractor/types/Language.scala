@@ -3,6 +3,8 @@ package wiki.extractor.types
 import upickle.default.*
 import wiki.extractor.util.FileHelpers
 
+import java.time.MonthDay
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.Locale
 
 case class Language(
@@ -23,15 +25,27 @@ case class Language(
    */
   rootPage: String) {
 
-  val locale: Locale = {
-    val cc = if (code == "en_simple") {
-      "en"
-    } else {
-      code
+  /**
+    * Validates if a string represents a date in the format "MMMM d" for a given locale.
+    * Examples:
+    *
+    * isDate("December 15")  // returns true in Locale.US
+    * isDate("Décembre 15")  // returns true in Locale.FRANCE
+    * isDate("not a date")   // returns false
+    *
+    * @param text  The string to validate, e.g. "December 15" or "Décembre 15"
+    * @return true if the string represents a valid month and day in the current locale
+    */
+  def isDate(text: String): Boolean = {
+    try {
+      val formatter = DateTimeFormatter
+        .ofPattern("MMMM d")
+        .withLocale(locale)
+      MonthDay.parse(text, formatter)
+      true
+    } catch {
+      case _: DateTimeParseException => false
     }
-
-    // Should be Locale.of(cc) for Java 19+, but that doesn't work before 19
-    new Locale(cc)
   }
 
   /**
@@ -46,6 +60,17 @@ case class Language(
   def isDisambiguation(transclusion: String): Boolean = {
     val tHead = transclusion.split('|').headOption.map(_.toLowerCase(locale)).getOrElse("")
     normalizedDisambiguationPrefixes.contains(tHead)
+  }
+
+  val locale: Locale = {
+    val cc = if (code == "en_simple") {
+      "en"
+    } else {
+      code
+    }
+
+    // Should be Locale.of(cc) for Java 19+, but that doesn't work before 19
+    new Locale(cc)
   }
 
   // Normally this is based on the language code, but in the case of the Simple

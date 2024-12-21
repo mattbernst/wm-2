@@ -57,7 +57,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
           val destinationCounts = cleanSlice
             .map(e => (e.destination, e.count))
             .toMap
-          sink.addSense(Sense(labelId = labelId, destinationCounts = destinationCounts))
+          sink.addSense(Sense(labelId = labelId, senseCounts = destinationCounts))
         }
 
         j += 1

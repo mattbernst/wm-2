@@ -194,19 +194,23 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
 
   it should "write and read back senses for a label" in {
     val labelId = randomInt()
+    val d1      = randomInt()
+    val d2      = randomInt()
     val sense = Sense(
       labelId = labelId,
-      destinationCounts = Map(
-        randomInt() -> 3,
-        randomInt() -> 2
+      senseCounts = Map(
+        d1 -> 3,
+        d2 -> 2
       )
     )
 
-    storage.sense.read(labelId) shouldBe None
+    storage.sense.getSenseByLabelId(labelId) shouldBe None
 
     storage.sense.write(Seq(sense))
 
-    storage.sense.read(labelId) shouldBe Some(sense)
+    storage.sense.getSenseByLabelId(labelId) shouldBe Some(sense)
+    storage.sense.getSenseByDestinationId(d1) shouldBe Some(sense)
+    storage.sense.getSenseByDestinationId(d2) shouldBe Some(sense)
   }
 
   override def afterAll(): Unit = {

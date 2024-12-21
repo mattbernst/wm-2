@@ -10,7 +10,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class ArticleSelection(db: Storage, languageLogic: LanguageLogic) {
+class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
 
   /**
     * Extract randomized subsets of articles, each of which matches the
