@@ -60,8 +60,6 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
   }
 
   private def articleToFeatures(pageId: Int) = {
-    val minSenseProbability = 0.01
-
     // Identify ambiguous-sense links from article
     val links = db.link
       .getBySource(pageId)
@@ -83,7 +81,9 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     // the training data set.
   }
 
-  private lazy val senseCache: LoadingCache[Int, Sense] =
+  private val minSenseProbability = 0.01
+
+  private val senseCache: LoadingCache[Int, Sense] =
     Scaffeine()
       .maximumSize(1_000_000)
       .build(loader = (destinationId: Int) => {
@@ -91,7 +91,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       })
 
   private lazy val contextualizer =
-    new Contextualizer(new ArticleComparer(db), db, props.language)
+    new Contextualizer(senseCache, new ArticleComparer(db), db, props.language)
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()

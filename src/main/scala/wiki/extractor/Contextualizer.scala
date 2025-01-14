@@ -1,8 +1,37 @@
 package wiki.extractor
 
-import wiki.db.Storage
-import wiki.extractor.types.Language
+import com.github.blemale.scaffeine.LoadingCache
+import wiki.db.{ResolvedLink, Storage}
+import wiki.extractor.types.{LabelCounter, Language, Sense}
 
-class Contextualizer(comparer: ArticleComparer, db: Storage, language: Language) {
-  def getContext(labels: Array[Int]) = {}
+class Contextualizer(
+  senseCache: LoadingCache[Int, Sense],
+  comparer: ArticleComparer,
+  db: Storage,
+  language: Language) {
+
+  def getContext(pageId: Int, minSenseProbability: Double) = {
+    val minLinkProbability = 0.005
+    val minLinksIn         = 4
+    val topN               = 50
+    // Get links from page. Get distinct labels from links, only for labels
+    // with label.link_doc_count >= minLinksIn and
+    // (label.link_count / label.occurrence_count) >= minLinkProbability
+
+    val links = db.link
+      .getBySource(pageId)
+      .distinctBy(_.anchorText)
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l.anchorText).exists(_ >= minLinksIn))
+      .filter(l => labelCounter.getLinkProbability(l.anchorText).exists(_ >= minLinkProbability))
+
+    val topArticles = collectTopArticles(links, topN)
+
+    // We need a sense cache here too
+  }
+
+  private def collectTopArticles(links: Seq[ResolvedLink], topN: Int): Unit = {
+
+  }
+
+  private val labelCounter: LabelCounter = db.label.read()
 }

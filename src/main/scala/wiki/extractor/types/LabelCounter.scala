@@ -66,6 +66,12 @@ class LabelCounter {
   def getLinkOccurrenceDocCount(label: String): Option[Int] =
     labelToCount.get(label).map(a => a(LabelCounter.linkOccurrenceDocCountIndex))
 
+  def getLinkProbability(label: String): Option[Double] = {
+    labelToCount.get(label).map { a =>
+      a(LabelCounter.linkOccurrenceCountIndex) / a(LabelCounter.occurrenceCountIndex).toDouble
+    }
+  }
+
   def getEntries(): Iterator[(String, Array[Int])] =
     labelToCount.iterator
 
