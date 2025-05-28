@@ -4,8 +4,9 @@ import upickle.default.*
 import wiki.extractor.util.FileHelpers
 
 import java.time.MonthDay
-import java.time.format.{DateTimeFormatter, DateTimeParseException}
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import scala.util.Try
 
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
@@ -37,14 +38,9 @@ case class Language(
     * @return true if the string represents a valid month and day in the current locale
     */
   def isDate(text: String): Boolean = {
-    try {
-      val formatter = DateTimeFormatter
-        .ofPattern("MMMM d")
-        .withLocale(locale)
-      MonthDay.parse(text, formatter)
-      true
-    } catch {
-      case _: DateTimeParseException => false
+    Try(MonthDay.parse(text, formatter)).toOption match {
+      case Some(_) => true
+      case None    => false
     }
   }
 
@@ -83,6 +79,10 @@ case class Language(
     }
     s":$prefix:"
   }
+
+  private val formatter = DateTimeFormatter
+    .ofPattern("MMMM d")
+    .withLocale(locale)
 
   private val normalizedDisambiguationPrefixes: Set[String] =
     disambiguationPrefixes.map(_.toLowerCase(locale)).toSet

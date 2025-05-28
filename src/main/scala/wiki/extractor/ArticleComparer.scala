@@ -203,7 +203,7 @@ object ArticleComparer {
   /**
     * Calculate a measure of similarity between two different link collections,
     * inspired by "The Google similarity distance"
-    * https://doi.org/10.1109/TKDE.2007.48
+    * https://doi.org/10.1109/TKDE.2007.48 https://arxiv.org/pdf/cs/0412098
     *
     * See the discussion of "relatedness" in section 3.1 of
     * "Learning to Link with Wikipedia"
@@ -219,6 +219,8 @@ object ArticleComparer {
     * the links are completely non-overlapping but abruptly reaches > 0.5 when
     * links have even one match. That is because the original Google definition
     * was tuned for a different use case.
+    *
+    * TODO: consider smoothing for the abrupt transition
     *
     * @param linksA       Links into or out of article A
     * @param linksB       Links into or out of article B

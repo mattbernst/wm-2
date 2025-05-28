@@ -18,6 +18,9 @@ class Contextualizer(
     // with label.link_doc_count >= minLinksIn and
     // (label.link_count / label.occurrence_count) >= minLinkProbability
 
+    // These are the NGrams that have been used as links anywhere in Wikipedia
+
+    // These are the actual links from the page
     val links = db.link
       .getBySource(pageId)
       .distinctBy(_.anchorText)
@@ -26,12 +29,10 @@ class Contextualizer(
 
     val topArticles = collectTopArticles(links, topN)
 
-    // We need a sense cache here too
+    // We want top articles by weight
   }
 
-  private def collectTopArticles(links: Seq[ResolvedLink], topN: Int): Unit = {
-
-  }
+  private def collectTopArticles(links: Seq[ResolvedLink], topN: Int): Unit = {}
 
   private val labelCounter: LabelCounter = db.label.read()
 }

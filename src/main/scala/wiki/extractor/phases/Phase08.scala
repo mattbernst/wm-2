@@ -79,6 +79,9 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     // Use context to resolve ambiguous links. Each ambiguous link where
     // the sense.priorProbability >= minSenseProbability becomes a row in
     // the training data set.
+    // "Each existing link provides one positive example, namely its chosen
+    // destination, and several negative examples, namely the destinations that
+    // have been chosen for this link text in other articles but not this one."
   }
 
   private val minSenseProbability = 0.01
