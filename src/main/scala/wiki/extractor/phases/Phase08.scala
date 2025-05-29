@@ -2,10 +2,10 @@ package wiki.extractor.phases
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
-import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.Sense
 import wiki.extractor.util.ConfiguredProperties
+import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 
 class Phase08(db: Storage) extends Phase(db: Storage) {
 
@@ -94,7 +94,12 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       })
 
   private lazy val contextualizer =
-    new Contextualizer(senseCache, new ArticleComparer(db), db, props.language)
+    new Contextualizer(
+      senseCache = senseCache,
+      comparer = new ArticleComparer(db),
+      db = db,
+      language = props.language
+    )
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()

@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{PageMarkup, TypedPageMarkup, Worker}
+import wiki.extractor.types.{TypedPageMarkup, Worker}
 import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
@@ -18,19 +18,14 @@ class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: collection.Se
     * @return    A map of valid labels to counts from within the page
     */
   def extract(tpm: TypedPageMarkup): mutable.Map[String, Int] = {
-    val pm: PageMarkup = if (tpm.pmu.nonEmpty) {
-      PageMarkup.deserializeUncompressed(tpm.pmu.get)
-    } else {
-      PageMarkup.deserializeCompressed(tpm.pmz.get)
-    }
+    val pageNgrams  = mutable.Map[String, Int]().withDefaultValue(0)
+    val parseResult = tpm.markup.parseResult
 
-    val pageNgrams = mutable.Map[String, Int]().withDefaultValue(0)
-
-    pm.parseResult
+    parseResult
       .map(_.text)
       .foreach { plainText =>
         languageLogic
-          .wordNgrams(plainText, goodLabels)
+          .wikiWordNGrams(plainText, goodLabels)
           .foreach(label => pageNgrams(label) += 1)
       }
 

@@ -115,11 +115,13 @@ object LinkStorage {
     val counts       = Array.ofDim[Int](n)
     var j            = 0
     DB.autoCommit { implicit session =>
-      sql"""SELECT anchor_text, destination, count(destination) FROM $table GROUP BY destination
-           ORDER BY anchor_text""".foreach { rs =>
+      sql"""SELECT anchor_text, destination, count(*)
+            FROM $table
+            GROUP BY anchor_text, destination
+            ORDER BY anchor_text""".foreach { rs =>
         labels(j) = rs.string("anchor_text")
         destinations(j) = rs.int("destination")
-        counts(j) = rs.int("count(destination)")
+        counts(j) = rs.int("count(*)")
         j += 1
       }
     }
@@ -129,8 +131,9 @@ object LinkStorage {
 
   private def countGroupedLinks(): Int = {
     DB.autoCommit { implicit session =>
-      sql"""WITH grouped AS (SELECT anchor_text, destination, count(destination) FROM $table GROUP BY destination)
-           SELECT count(*) FROM grouped"""
+      sql"""WITH grouped AS
+            (SELECT anchor_text, destination, count(*) FROM $table GROUP BY anchor_text, destination)
+            SELECT count(*) FROM grouped"""
         .map(rs => rs.int("count(*)"))
         .single()
         .getOrElse(0)

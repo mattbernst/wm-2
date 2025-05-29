@@ -38,10 +38,23 @@ The equivalent sbt command is
 sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml"
 ```
 
-With default settings on a 2019 Macbook Pro (2.6 GHz 6-Core Intel Core i7, 64 GB RAM) and the dump file from September
+With default settings on a 2024 Macbook Pro (M4 Pro, 64 GB RAM) and the dump file from September
 2024 this takes about 2.5 hours to complete. The output SQLite database is about 72 GB on disk (much larger if running
 without page markup compression), with most of the space consumed by `markup_z` or `markup` (table used
 depends on "COMPRESS_MARKUP" environment variable).
+
+Faster test with Simple English Wikipedia:
+
+```
+WP_LANG=en_simple make extract input=../wm-data/simplewiki-20240901-pages-articles.xml
+```
+
+Running with French Wikipedia:
+
+```
+WP_LANG=fr make extract input=../wm-data/frwiki-20240901-pages-articles.xml.bz2
+```
+
 
 ### Caveats
 

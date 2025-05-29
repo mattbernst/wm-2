@@ -9,8 +9,10 @@ class LabelCounter {
     * This should be called using data from the link table to initialize the
     * LabelCounter before processing the raw text of pages.
     *
-    * @param label               A label attached to a link (e.g. its anchor_text)
-    * @param linkOccurrenceCount The number of times this label is used as a link
+    * @param label               A label attached to a link (e.g. its
+    *                            anchor_text)
+    * @param linkOccurrenceCount The number of times this label is used as a
+    *                            link
     * @param linkDocCount        The number of distinct pages where this label
     *                            is used as a link
     */
@@ -54,18 +56,56 @@ class LabelCounter {
     labelToCount.put(label, counts): Unit
   }
 
+  /**
+    * Number of times this label is mentioned in Wikipedia (including links and
+    * plain text).
+    *
+    * @param label An NGram based label
+    * @return      Count of occurrences across all Wikipedia text
+    */
+  // Number of times this label is mentioned in Wikipedia (including links and plain text).
   def getOccurrenceCount(label: String): Option[Int] =
     labelToCount.get(label).map(a => a(LabelCounter.occurrenceCountIndex))
 
+  /**
+    * Number of documents in Wikipedia mentioning this label at least once
+    * (including links and plain text).
+    *
+    * @param label An NGram based label
+    * @return      Count of distinct documents containing the label
+    */
   def getOccurrenceDocCount(label: String): Option[Int] =
     labelToCount.get(label).map(a => a(LabelCounter.occurrenceDocCountIndex))
 
+  /**
+    * Number of times this label is used as the anchor text of a link in
+    * Wikipedia.
+    *
+    * @param label An NGram based label
+    * @return      Count of occurrences as link anchor text across all
+    *              Wikipedia text
+    */
   def getlinkOccurrenceCount(label: String): Option[Int] =
     labelToCount.get(label).map(a => a(LabelCounter.linkOccurrenceCountIndex))
 
+  /**
+    * Number of documents in Wikipedia using this label as the anchor text of
+    * a link.
+    *
+    * @param label An NGram based label
+    * @return      Count of distinct documents containing the label as
+    *              anchor text
+    */
   def getLinkOccurrenceDocCount(label: String): Option[Int] =
     labelToCount.get(label).map(a => a(LabelCounter.linkOccurrenceDocCountIndex))
 
+  /**
+    * The fraction of instances in which this label is used as the anchor text
+    * of a link in Wikipedia.
+    *
+    * @param label An NGram based label
+    * @return      Occurrences as link divided by all occurrences
+    */
   def getLinkProbability(label: String): Option[Double] = {
     labelToCount.get(label).map { a =>
       a(LabelCounter.linkOccurrenceCountIndex) / a(LabelCounter.occurrenceCountIndex).toDouble

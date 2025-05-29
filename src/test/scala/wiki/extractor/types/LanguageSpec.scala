@@ -155,11 +155,11 @@ class LanguageSpec extends UnitSpec {
   it should "handle complex Unicode grapheme clusters" in {
     // Test with combining characters
     lang.capitalizeFirst("é́motion") should not be empty // Should handle grapheme clusters properly
-    lang.capitalizeFirst("🙂face") shouldBe "🙂face" // Emoji should remain unchanged
+    lang.capitalizeFirst("🙂face") shouldBe "🙂face"     // Emoji should remain unchanged
   }
 
   it should "preserve whitespace and formatting" in {
-    lang.capitalizeFirst(" hello") shouldBe " hello" // Leading space means first char is space, not 'h'
+    lang.capitalizeFirst(" hello") shouldBe " hello"   // Leading space means first char is space, not 'h'
     lang.capitalizeFirst("\thello") shouldBe "\thello" // Tab character first
     lang.capitalizeFirst("\nhello") shouldBe "\nhello" // Newline character first
   }
@@ -211,11 +211,11 @@ class LanguageSpec extends UnitSpec {
   it should "handle complex Unicode grapheme clusters" in {
     // Test with combining characters
     lang.unCapitalizeFirst("É́motion") should not be empty // Should handle grapheme clusters properly
-    lang.unCapitalizeFirst("🙂Face") shouldBe "🙂Face" // Emoji should remain unchanged
+    lang.unCapitalizeFirst("🙂Face") shouldBe "🙂Face"     // Emoji should remain unchanged
   }
 
   it should "preserve whitespace and formatting" in {
-    lang.unCapitalizeFirst(" Hello") shouldBe " Hello" // Leading space means first char is space, not 'H'
+    lang.unCapitalizeFirst(" Hello") shouldBe " Hello"   // Leading space means first char is space, not 'H'
     lang.unCapitalizeFirst("\tHello") shouldBe "\tHello" // Tab character first
     lang.unCapitalizeFirst("\nHello") shouldBe "\nHello" // Newline character first
   }
@@ -227,7 +227,7 @@ class LanguageSpec extends UnitSpec {
 
     testStrings.foreach { str =>
       // capitalizeFirst -> unCapitalizeFirst should give lowercase first char
-      val capitalized = lang.capitalizeFirst(str)
+      val capitalized   = lang.capitalizeFirst(str)
       val uncapitalized = lang.unCapitalizeFirst(capitalized)
       if (str.nonEmpty && str.head.isLetter) {
         uncapitalized.head.isLower shouldBe true
@@ -235,7 +235,7 @@ class LanguageSpec extends UnitSpec {
 
       // unCapitalizeFirst -> capitalizeFirst should give uppercase first char
       val uncappedFirst = lang.unCapitalizeFirst(str)
-      val cappedAgain = lang.capitalizeFirst(uncappedFirst)
+      val cappedAgain   = lang.capitalizeFirst(uncappedFirst)
       if (str.nonEmpty && str.head.isLetter) {
         cappedAgain.head.isUpper shouldBe true
       }

@@ -71,12 +71,12 @@ case class Language(
   }
 
   /**
-   * Capitalize the first visual character of a string according to the
-   * current locale.
-   *
-   * @param input A string that may or may not already start with a capital
-   * @return      A capital-character-first string
-   */
+    * Capitalize the first visual character of a string according to the
+    * current locale.
+    *
+    * @param input A string that may or may not already start with a capital
+    * @return      A capital-character-first string
+    */
   def capitalizeFirst(input: String): String = {
     if (input.nonEmpty) {
       // Use BreakIterator to find the first grapheme cluster (visual character)
@@ -88,7 +88,7 @@ case class Language(
         input
       } else {
         val firstGrapheme = input.substring(0, firstBoundary)
-        val upperFirst = firstGrapheme.toUpperCase(locale)
+        val upperFirst    = firstGrapheme.toUpperCase(locale)
         upperFirst + input.substring(firstBoundary)
       }
     } else {
@@ -97,12 +97,12 @@ case class Language(
   }
 
   /**
-   * Un-capitalize the first visual character of a string according to the
-   * current locale.
-   *
-   * @param input A string that may or may not already start with a capital
-   * @return      A non-capital-character-first string
-   */
+    * Un-capitalize the first visual character of a string according to the
+    * current locale.
+    *
+    * @param input A string that may or may not already start with a capital
+    * @return      A non-capital-character-first string
+    */
   def unCapitalizeFirst(input: String): String = {
     if (input.nonEmpty) {
       // Use BreakIterator to find the first grapheme cluster (visual character)
@@ -114,7 +114,7 @@ case class Language(
         input
       } else {
         val firstGrapheme = input.substring(0, firstBoundary)
-        val upperFirst = firstGrapheme.toLowerCase(locale)
+        val upperFirst    = firstGrapheme.toLowerCase(locale)
         upperFirst + input.substring(firstBoundary)
       }
     } else {

@@ -36,10 +36,10 @@ object NGram {
     * @param ngrams       A sequence of ngrams extracted from the source string
     * @return             Pieces of the original source string
     */
-  def sliceString(sourceString: String, ngrams: Seq[NGram]): Seq[String] = {
-    ngrams.map(ngram => sliceString(sourceString, ngram))
+  def generateStrings(sourceString: String, ngrams: Seq[NGram]): Seq[String] = {
+    ngrams.map(ngram => generateString(sourceString, ngram))
   }
 
-  def sliceString(sourceString: String, ngram: NGram): String =
+  def generateString(sourceString: String, ngram: NGram): String =
     sourceString.slice(ngram.start, ngram.end)
 }

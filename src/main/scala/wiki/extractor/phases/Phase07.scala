@@ -33,12 +33,15 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val anchorPages = db.page.getAnchorPages()
     DBLogging.info("Loading grouped links from db")
     val groupedLinks = db.link.getGroupedLinks()
-    val sink         = new SenseSink(db)
+    DBLogging.info("Loaded grouped links from db")
+    val sink = new SenseSink(db)
 
     // Clean anchors in-place. Bad anchors become empty strings,
     // and will not match anything in targets.
     groupedLinks.labels.mapInPlace(l => anchorLogic.cleanAnchor(l))
     val transitions = changes(groupedLinks.labels)
+
+    DBLogging.info("Storing sense counts for labels")
     if (transitions.isEmpty) {
       DBLogging.error(s"Did not find any link groups to process")
     } else {
@@ -70,8 +73,9 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
   }
 
   private def changes(arr: Array[String]): Array[Int] = {
-    if (arr.isEmpty) Array.empty
-    else {
+    if (arr.isEmpty) {
+      Array.empty
+    } else {
       arr.zipWithIndex
         .sliding(2)
         .collect { case Array((a, _), (b, idx)) if a != b => idx }

@@ -39,7 +39,7 @@ class NGramGeneratorSpec extends UnitSpec {
     )
 
     val result  = ngg.generate(input).toList
-    val strings = NGram.sliceString(input, result)
+    val strings = NGram.generateStrings(input, result)
 
     strings shouldBe expected
   }
@@ -82,7 +82,7 @@ class NGramGeneratorSpec extends UnitSpec {
     )
 
     val result  = ngg.generate(input).toList
-    val strings = NGram.sliceString(input, result)
+    val strings = NGram.generateStrings(input, result)
 
     strings shouldBe expected
   }
@@ -129,7 +129,7 @@ class NGramGeneratorSpec extends UnitSpec {
     )
 
     val result  = ngg.generate(input).toList
-    val strings = NGram.sliceString(input, result)
+    val strings = NGram.generateStrings(input, result)
 
     strings shouldBe expected
   }
@@ -184,7 +184,7 @@ class NGramGeneratorSpec extends UnitSpec {
     )
 
     val result  = ngg.generate(input).toList
-    val strings = NGram.sliceString(input, result)
+    val strings = NGram.generateStrings(input, result)
 
     strings shouldBe expected
   }
@@ -223,7 +223,7 @@ class NGramGeneratorSpec extends UnitSpec {
     )
 
     val result   = ngg.generate(input).toList
-    val strings  = NGram.sliceString(input, result)
+    val strings  = NGram.generateStrings(input, result)
     val combined = result.map(_.isSentenceStart).zip(strings)
 
     combined shouldBe expected
@@ -287,7 +287,7 @@ class NGramGeneratorSpec extends UnitSpec {
     val input = "The order of the memory bytes storing the bits varies; see endianness."
 
     val result     = ngg.generate(input).toList
-    val strings    = NGram.sliceString(input, result)
+    val strings    = NGram.generateStrings(input, result)
     val resultFast = ngg.generateFast(input).toList
 
     strings.foreach(s => resultFast.contains(s) shouldBe true)
