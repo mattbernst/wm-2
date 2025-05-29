@@ -3,6 +3,7 @@ package wiki.extractor.types
 import upickle.default.*
 import wiki.extractor.util.FileHelpers
 
+import java.text.BreakIterator
 import java.time.MonthDay
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -67,6 +68,58 @@ case class Language(
 
     // Should be Locale.of(cc) for Java 19+, but that doesn't work before 19
     new Locale(cc)
+  }
+
+  /**
+   * Capitalize the first visual character of a string according to the
+   * current locale.
+   *
+   * @param input A string that may or may not already start with a capital
+   * @return      A capital-character-first string
+   */
+  def capitalizeFirst(input: String): String = {
+    if (input.nonEmpty) {
+      // Use BreakIterator to find the first grapheme cluster (visual character)
+      val boundary = BreakIterator.getCharacterInstance(locale)
+      boundary.setText(input)
+
+      val firstBoundary = boundary.next()
+      if (firstBoundary == BreakIterator.DONE || firstBoundary <= 0) {
+        input
+      } else {
+        val firstGrapheme = input.substring(0, firstBoundary)
+        val upperFirst = firstGrapheme.toUpperCase(locale)
+        upperFirst + input.substring(firstBoundary)
+      }
+    } else {
+      input
+    }
+  }
+
+  /**
+   * Un-capitalize the first visual character of a string according to the
+   * current locale.
+   *
+   * @param input A string that may or may not already start with a capital
+   * @return      A non-capital-character-first string
+   */
+  def unCapitalizeFirst(input: String): String = {
+    if (input.nonEmpty) {
+      // Use BreakIterator to find the first grapheme cluster (visual character)
+      val boundary = BreakIterator.getCharacterInstance(locale)
+      boundary.setText(input)
+
+      val firstBoundary = boundary.next()
+      if (firstBoundary == BreakIterator.DONE || firstBoundary <= 0) {
+        input
+      } else {
+        val firstGrapheme = input.substring(0, firstBoundary)
+        val upperFirst = firstGrapheme.toLowerCase(locale)
+        upperFirst + input.substring(firstBoundary)
+      }
+    } else {
+      input
+    }
   }
 
   // Normally this is based on the language code, but in the case of the Simple
