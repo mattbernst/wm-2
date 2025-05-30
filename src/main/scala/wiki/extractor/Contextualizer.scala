@@ -61,7 +61,8 @@ class Contextualizer(
 
   private def linkLabels(text: String): Array[String] = {
     languageLogic
-      .wikiWordNGrams(text, goodLabels)
+      .wordNGrams(language = language, documentText = text)
+      .filter(n => goodLabels.contains(n))
       .distinct
   }
 
@@ -74,3 +75,5 @@ class Contextualizer(
   private val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
   private val goodLabels: collection.Set[String]  = labelToId.keySet
 }
+
+object Contextualizer {}

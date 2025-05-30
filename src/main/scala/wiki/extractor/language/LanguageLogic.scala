@@ -3,8 +3,10 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
 import wiki.extractor.language.types.Snippet
+import wiki.extractor.types.Language
 import wiki.extractor.util.Logging
 
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 trait LanguageLogic {
@@ -52,24 +54,34 @@ trait LanguageLogic {
     *
     * @param wikiPagePlainText A plain-text rendition of a Wikipedia entry
     * @param valid             The set of valid strings to retain
-    * @return                  An array of word-level ngrams as strings
+    * @return                  An array of word-level NGrams as strings
     */
   def wikiWordNGrams(wikiPagePlainText: String, valid: collection.Set[String]): Array[String] =
     fastNGrams(wikiPagePlainText, valid)
 
   /**
-    * Generate word NGrams and filter them against the valid set of NGrams.
-    * This is a more general function that can handle any kind of document.
-    * The main different from wikiWordNGrams is that it will generate
-    * lower-cased variants of NGrams for beginning-of-sentence NGrams. This
-    * requires a slower code path than wikiWordNGrams but it can help
+    * Generate word NGrams from a text document. This is a more general
+    * function that can handle any kind of document. The main different
+    * from wikiWordNGrams is that it will generate lower-cased variants of
+    * NGrams for beginning-of-sentence NGrams. This requires a slower code path
+    * than wikiWordNGrams.
     *
-    * @param documentText
-    * @param valid
-    * @return
+    * @param language     The language to use for processing the document
+    * @param documentText The plain text of a document
+    * @return             An array of word-level NGrams as strings
     */
-  def wordNGrams(documentText: String, valid: collection.Set[String]): Array[String] = {
-    ???
+  def wordNGrams(language: Language, documentText: String): Array[String] = {
+    val buffer = ListBuffer[String]()
+    val ngg    = new NGramGenerator(sentenceDetector.get(), tokenizer.get())
+
+    ngg.generate(documentText).foreach { ng =>
+      buffer.append(ng.getNgramAsString(documentText))
+      if (ng.isSentenceStart) {
+        buffer.append(language.unCapitalizeFirst(ng.getNgramAsString(documentText)))
+      }
+    }
+
+    buffer.toArray
   }
 
   private[language] def fastNGrams(input: String, valid: collection.Set[String]): Array[String] = {
