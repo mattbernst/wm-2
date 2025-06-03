@@ -127,16 +127,23 @@ class Contextualizer(
     * @return           Candidates reweighted, ranked, and limited to a maximum
     *                   of maxContextSize results
     */
+
   private def collectTopCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
     val pages = ListBuffer[RepresentativePage]()
-    candidates.foreach { a =>
+    var j = 0
+
+    while (j < candidates.length) {
       var averageRelatedness = 0.0
-      candidates.foreach { b =>
+      var k = j + 1
+      val a = candidates(j)
+      while (k < candidates.length) {
+        val b = candidates(k)
         if (a.pageId != b.pageId) {
           comparer
             .compare(a.pageId, b.pageId)
             .foreach(comparison => averageRelatedness += comparison.mean)
         }
+        k += 1
       }
 
       if (candidates.length > 1) {
@@ -145,6 +152,7 @@ class Contextualizer(
 
       val weight = a.weight + (4 * averageRelatedness) / 5
       pages.append(RepresentativePage(pageId = a.pageId, weight = weight))
+      j += 1
     }
 
     pages.toArray

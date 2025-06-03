@@ -15,6 +15,7 @@ import scala.collection.mutable.ListBuffer
 case class ModelEntry(
   sourcePageId: Int,
   linkDestination: Int,
+  senseId: Int,
   commonness: Double,
   relatedness: Double,
   contextQuality: Double,
@@ -56,15 +57,15 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
     // Training articles, disambiguation-test articles, topic-test articles
     //val sizes = Seq(1000, 500, 500)
-    val sizes = Seq(10, 5, 5)
+    val sizes = Seq(5, 2, 2)
 
     val res = selector
       .extractSets(
         sizes = sizes,
-        minOutLinks = 50,
-        minInLinks = 25,
+        minOutLinks = 15,
+        minInLinks = 20,
         maxListProportion = 0.1,
-        minWordCount = 200,
+        minWordCount = 400,
         maxWordCount = 4000
       )
 
@@ -111,6 +112,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
             val entry = ModelEntry(
               sourcePageId = pageId,
               linkDestination = link.destination,
+              senseId = senseId,
               commonness = sense.commonness(senseId),
               relatedness = comparer.getRelatednessTo(senseId, context),
               contextQuality = context.quality,

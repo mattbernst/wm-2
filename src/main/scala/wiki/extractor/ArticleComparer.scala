@@ -16,7 +16,12 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     */
   def compare(a: Int, b: Int): Option[Comparison] = {
     // Comparison is symmetric, so results for (A,B) also match (B,A)
-    val key = List(a, b).sorted
+    val key = if (a > b) {
+      (a.toLong << 32) | (b.toLong & 0xFFFFFFFFL)
+    }
+    else {
+      (b.toLong << 32) | (a.toLong & 0xFFFFFFFFL)
+    }
 
     comparisonCache.get(key, _ => {
       if (a == b) {
@@ -215,7 +220,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
         }
       })
 
-  private val comparisonCache: Cache[List[Int], Option[Comparison]] =
+  private val comparisonCache: Cache[Long, Option[Comparison]] =
     Scaffeine()
       .maximumSize(cacheSize)
       .build()
