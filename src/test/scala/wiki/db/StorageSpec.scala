@@ -209,8 +209,6 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.sense.write(Seq(sense))
 
     storage.sense.getSenseByLabelId(labelId) shouldBe Some(sense)
-    storage.sense.getSenseByDestinationId(d1) shouldBe Some(sense)
-    storage.sense.getSenseByDestinationId(d2) shouldBe Some(sense)
   }
 
   override def afterAll(): Unit = {

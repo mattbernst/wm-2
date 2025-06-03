@@ -1,0 +1,4 @@
+package wiki.extractor.types
+
+case class RepresentativePage(pageId: Int, weight: Double)
+case class Context(pages: Array[RepresentativePage], quality: Double)

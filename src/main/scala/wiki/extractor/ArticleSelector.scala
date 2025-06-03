@@ -67,11 +67,7 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
             if (wordCount >= minWordCount && wordCount <= maxWordCount) {
               val wikiText = markup.flatMap(_.wikitext).getOrElse("")
               if (lineListRatio(wikiText) <= maxListProportion) {
-                println(s"SIZE $size C $candidate")
                 result.append(candidate)
-              } else {
-                val page = db.getPage(candidate)
-                println(s"REJECTED $candidate $page")
               }
             }
           }

@@ -1,11 +1,24 @@
 package wiki.extractor.phases
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
+import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.Sense
 import wiki.extractor.util.ConfiguredProperties
 import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
+
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
+// TODO db storage
+case class ModelEntry(
+  sourcePageId: Int,
+  linkDestination: Int,
+  commonness: Double,
+  relatedness: Double,
+  contextQuality: Double,
+  isCorrectSense: Boolean)
 
 class Phase08(db: Storage) extends Phase(db: Storage) {
 
@@ -42,7 +55,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     val selector = new ArticleSelector(db, ll)
 
     // Training articles, disambiguation-test articles, topic-test articles
-    val sizes = Seq(1000, 500, 500)
+    //val sizes = Seq(1000, 500, 500)
+    val sizes = Seq(10, 5, 5)
 
     val res = selector
       .extractSets(
@@ -55,51 +69,84 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       )
 
     // Generate features from the subsets of articles
+    res.foreach { subset =>
+      subset.foreach { pageId =>
+        articleToFeatures(pageId)
+      }
+    }
 
     //db.phase.completePhase(number)
   }
 
-  private def articleToFeatures(pageId: Int) = {
-    // Identify ambiguous-sense links from article
+  /**
+    * Get features to train on from a Wikipedia article. We're trying
+    * to predict the correct sense of an ambiguous term from commonness,
+    * relatedness, and context quality.
+    *
+    * This encapsulates logic similar to "train" in Disambiguator.java
+    *
+    * @param pageId The numeric ID of a Wikipedia page used for training
+    */
+  private def articleToFeatures(pageId: Int): Array[ModelEntry] = {
+    val context = contextualizer.getContext(pageId, minSenseProbability)
+    val buffer  = ListBuffer[ModelEntry]()
+
     val links = db.link
       .getBySource(pageId)
+      .filter(l => labelToId(l.anchorText) > 0)
       .distinctBy(rl => (rl.anchorText, rl.destination))
 
-    // For each link, we need to determine if it is ambiguous or not.
-    val ambiguousLinks = links.filter { link =>
-      val sense = senseCache.get(link.destination)
-      // An ambiguous label must have multiple senses and must not be totally
-      // dominated by the commonest sense
-      sense.senseCounts.size > 1 &&
-      sense.commonness(sense.commonestSense) < 1.0 - minSenseProbability
+    // Identify ambiguous-sense links from article.
+    // Ambiguous links go into the training data.
+    links.foreach { link =>
+      labelIdToSense.get(labelToId(link.anchorText)).foreach { sense =>
+        // An ambiguous label must have multiple senses and must not be totally
+        // dominated by the commonest sense.
+        val dominated = sense.commonness(sense.commonestSense) > 1.0 - minSenseProbability
+        if (sense.senseCounts.size > 1 && !dominated) {
+          // "Each existing link provides one positive example, namely its chosen
+          // destination, and several negative examples, namely the destinations that
+          // have been chosen for this link text in other articles but not this one."
+          sense.senseCounts.keys.map { senseId =>
+            val entry = ModelEntry(
+              sourcePageId = pageId,
+              linkDestination = link.destination,
+              commonness = sense.commonness(senseId),
+              relatedness = comparer.getRelatednessTo(senseId, context),
+              contextQuality = context.quality,
+              isCorrectSense = senseId == link.destination
+            )
+            BlackWhite.pprintln(entry)
+            buffer.append(entry)
+          }
+        }
+      }
     }
 
-    // Generate context from article
-
-    // Use context to resolve ambiguous links. Each ambiguous link where
-    // the sense.priorProbability >= minSenseProbability becomes a row in
-    // the training data set.
-    // "Each existing link provides one positive example, namely its chosen
-    // destination, and several negative examples, namely the destinations that
-    // have been chosen for this link text in other articles but not this one."
+    buffer.toArray
   }
 
   private val minSenseProbability = 0.01
 
-  private val senseCache: LoadingCache[Int, Sense] =
+  private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
     Scaffeine()
       .maximumSize(1_000_000)
-      .build(loader = (destinationId: Int) => {
-        db.sense.getSenseByDestinationId(destinationId).get
+      .build(loader = (labelId: Int) => {
+        db.sense.getSenseByLabelId(labelId)
       })
 
   private lazy val contextualizer =
     new Contextualizer(
-      senseCache = senseCache,
-      comparer = new ArticleComparer(db),
+      maxContextSize = 64,
+      labelIdToSense = labelIdToSense,
+      labelToId = labelToId,
+      comparer = comparer,
       db = db,
       language = props.language
     )
+
+  private lazy val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
+  private lazy val comparer                            = new ArticleComparer(db)
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()

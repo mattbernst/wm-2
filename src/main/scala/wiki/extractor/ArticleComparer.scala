@@ -2,7 +2,7 @@ package wiki.extractor
 
 import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
 import wiki.db.Storage
-import wiki.extractor.types.{Comparison, PageType, VectorPair}
+import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
 
 class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
@@ -25,6 +25,35 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
         Some(makeComparison(a, b))
       }
     })
+  }
+
+  /**
+    * Get relatedness measure between a given Wikipedia page ID and a Context
+    * of representative pages for a document. For example, a page about the
+    * planet Mercury should be more related to a Context derived from an
+    * document about NASA than it is related to a Context derived from an
+    * article about pollutants in coal.
+    *
+    * @param pageId  The numeric ID of a Wikipedia page
+    * @param context A Context containing top candidate Wikipedia pages for
+    *                representing a document
+    * @return        A measure that is higher for pages that are more similar
+    *                to the given Context
+    */
+  def getRelatednessTo(pageId: Int, context: Context): Double = {
+    if (context.quality == 0.0 || context.pages.isEmpty) {
+      0.0
+    } else {
+      var relatedness = 0.0
+      context.pages.foreach { page =>
+        compare(page.pageId, pageId).foreach { comparsion =>
+          val r = comparsion.mean * page.weight
+          relatedness += r
+        }
+      }
+
+      relatedness / context.quality
+    }
   }
 
   /**
@@ -106,7 +135,13 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   private def makeVectors(linksA: Array[Int], linksB: Array[Int], cache: LoadingCache[Int, Int]): VectorPair = {
     val linkACounts = linksA.groupBy(identity).view.mapValues(_.length)
     val linkBCounts = linksB.groupBy(identity).view.mapValues(_.length)
-    val commonLinks = linkACounts.keySet.intersect(linkBCounts.keySet).toArray.sorted
+    val commonLinks = linkACounts
+      .keySet
+      .intersect(linkBCounts.keySet)
+      .filter(l => cache.get(l) > 0)
+      .toArray
+      .sorted
+
     if (commonLinks.nonEmpty) {
       val vectorA = Array.ofDim[Double](commonLinks.length)
       val vectorB = Array.ofDim[Double](commonLinks.length)
@@ -279,7 +314,7 @@ object ArticleComparer {
       j += 1
     }
 
-    if (magnitudeASquared == 0 || magnitudeBSquared == 0) {
+    if (magnitudeASquared == 0.0 || magnitudeBSquared == 0.0) {
       0.0
     } else {
       dotProduct / math.sqrt(magnitudeASquared * magnitudeBSquared)

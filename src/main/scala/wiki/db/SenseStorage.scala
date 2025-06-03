@@ -92,24 +92,5 @@ object SenseStorage {
     }
   }
 
-  /**
-    * Read label senses from the sense table, if the destination referenced by
-    * ID has senses stored. This is needed during the disambiguation training
-    * data extraction process to classify links to a destination as ambiguous
-    * or unambiguous.
-    *
-    * @param destinationId The numeric ID of the destination
-    * @return Senses for the label, if found in the table
-    */
-  def getSenseByDestinationId(destinationId: Int): Option[Sense] = {
-    val label = DB.autoCommit { implicit session =>
-      sql"""SELECT label_id FROM $table WHERE destination=$destinationId"""
-        .map(r => r.int("label_id"))
-        .single()
-    }
-
-    label.flatMap(labelId => getSenseByLabelId(labelId))
-  }
-
   private val table = Storage.table("sense")
 }

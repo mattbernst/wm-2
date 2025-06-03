@@ -4,10 +4,9 @@ import upickle.default.*
 import wiki.extractor.util.FileHelpers
 
 import java.text.BreakIterator
-import java.time.MonthDay
 import java.time.format.DateTimeFormatter
+import java.time.{MonthDay, YearMonth}
 import java.util.Locale
-import scala.util.Try
 
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
@@ -28,21 +27,23 @@ case class Language(
   rootPage: String) {
 
   /**
-    * Validates if a string represents a date in the format "MMMM d" for a given locale.
-    * Examples:
+    * Generate all possible "MMMM d" combinations (full month name + day) that are valid
+    * in the current locale.
     *
-    * isDate("December 15")  // returns true in Locale.US
-    * isDate("Décembre 15")  // returns true in Locale.FRANCE
-    * isDate("not a date")   // returns false
-    *
-    * @param text  The string to validate, e.g. "December 15" or "Décembre 15"
-    * @return true if the string represents a valid month and day in the current locale
+    * @return A Set of all valid date strings in "MMMM d" format
     */
-  def isDate(text: String): Boolean = {
-    Try(MonthDay.parse(text, formatter)).toOption match {
-      case Some(_) => true
-      case None    => false
-    }
+  def generateValidDateStrings(): Set[String] = {
+    val formatter = DateTimeFormatter.ofPattern("MMMM d", locale)
+    val validStrings = for {
+      month <- 1 to 12
+      // Get the maximum days for this month (using a leap year)
+      maxDay = YearMonth.of(2024, month).lengthOfMonth()
+      day <- 1 to maxDay
+      monthDay   = MonthDay.of(month, day)
+      dateString = monthDay.format(formatter)
+    } yield dateString
+
+    validStrings.toSet
   }
 
   /**
@@ -132,10 +133,6 @@ case class Language(
     }
     s":$prefix:"
   }
-
-  private val formatter = DateTimeFormatter
-    .ofPattern("MMMM d")
-    .withLocale(locale)
 
   private val normalizedDisambiguationPrefixes: Set[String] =
     disambiguationPrefixes.map(_.toLowerCase(locale)).toSet

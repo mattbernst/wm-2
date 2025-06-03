@@ -52,7 +52,7 @@ class NGramGenerator(
       val globalEnd   = lineStart + sentenceSpan.getStart + tokenSpans(right).getEnd
       val ngramStart  = tokenSpans(left).getStart
 
-      val tokenSpansLocalToNgram = (left.to(right)).map { k =>
+      val tokenSpansLocalToNgram = left.to(right).map { k =>
         val tokenSpan = tokenSpans(k)
         new Span(
           tokenSpan.getStart - ngramStart,

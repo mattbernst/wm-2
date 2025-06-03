@@ -24,7 +24,7 @@ trait LanguageLogic {
     * at all, then both firstParagraph and firstSentence are None.
     *
     * @param input Text to process for extraction
-    * @return A snippet of extracted text content
+    * @return      A snippet of extracted text content
     */
   def getSnippet(input: String): Snippet = {
     val lines = input.split('\n')
