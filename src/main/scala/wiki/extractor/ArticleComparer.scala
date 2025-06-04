@@ -51,15 +51,44 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       0.0
     } else {
       var relatedness = 0.0
-      // TODO? prime cache with all context.pages
+      val pageIds     = (Array(pageId) ++ context.pages.map(_.pageId)).distinct.sorted
+      primeCaches(pageIds)
       context.pages.foreach { page =>
-        compare(page.pageId, pageId).foreach { comparsion =>
-          val r = comparsion.mean * page.weight
+        compare(page.pageId, pageId).foreach { comparison =>
+          val r = comparison.mean * page.weight
           relatedness += r
         }
       }
 
       relatedness / context.quality
+    }
+  }
+
+  /**
+    * Populate in/out link caches with the data needed for comparisons. This is
+    * more efficient than loading everything on a cache miss because we can
+    * do bulk database lookups for the missing elements.
+    *
+    * @param pageIds All the numeric IDs of Wikipedia pages to look up
+    */
+  def primeCaches(pageIds: Array[Int]): Unit = {
+    val missingIn = pageIds
+      .filter(p => inLinkCache.getIfPresent(p).isEmpty)
+      .distinct
+      .toSeq
+    if (missingIn.nonEmpty) {
+      db.link
+        .getByDestination(missingIn)
+        .foreach(t => inLinkCache.put(t._1, t._2.map(_.source).toArray))
+    }
+    val missingOut = pageIds
+      .filter(p => outLinkCache.getIfPresent(p).isEmpty)
+      .distinct
+      .toSeq
+    if (missingOut.nonEmpty) {
+      db.link
+        .getBySource(missingOut)
+        .foreach(t => outLinkCache.put(t._1, t._2.map(_.destination).toArray))
     }
   }
 
@@ -169,8 +198,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
           commonLinksBuffer += link
         }
     }
-
-    // Prime link count cache in bulk, then filter out zero-count links
 
     if (commonLinksBuffer.nonEmpty) {
       val commonLinks = commonLinksBuffer.toArray.sorted

@@ -29,11 +29,10 @@ class Contextualizer(
     */
   def getContext(pageId: Int, minSenseProbability: Double): Context = {
     val parseResult = db.page.readMarkupAuto(pageId).flatMap(_.parseResult)
-    // Use only anchor texts
-    val links = parseResult.map(_.links).getOrElse(Seq())
+    val links       = parseResult.map(_.links).getOrElse(Seq())
 
-    val allLinks = links.map(_.anchorText).mkString(" ")
-    getContext(allLinks, minSenseProbability)
+    val linkAnchorTexts = links.map(_.anchorText).mkString(" ")
+    getContext(linkAnchorTexts, minSenseProbability)
   }
 
   /**
@@ -131,6 +130,7 @@ class Contextualizer(
   private def collectTopCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
     val pages = ListBuffer[RepresentativePage]()
     var j     = 0
+    comparer.primeCaches(candidates.map(_.pageId))
 
     while (j < candidates.length) {
       var averageRelatedness = 0.0

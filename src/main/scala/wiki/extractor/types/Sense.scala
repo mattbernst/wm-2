@@ -1,7 +1,7 @@
 package wiki.extractor.types
 
 // A label_id using the id from the label table, mapped to a per-destination
-// count of links for that sense
+// count of page links for that sense
 case class Sense(labelId: Int, senseCounts: Map[Int, Int]) {
 
   def commonness(destination: Int): Double = {

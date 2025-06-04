@@ -89,12 +89,25 @@ object LinkStorage {
     * @param id ID of the destination page involved in a link
     * @return   All matching links
     */
-  def getByDestination(id: Int): Seq[ResolvedLink] = {
-    DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM $table WHERE destination=$id"""
-        .map(toResolvedLink)
-        .list()
+  def getByDestination(id: Int): Seq[ResolvedLink] =
+    getByDestination(Seq(id)).getOrElse(id, Seq())
+
+  /**
+    * Get links for multiple destination page IDs, keyed by destination page ID.
+    *
+    * @param ids IDs of the destination pages involved in a link
+    * @return    Destination IDs mapped to matching links
+    */
+  def getByDestination(ids: Seq[Int]): Map[Int, Seq[ResolvedLink]] = {
+    val batches = ids.grouped(Storage.batchSqlSize).toSeq
+    val rows = DB.autoCommit { implicit session =>
+      batches.flatMap { batch =>
+        sql"""SELECT * FROM $table WHERE destination IN ($batch)"""
+          .map(toResolvedLink)
+          .list()
+      }
     }
+    rows.groupBy(_.destination)
   }
 
   /**
