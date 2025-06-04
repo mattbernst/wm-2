@@ -9,12 +9,12 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class Contextualizer(
-                      maxContextSize: Int,
-                      labelIdToSense: LoadingCache[Int, Option[Sense]],
-                      labelToId: mutable.Map[String, Int],
-                      comparer: ArticleComparer,
-                      db: Storage,
-                      language: Language) {
+  maxContextSize: Int,
+  labelIdToSense: LoadingCache[Int, Option[Sense]],
+  labelToId: mutable.Map[String, Int],
+  comparer: ArticleComparer,
+  db: Storage,
+  language: Language) {
 
   /**
     * Construct a context containing top candidate Wikipedia pages from an
@@ -130,12 +130,12 @@ class Contextualizer(
 
   private def collectTopCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
     val pages = ListBuffer[RepresentativePage]()
-    var j = 0
+    var j     = 0
 
     while (j < candidates.length) {
       var averageRelatedness = 0.0
-      var k = j + 1
-      val a = candidates(j)
+      var k                  = j + 1
+      val a                  = candidates(j)
       while (k < candidates.length) {
         val b = candidates(k)
         if (a.pageId != b.pageId) {

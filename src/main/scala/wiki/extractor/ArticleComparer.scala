@@ -4,6 +4,8 @@ import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
 
+import scala.collection.mutable
+
 class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
   /**
@@ -18,8 +20,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     // Comparison is symmetric, so results for (A,B) also match (B,A)
     val key = if (a > b) {
       (a.toLong << 32) | (b.toLong & 0xFFFFFFFFL)
-    }
-    else {
+    } else {
       (b.toLong << 32) | (a.toLong & 0xFFFFFFFFL)
     }
 
@@ -138,22 +139,45 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     * @return       A pair of vectors containing weights for matched terms
     */
   private def makeVectors(linksA: Array[Int], linksB: Array[Int], cache: LoadingCache[Int, Int]): VectorPair = {
-    val linkACounts = linksA.groupBy(identity).view.mapValues(_.length)
-    val linkBCounts = linksB.groupBy(identity).view.mapValues(_.length)
-    val commonLinks = linkACounts
-      .keySet
-      .intersect(linkBCounts.keySet)
-      .filter(l => cache.get(l) > 0)
-      .toArray
-      .sorted
+    val linkACounts = mutable.Map[Int, Int]().withDefaultValue(0)
+    val linkBCounts = mutable.Map[Int, Int]().withDefaultValue(0)
+    var maxCountA   = 0
+    var maxCountB   = 0
 
-    if (commonLinks.nonEmpty) {
-      val vectorA = Array.ofDim[Double](commonLinks.length)
-      val vectorB = Array.ofDim[Double](commonLinks.length)
-      // Get the count of the most heavily repeated (if any) link in each of
-      // the link sequences, for constructing the augmented link frequency.
-      val commonestA = linkACounts.values.max.toDouble
-      val commonestB = linkBCounts.values.max.toDouble
+    linksA.foreach { link =>
+      val newCount = linkACounts(link) + 1
+      linkACounts(link) = newCount
+      if (newCount > maxCountA) {
+        maxCountA = newCount
+      }
+    }
+
+    linksB.foreach { link =>
+      val newCount = linkBCounts(link) + 1
+      linkBCounts(link) = newCount
+      if (newCount > maxCountB) {
+        maxCountB = newCount
+      }
+    }
+
+    // Find common links
+    val commonLinksBuffer = mutable.ArrayBuffer[Int]()
+    linkACounts.foreach {
+      case (link, _) =>
+        if (linkBCounts.contains(link) && cache.get(link) > 0) {
+          commonLinksBuffer += link
+        }
+    }
+
+    // Prime link count cache in bulk, then filter out zero-count links
+
+    if (commonLinksBuffer.nonEmpty) {
+      val commonLinks = commonLinksBuffer.toArray.sorted
+      val vectorA     = Array.ofDim[Double](commonLinks.length)
+      val vectorB     = Array.ofDim[Double](commonLinks.length)
+
+      val commonestA = maxCountA.toDouble
+      val commonestB = maxCountB.toDouble
 
       var j = 0
       commonLinks.foreach { link =>
