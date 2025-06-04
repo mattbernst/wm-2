@@ -51,6 +51,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       0.0
     } else {
       var relatedness = 0.0
+      // TODO? prime cache with all context.pages
       context.pages.foreach { page =>
         compare(page.pageId, pageId).foreach { comparsion =>
           val r = comparsion.mean * page.weight
@@ -350,19 +351,9 @@ object ArticleComparer {
     }
   }
 
-  // TODO remove?
-  def intersectionProportion(linksA: Array[Int], linksB: Array[Int]): Double = {
-    val u = countUnion(linksA, linksB)
-    if (u == 0) {
-      0.0
-    } else {
-      countIntersection(linksA, linksB) / u.toDouble
-    }
+  def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int = {
+    val setA = mutable.Set.from(linksA)
+    val setB = mutable.Set.from(linksB)
+    setA.intersect(setB).size
   }
-
-  private def countUnion(linksA: Array[Int], linksB: Array[Int]): Int =
-    linksA.toSet.union(linksB.toSet).size
-
-  private def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int =
-    linksA.toSet.intersect(linksB.toSet).size
 }

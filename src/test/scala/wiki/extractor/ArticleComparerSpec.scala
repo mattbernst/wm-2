@@ -104,5 +104,57 @@ class ArticleComparerSpec extends UnitSpec {
     ArticleComparer.cosineSimilarity(vectorA, vectorB) shouldBe 0.0
   }
 
+  behavior of "ArticleComparer.countIntersection"
+
+  it should "return 0 for empty arrays" in {
+    ArticleComparer.countIntersection(Array(), Array()) shouldBe 0
+  }
+
+  it should "return 0 when one array is empty" in {
+    val a = Array(1, 2, 3)
+    ArticleComparer.countIntersection(a, Array()) shouldBe 0
+    ArticleComparer.countIntersection(Array(), a) shouldBe 0
+  }
+
+  it should "return 0 for non-overlapping arrays" in {
+    val a = Array(1, 2, 3)
+    val b = Array(4, 5, 6)
+    ArticleComparer.countIntersection(a, b) shouldBe 0
+  }
+
+  it should "return correct count for identical arrays" in {
+    val a = Array(1, 2, 3, 4, 5)
+    ArticleComparer.countIntersection(a, a) shouldBe 5
+  }
+
+  it should "return correct count for partially overlapping arrays" in {
+    val a = Array(1, 2, 3, 4, 5)
+    val b = Array(3, 4, 5, 6, 7)
+    ArticleComparer.countIntersection(a, b) shouldBe 3
+  }
+
+  it should "handle swapped array order with duplication" in {
+    val a        = Array(1, 2, 2, 3, 3, 3)
+    val b        = Array(2, 3, 4)
+    val expected = 2
+    ArticleComparer.countIntersection(a, b) shouldBe expected
+    ArticleComparer.countIntersection(b, a) shouldBe expected
+  }
+
+  it should "work efficiently random arrays" in {
+    val a        = randomInts(150).toArray
+    val b        = randomInts(200).toArray
+    val expected = a.toSet.intersect(b.toSet).size
+
+    ArticleComparer.countIntersection(a, b) shouldBe expected
+  }
+
+  it should "be consistent regardless of array order" in {
+    val a = Array(1, 3, 5, 7, 9)
+    val b = Array(2, 3, 6, 7, 10)
+
+    ArticleComparer.countIntersection(a, b) shouldBe ArticleComparer.countIntersection(b, a)
+  }
+
   private lazy val articleCount = 500_000
 }
