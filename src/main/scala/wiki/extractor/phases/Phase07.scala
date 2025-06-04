@@ -56,10 +56,9 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
           .filter(e => util.Arrays.binarySearch(anchorPages, e.destination) >= 0)
 
         if (cleanSlice.nonEmpty) {
-          val labelId = targets(cleanSlice.head.label)
-          val destinationCounts = cleanSlice
-            .map(e => (e.destination, e.count))
-            .toMap
+          val labelId           = targets(cleanSlice.head.label)
+          val destinationCounts = mutable.Map[Int, Int]()
+          cleanSlice.foreach(e => destinationCounts.put(e.destination, e.count))
           sink.addSense(Sense(labelId = labelId, senseCounts = destinationCounts))
         }
 

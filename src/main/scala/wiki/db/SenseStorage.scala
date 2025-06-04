@@ -3,6 +3,8 @@ package wiki.db
 import scalikejdbc.*
 import wiki.extractor.types.Sense
 
+import scala.collection.mutable
+
 object SenseStorage {
 
   /**
@@ -80,15 +82,16 @@ object SenseStorage {
     * @return        Senses for the label, if found in the table
     */
   def getSenseByLabelId(labelId: Int): Option[Sense] = {
-    val destinationCounts = DB.autoCommit { implicit session =>
-      sql"""SELECT destination, n FROM $table WHERE label_id=$labelId""".map { r =>
-        (r.int("destination"), r.int("n"))
-      }.list().toMap
+    val senseCounts = mutable.Map[Int, Int]()
+    DB.autoCommit { implicit session =>
+      sql"""SELECT destination, n FROM $table WHERE label_id=$labelId""".foreach { r =>
+        senseCounts.put(r.int("destination"), r.int("n")): Unit
+      }
     }
-    if (destinationCounts.isEmpty) {
+    if (senseCounts.isEmpty) {
       None
     } else {
-      Some(Sense(labelId = labelId, senseCounts = destinationCounts))
+      Some(Sense(labelId = labelId, senseCounts = senseCounts))
     }
   }
 

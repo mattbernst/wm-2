@@ -7,6 +7,8 @@ import wiki.extractor.types.*
 import wiki.extractor.util.{ConfiguredProperties, FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
 
+import scala.collection.mutable
+
 class StorageSpec extends UnitSpec with BeforeAndAfterAll {
   behavior of "Storage.getPage"
 
@@ -198,9 +200,11 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val d2      = randomInt()
     val sense = Sense(
       labelId = labelId,
-      senseCounts = Map(
-        d1 -> 3,
-        d2 -> 2
+      senseCounts = mutable.Map.from(
+        Map(
+          d1 -> 3,
+          d2 -> 2
+        )
       )
     )
 
