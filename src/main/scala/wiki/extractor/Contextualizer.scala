@@ -4,6 +4,7 @@ import com.github.blemale.scaffeine.LoadingCache
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
+import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -50,12 +51,17 @@ class Contextualizer(
     // (label.link_count / label.occurrence_count) >= minLinkProbability.
     // A label is an NGram that has been used as anchor text anywhere in Wikipedia.
 
+    println(s"GETTING LABELS")
     val labels = linkLabels(text)
       .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
+    println(s"GOT LABELS")
 
-    val candidates    = collectCandidates(labels, minSenseProbability)
+    println(s"COLLECTING CANDIDATES ${System.currentTimeMillis()}")
+    val candidates = collectCandidates(labels, minSenseProbability)
+    println(s"COLLECTING TOP CANDIDATES from ${candidates.length} candidates ${System.currentTimeMillis()}")
     val topCandidates = collectTopCandidates(candidates)
+    println(s"COLLECTED TOP CANDIDATES ${System.currentTimeMillis()}")
 
     Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
   }
@@ -134,7 +140,7 @@ class Contextualizer(
 
     while (j < candidates.length) {
       var averageRelatedness = 0.0
-      var k                  = j + 1
+      var k                  = 0
       val a                  = candidates(j)
       while (k < candidates.length) {
         val b = candidates(k)
@@ -158,6 +164,7 @@ class Contextualizer(
     pages.toArray
       .sortBy(-_.weight)
       .take(maxContextSize)
+      .sortBy(_.pageId)
   }
 
   private def linkLabels(text: String): Array[String] = {
@@ -170,8 +177,12 @@ class Contextualizer(
   private val minLinkProbability = 0.0025
   private val minLinksIn         = 4
 
-  private val languageLogic: LanguageLogic       = LanguageLogic.getLanguageLogic(language.code)
-  private val labelCounter: LabelCounter         = db.label.read()
+  private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code)
+
+  private val labelCounter: LabelCounter = {
+    DBLogging.info(s"Loading LabelCounter")
+    db.label.read()
+  }
   private val goodLabels: collection.Set[String] = labelToId.keySet
   private val dateStrings                        = language.generateValidDateStrings()
   private val datePageIds                        = dateStrings.flatMap(d => db.getPage(d)).map(_.id)

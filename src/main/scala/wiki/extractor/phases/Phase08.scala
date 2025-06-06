@@ -57,7 +57,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
     // Training articles, disambiguation-test articles, topic-test articles
     //val sizes = Seq(1000, 500, 500)
-    val sizes = Seq(5, 2, 2)
+    // val sizes = Seq(5, 2, 2)
+    val sizes = Seq(10)
 
     val res = selector
       .extractSets(
@@ -89,8 +90,10 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     * @param pageId The numeric ID of a Wikipedia page used for training
     */
   private def articleToFeatures(pageId: Int): Array[ModelEntry] = {
+    println(s"GETTING CONTEXT for $pageId ${System.currentTimeMillis()}")
     val context = contextualizer.getContext(pageId, minSenseProbability)
-    val buffer  = ListBuffer[ModelEntry]()
+    println(s"GOT CONTEXT for $pageId ${System.currentTimeMillis()}")
+    val buffer = ListBuffer[ModelEntry]()
 
     val links = db.link
       .getBySource(pageId)

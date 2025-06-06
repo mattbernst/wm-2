@@ -5,6 +5,16 @@ import wiki.db.Storage
 import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
 
 import scala.collection.mutable
+import scala.util.hashing.MurmurHash3
+case class CountsWithMax(m: mutable.Map[Int, Int], max: Double)
+case class LinkVector(links: Array[Int], key: Long)
+
+object LinkVector {
+
+  def apply(links: Array[Int]): LinkVector = {
+    LinkVector(links = links, key = ArticleComparer.hashLinks(links))
+  }
+}
 
 class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
@@ -51,7 +61,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       0.0
     } else {
       var relatedness = 0.0
-      val pageIds     = (Array(pageId) ++ context.pages.map(_.pageId)).distinct.sorted
+      val pageIds     = (Array(pageId) ++ context.pages.map(_.pageId)).distinct
       primeCaches(pageIds)
       context.pages.foreach { page =>
         compare(page.pageId, pageId).foreach { comparison =>
@@ -79,7 +89,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     if (missingIn.nonEmpty) {
       db.link
         .getByDestination(missingIn)
-        .foreach(t => inLinkCache.put(t._1, t._2.map(_.source).toArray))
+        .foreach(t => inLinkCache.put(t._1, LinkVector(t._2.map(_.source).toArray)))
     }
     val missingOut = pageIds
       .filter(p => outLinkCache.getIfPresent(p).isEmpty)
@@ -88,7 +98,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     if (missingOut.nonEmpty) {
       db.link
         .getBySource(missingOut)
-        .foreach(t => outLinkCache.put(t._1, t._2.map(_.destination).toArray))
+        .foreach(t => outLinkCache.put(t._1, LinkVector(t._2.map(_.destination).toArray)))
     }
   }
 
@@ -122,12 +132,12 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     // otherwise, all results are crammed into the upper portion of the 0-1
     // range.
     val inGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAIn, linksBIn, articleCount)
+      val original = ArticleComparer.googleMeasure(linksAIn.links, linksBIn.links, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
     val outGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAOut, linksBOut, articleCount)
+      val original = ArticleComparer.googleMeasure(linksAOut.links, linksBOut.links, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
@@ -162,80 +172,95 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     * linked pages, and it uses the "augmented frequency" approach to term
     * (link) frequency.
     *
-    * @param linksA A sequence of links from article A or to article A
-    * @param linksB A sequence of links from article B or to article B
+    * @param a      A sequence of links from article A or to article A
+    * @param b      A sequence of links from article B or to article B
     * @param cache  A cache for counts of distinct article occurrences, used
-    *               for calculating the inverse term
+    *               for calculating the inverse term frequency
     * @return       A pair of vectors containing weights for matched terms
     */
-  private def makeVectors(linksA: Array[Int], linksB: Array[Int], cache: LoadingCache[Int, Int]): VectorPair = {
-    val linkACounts = mutable.Map[Int, Int]().withDefaultValue(0)
-    val linkBCounts = mutable.Map[Int, Int]().withDefaultValue(0)
-    var maxCountA   = 0
-    var maxCountB   = 0
+  private def makeVectors(a: LinkVector, b: LinkVector, cache: LoadingCache[Int, Int]): VectorPair = {
+    if (a.links.nonEmpty && b.links.nonEmpty) {
+      val linkACounts = getCounts(a)
+      val linkBCounts = getCounts(b)
 
-    linksA.foreach { link =>
-      val newCount = linkACounts(link) + 1
-      linkACounts(link) = newCount
-      if (newCount > maxCountA) {
-        maxCountA = newCount
-      }
-    }
-
-    linksB.foreach { link =>
-      val newCount = linkBCounts(link) + 1
-      linkBCounts(link) = newCount
-      if (newCount > maxCountB) {
-        maxCountB = newCount
-      }
-    }
-
-    // Find common links
-    val commonLinksBuffer = mutable.ArrayBuffer[Int]()
-    linkACounts.foreach {
-      case (link, _) =>
-        if (linkBCounts.contains(link) && cache.get(link) > 0) {
-          commonLinksBuffer += link
+      // Find common links
+      val unFilteredCommonLinks = Array.ofDim[Int](math.min(linkACounts.m.size, linkBCounts.m.size))
+      var k                     = 0
+      linkACounts.m.keys.foreach { link =>
+        if (linkBCounts.m.contains(link)) {
+          unFilteredCommonLinks(k) = link
+          k += 1
         }
-    }
-
-    if (commonLinksBuffer.nonEmpty) {
-      val commonLinks = commonLinksBuffer.toArray.sorted
-      val vectorA     = Array.ofDim[Double](commonLinks.length)
-      val vectorB     = Array.ofDim[Double](commonLinks.length)
-
-      val commonestA = maxCountA.toDouble
-      val commonestB = maxCountB.toDouble
-
-      var j = 0
-      commonLinks.foreach { link =>
-        val countDistinct           = cache.get(link)
-        val inverseArticleFrequency = math.log(articleCount / countDistinct.toDouble)
-        val linkFrequencyA          = 0.5 + (0.5 * (linkACounts(link) / commonestA))
-        val linkFrequencyB          = 0.5 + (0.5 * (linkBCounts(link) / commonestB))
-        vectorA(j) = linkFrequencyA * inverseArticleFrequency
-        vectorB(j) = linkFrequencyB * inverseArticleFrequency
-        j += 1
       }
 
-      VectorPair(vectorA, vectorB)
+      // Prime cache, retain only in-cache common links
+      val subArray = unFilteredCommonLinks.take(k)
+      cache.getAll(subArray)
+      val commonLinks = subArray.filter(link => cache.get(link) > 0)
+      k = commonLinks.length
+
+      if (k > 0) {
+        val vectorA = Array.ofDim[Double](k)
+        val vectorB = Array.ofDim[Double](k)
+
+        var j = 0
+        while (j < k) {
+          val link                    = commonLinks(j)
+          val countDistinct           = cache.get(link)
+          val inverseArticleFrequency = math.log(articleCount / countDistinct.toDouble)
+          val linkFrequencyA          = 0.5 + (0.5 * (linkACounts.m(link) / linkACounts.max))
+          val linkFrequencyB          = 0.5 + (0.5 * (linkBCounts.m(link) / linkBCounts.max))
+          vectorA(j) = linkFrequencyA * inverseArticleFrequency
+          vectorB(j) = linkFrequencyB * inverseArticleFrequency
+          j += 1
+        }
+
+        VectorPair(vectorA, vectorB)
+      } else {
+        VectorPair(Array(), Array())
+      }
     } else {
       VectorPair(Array(), Array())
     }
   }
 
-  private val inLinkCache: LoadingCache[Int, Array[Int]] =
+  private def getCounts(v: LinkVector): CountsWithMax = {
+    linkCountsCache.get(
+      v.key,
+      (_: Long) => {
+        val linkCounts = mutable.Map[Int, Int]().withDefaultValue(0)
+        var maxCount   = 0
+        v.links.foreach { link =>
+          val newCount = linkCounts(link) + 1
+          linkCounts(link) = newCount
+          if (newCount > maxCount) {
+            maxCount = newCount
+          }
+        }
+        CountsWithMax(linkCounts, maxCount.toDouble)
+      }
+    )
+  }
+
+  private val linkCountsCache: Cache[Long, CountsWithMax] =
+    Scaffeine()
+      .maximumSize(cacheSize)
+      .build()
+
+  private val inLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
       .maximumSize(cacheSize)
       .build(loader = (id: Int) => {
-        db.link.getByDestination(id).map(_.source).toArray
+        val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
+        LinkVector(ids)
       })
 
-  private val outLinkCache: LoadingCache[Int, Array[Int]] =
+  private val outLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
       .maximumSize(cacheSize)
       .build(loader = (id: Int) => {
-        db.link.getBySource(id).map(_.destination).toArray
+        val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
+        LinkVector(ids)
       })
 
   // We need counts of how many distinct articles link to each page to
@@ -246,14 +271,40 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   private val distinctLinkInCountCache: LoadingCache[Int, Int] =
     Scaffeine()
       .maximumSize(cacheSize)
-      .build(loader = (id: Int) => {
-        inLinkCache.getIfPresent(id) match {
-          case Some(sources) =>
-            sources.distinct.length
-          case None =>
-            db.link.getByDestination(id).map(_.source).distinct.length
-        }
-      })
+      .build(
+        loader = (id: Int) => {
+          inLinkCache.getIfPresent(id) match {
+            case Some(sources) =>
+              sources.links.distinct.length
+            case None =>
+              db.link.getByDestination(id).map(_.source).distinct.length
+          }
+        },
+        allLoader = Some((ids: Iterable[Int]) => {
+          val idsSet = ids.toSet
+
+          // Get cached values first
+          val cachedResults = idsSet.flatMap { id =>
+            inLinkCache.getIfPresent(id).map(id -> _.links.distinct.length)
+          }.toMap
+
+          // Identify missing IDs that need to be loaded from DB
+          val missingIds = idsSet -- cachedResults.keySet
+
+          if (missingIds.nonEmpty) {
+            // Bulk load missing data from database
+            val dbResults = db.link.getByDestination(missingIds.toSeq).map {
+              case (id, links) =>
+                id -> links.map(_.source).distinct.length
+            }
+
+            // Combine cached and DB results
+            cachedResults ++ dbResults
+          } else {
+            cachedResults
+          }
+        })
+      )
 
   // We also need counts of how many distinct articles are linked from each
   // page to calculate the inverse article frequency. Opportunistically try
@@ -263,14 +314,40 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   private val distinctLinkOutCountCache: LoadingCache[Int, Int] =
     Scaffeine()
       .maximumSize(cacheSize)
-      .build(loader = (id: Int) => {
-        outLinkCache.getIfPresent(id) match {
-          case Some(destinations) =>
-            destinations.distinct.length
-          case None =>
-            db.link.getBySource(id).map(_.destination).distinct.length
-        }
-      })
+      .build(
+        loader = (id: Int) => {
+          outLinkCache.getIfPresent(id) match {
+            case Some(destinations) =>
+              destinations.links.distinct.length
+            case None =>
+              db.link.getBySource(id).map(_.destination).distinct.length
+          }
+        },
+        allLoader = Some((ids: Iterable[Int]) => {
+          val idsSet = ids.toSet
+
+          // Get cached values first
+          val cachedResults = idsSet.flatMap { id =>
+            outLinkCache.getIfPresent(id).map(id -> _.links.distinct.length)
+          }.toMap
+
+          // Identify missing IDs that need to be loaded from DB
+          val missingIds = idsSet -- cachedResults.keySet
+
+          if (missingIds.nonEmpty) {
+            // Bulk load missing data from database
+            val dbResults = db.link.getBySource(missingIds.toSeq).map {
+              case (id, links) =>
+                id -> links.map(_.destination).distinct.length
+            }
+
+            // Combine cached and DB results
+            cachedResults ++ dbResults
+          } else {
+            cachedResults
+          }
+        })
+      )
 
   private val comparisonCache: Cache[Long, Option[Comparison]] =
     Scaffeine()
@@ -383,4 +460,9 @@ object ArticleComparer {
     val setB = mutable.Set.from(linksB)
     setA.intersect(setB).size
   }
+
+  private[extractor] def hashLinks(input: Array[Int]): Long =
+    MurmurHash3
+      .arrayHash(input)
+      .toLong
 }
