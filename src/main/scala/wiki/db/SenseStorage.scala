@@ -95,5 +95,44 @@ object SenseStorage {
     }
   }
 
+  /**
+    * Bulk loads Sense objects for multiple label IDs in a single database
+    * operation.
+    * Only label IDs that have associated data in the database will be present
+    * in the returned map.
+    *
+    * @param labelIds Sequence of label IDs to retrieve senses for
+    * @return Map where keys are label IDs and values are their corresponding
+    *         Sense objects.
+    */
+  def getSensesByLabelIds(labelIds: Seq[Int]): Map[Int, Sense] = {
+    if (labelIds.nonEmpty) {
+      val batches = labelIds.grouped(Storage.batchSqlSize).toSeq
+      val rows: Seq[(Int, Int, Int)] = DB.autoCommit { implicit session =>
+        batches.flatMap { batch =>
+          sql"""SELECT label_id, destination, n FROM $table WHERE label_id IN ($batch)"""
+            .map(rs => (rs.int("label_id"), rs.int("destination"), rs.int("n")))
+            .list()
+        }
+      }
+
+      // Group by label_id and build sense counts for each
+      rows
+        .groupBy(_._1)
+        .view
+        .mapValues { labelRows =>
+          val senseCounts = mutable.Map[Int, Int]()
+          labelRows.foreach {
+            case (_, destination, n) =>
+              senseCounts.put(destination, n)
+          }
+          Sense(labelId = labelRows.head._1, senseCounts = senseCounts)
+        }
+        .toMap
+    } else {
+      Map()
+    }
+  }
+
   private val table = Storage.table("sense")
 }

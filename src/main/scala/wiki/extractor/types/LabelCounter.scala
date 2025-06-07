@@ -101,14 +101,16 @@ class LabelCounter {
 
   /**
     * The fraction of instances in which this label is used as the anchor text
-    * of a link in Wikipedia.
+    * of a link in Wikipedia. Sometimes parse errors or other data
+    * irregularities put this value over 1.0, so limit it to 1.0.
     *
     * @param label An NGram based label
     * @return      Occurrences as link divided by all occurrences
     */
   def getLinkProbability(label: String): Option[Double] = {
     labelToCount.get(label).map { a =>
-      a(LabelCounter.linkOccurrenceCountIndex) / a(LabelCounter.occurrenceCountIndex).toDouble
+      val p = a(LabelCounter.linkOccurrenceCountIndex) / a(LabelCounter.occurrenceCountIndex).toDouble
+      math.min(p, 1.0)
     }
   }
 

@@ -88,8 +88,8 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       .toSeq
     if (missingIn.nonEmpty) {
       db.link
-        .getByDestination(missingIn)
-        .foreach(t => inLinkCache.put(t._1, LinkVector(t._2.map(_.source).toArray)))
+        .getSourcesByDestination(missingIn)
+        .foreach(t => inLinkCache.put(t._1, LinkVector(t._2)))
     }
     val missingOut = pageIds
       .filter(p => outLinkCache.getIfPresent(p).isEmpty)
@@ -97,8 +97,8 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       .toSeq
     if (missingOut.nonEmpty) {
       db.link
-        .getBySource(missingOut)
-        .foreach(t => outLinkCache.put(t._1, LinkVector(t._2.map(_.destination).toArray)))
+        .getDestinationsBySource(missingOut)
+        .foreach(t => outLinkCache.put(t._1, LinkVector(t._2)))
     }
   }
 
@@ -293,9 +293,9 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
           if (missingIds.nonEmpty) {
             // Bulk load missing data from database
-            val dbResults = db.link.getByDestination(missingIds.toSeq).map {
+            val dbResults = db.link.getSourcesByDestination(missingIds.toSeq).map {
               case (id, links) =>
-                id -> links.map(_.source).distinct.length
+                id -> links.distinct.length
             }
 
             // Combine cached and DB results
@@ -336,9 +336,9 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
           if (missingIds.nonEmpty) {
             // Bulk load missing data from database
-            val dbResults = db.link.getBySource(missingIds.toSeq).map {
+            val dbResults = db.link.getDestinationsBySource(missingIds.toSeq).map {
               case (id, links) =>
-                id -> links.map(_.destination).distinct.length
+                id -> links.distinct.length
             }
 
             // Combine cached and DB results

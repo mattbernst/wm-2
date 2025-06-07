@@ -111,6 +111,66 @@ object LinkStorage {
   }
 
   /**
+    * Retrieves source IDs grouped by destination ID.
+    *
+    * This function takes a sequence of destination IDs and returns a mapping
+    * where each destination ID is associated with an array of all source IDs
+    * that connect to it. The query is batched for performance when dealing
+    * with large ID sequences.
+    *
+    * @param ids Sequence of destination IDs to look up
+    * @return Map where keys are destination IDs and values are arrays of
+    *         source IDs that have connections to those destinations
+    */
+  def getSourcesByDestination(ids: Seq[Int]): Map[Int, Array[Int]] = {
+    val batches = ids.grouped(Storage.batchSqlSize).toSeq
+    val rows: Seq[(Int, Int)] = DB.autoCommit { implicit session =>
+      batches.flatMap { batch =>
+        sql"""SELECT source, destination FROM $table WHERE destination IN ($batch)"""
+          .map(rs => (rs.int("destination"), rs.int("source")))
+          .list()
+      }
+    }
+
+    // Group by destination ID and collect source IDs into arrays
+    rows
+      .groupBy(_._1)
+      .view
+      .mapValues(_.map(_._2).toArray)
+      .toMap
+  }
+
+  /**
+    * Retrieves destination IDs grouped by source ID.
+    *
+    * This function takes a sequence of source IDs and returns a mapping where
+    * each source ID is associated with an array of all destination IDs that it
+    * connects to. The query is batched for performance when dealing with large
+    * ID sequences.
+    *
+    * @param ids Sequence of source IDs to look up
+    * @return Map where keys are source IDs and values are arrays of
+    *         destination IDs that those sources connect to
+    */
+  def getDestinationsBySource(ids: Seq[Int]): Map[Int, Array[Int]] = {
+    val batches = ids.grouped(Storage.batchSqlSize).toSeq
+    val rows: Seq[(Int, Int)] = DB.autoCommit { implicit session =>
+      batches.flatMap { batch =>
+        sql"""SELECT source, destination FROM $table WHERE source IN ($batch)"""
+          .map(rs => (rs.int("source"), rs.int("destination")))
+          .list()
+      }
+    }
+
+    // Group by source ID and collect destination IDs into arrays
+    rows
+      .groupBy(_._1)
+      .view
+      .mapValues(_.map(_._2).toArray)
+      .toMap
+  }
+
+  /**
     * Get labels along with their per-destination counts. These per-destination
     * counts show the relative likelihood of labels used in different semantic
     * senses.

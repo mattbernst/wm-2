@@ -100,6 +100,9 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       .filter(l => labelToId(l.anchorText) > 0)
       .distinctBy(rl => (rl.anchorText, rl.destination))
 
+    // Prime label cache
+    labelIdToSense.getAll(links.map(link => labelToId(link.anchorText)))
+
     // Identify ambiguous-sense links from article.
     // Ambiguous links go into the training data.
     links.foreach { link =>
@@ -136,9 +139,17 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
   private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
     Scaffeine()
       .maximumSize(1_000_000)
-      .build(loader = (labelId: Int) => {
-        db.sense.getSenseByLabelId(labelId)
-      })
+      .build(
+        loader = (labelId: Int) => {
+          db.sense.getSenseByLabelId(labelId)
+        },
+        allLoader = Some((labelIds: Iterable[Int]) => {
+          val bulkResults = db.sense.getSensesByLabelIds(labelIds.toSeq)
+          labelIds.map { labelId =>
+            labelId -> bulkResults.get(labelId)
+          }.toMap
+        })
+      )
 
   private lazy val contextualizer =
     new Contextualizer(

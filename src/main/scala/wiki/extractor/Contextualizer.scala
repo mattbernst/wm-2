@@ -88,6 +88,12 @@ class Contextualizer(
     // Context.java. Filter out labels that are dates as well as any senses
     // that resolve to pages titled as dates.
     val goodLabels = labels.filterNot(l => dateStrings.contains(l))
+
+    // Prime label cache
+    val labelIds = goodLabels
+      .flatMap(label => labelCounter.getLinkProbability(label).map(_ => labelToId(label)))
+    labelIdToSense.getAll(labelIds)
+
     goodLabels.foreach { label =>
       // Get linkProbability for label, then for all senses of label get sense prior probability
       // (e.g. Mercury-the-planet v.s. Mercury-the-god prior probability)
