@@ -58,7 +58,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     // Training articles, disambiguation-test articles, topic-test articles
     //val sizes = Seq(1000, 500, 500)
     // val sizes = Seq(5, 2, 2)
-    val sizes = Seq(10)
+    val sizes = Seq(10000)
 
     val res = selector
       .extractSets(
@@ -93,6 +93,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     println(s"GETTING CONTEXT for $pageId ${System.currentTimeMillis()}")
     val context = contextualizer.getContext(pageId, minSenseProbability)
     println(s"GOT CONTEXT for $pageId ${System.currentTimeMillis()}")
+    println(s"Stats for labelIdToSense: ${labelIdToSense.estimatedSize()} ${labelIdToSense.stats()}")
     val buffer = ListBuffer[ModelEntry]()
 
     val links = db.link
@@ -138,6 +139,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
   private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
     Scaffeine()
+      .recordStats()
       .maximumSize(1_000_000)
       .build(
         loader = (labelId: Int) => {

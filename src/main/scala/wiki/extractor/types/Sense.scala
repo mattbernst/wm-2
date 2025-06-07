@@ -40,5 +40,8 @@ case class Sense(labelId: Int, senseCounts: mutable.Map[Int, Int]) {
     senseCounts.values.sum.toDouble
 
   lazy val commonestSense: Int =
-    senseCounts.maxBy(_._2)._1
+    senseCounts
+      .maxByOption(_._2)
+      .map(_._2)
+      .getOrElse(-1)
 }
