@@ -141,12 +141,12 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       .maximumSize(1_000_000)
       .build(
         loader = (labelId: Int) => {
-          db.sense.getSenseByLabelId(labelId)
+          db.sense.getSenseByLabelId(labelId).map(_.pruned(minSenseProbability))
         },
         allLoader = Some((labelIds: Iterable[Int]) => {
           val bulkResults = db.sense.getSensesByLabelIds(labelIds.toSeq)
           labelIds.map { labelId =>
-            labelId -> bulkResults.get(labelId)
+            labelId -> bulkResults.get(labelId).map(_.pruned(minSenseProbability))
           }.toMap
         })
       )
