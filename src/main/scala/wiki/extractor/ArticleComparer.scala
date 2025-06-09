@@ -8,13 +8,16 @@ import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
 case class CountsWithMax(m: mutable.Map[Int, Int], max: Double)
-case class LinkVector(links: Array[Int], key: Long)
+case class LinkVector(links: Array[Int], key: Long, distinctLinks: Array[Int])
 
 object LinkVector {
 
-  def apply(links: Array[Int]): LinkVector = {
-    LinkVector(links = links, key = ArticleComparer.hashLinks(links))
-  }
+  def apply(links: Array[Int]): LinkVector =
+    LinkVector(
+      links = links,
+      key = ArticleComparer.hashLinks(links),
+      distinctLinks = links.distinct.sorted
+    )
 }
 
 class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
@@ -144,12 +147,12 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     // otherwise, all results are crammed into the upper portion of the 0-1
     // range.
     val inGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAIn.links, linksBIn.links, articleCount)
+      val original = ArticleComparer.googleMeasure(linksAIn.distinctLinks, linksBIn.distinctLinks, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
     val outGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAOut.links, linksBOut.links, articleCount)
+      val original = ArticleComparer.googleMeasure(linksAOut.distinctLinks, linksBOut.distinctLinks, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
@@ -286,7 +289,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   private val distinctLinkInCountCache: LoadingCache[Int, Int] =
     Scaffeine()
       .recordStats()
-      .maximumSize(cacheSize)
+      .maximumSize(cacheSize * 2)
       .build(
         loader = (id: Int) => {
           inLinkCache.getIfPresent(id) match {
@@ -369,7 +372,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   private val comparisonCache: Cache[Long, Option[Comparison]] =
     Scaffeine()
       .recordStats()
-      .maximumSize(cacheSize)
+      .maximumSize(cacheSize * 5)
       .build()
 
   private lazy val articleCount: Int =
@@ -474,9 +477,23 @@ object ArticleComparer {
   }
 
   def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int = {
-    val setA = mutable.Set.from(linksA)
-    val setB = mutable.Set.from(linksB)
-    setA.intersect(setB).size
+    var i     = 0
+    var j     = 0
+    var count = 0
+
+    while (i < linksA.length && j < linksB.length) {
+      if (linksA(i) == linksB(j)) {
+        count += 1
+        i += 1
+        j += 1
+      } else if (linksA(i) < linksB(j)) {
+        i += 1
+      } else {
+        j += 1
+      }
+    }
+
+    count
   }
 
   private[extractor] def hashLinks(input: Array[Int]): Long =

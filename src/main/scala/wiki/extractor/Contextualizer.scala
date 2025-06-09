@@ -1,7 +1,6 @@
 package wiki.extractor
 
 import com.github.blemale.scaffeine.LoadingCache
-import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
@@ -63,7 +62,6 @@ class Contextualizer(
     println(s"COLLECTING TOP CANDIDATES from ${candidates.length} candidates ${System.currentTimeMillis()}")
     val topCandidates = collectTopCandidates(candidates)
     println(s"COLLECTED TOP CANDIDATES ${System.currentTimeMillis()}")
-    BlackWhite.pprintln(comparer.getCacheStats())
 
     Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
   }
