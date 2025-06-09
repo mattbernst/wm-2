@@ -1,6 +1,5 @@
 package wiki.extractor
 
-import com.github.benmanes.caffeine.cache.stats.CacheStats
 import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
@@ -104,17 +103,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
         .getDestinationsBySource(missingOut)
         .foreach(t => outLinkCache.put(t._1, LinkVector(t._2)))
     }
-  }
-
-  def getCacheStats(): Map[String, (CacheStats, Long)] = {
-    Map(
-      "inLinkCache"               -> (inLinkCache.stats(), inLinkCache.estimatedSize()),
-      "outLinkCache"              -> (outLinkCache.stats(), outLinkCache.estimatedSize()),
-      "distinctLinkInCountCache"  -> (distinctLinkInCountCache.stats(), distinctLinkInCountCache.estimatedSize()),
-      "distinctLinkOutCountCache" -> (distinctLinkOutCountCache.stats(), distinctLinkOutCountCache.estimatedSize()),
-      "linkCountsCache"           -> (linkCountsCache.stats(), linkCountsCache.estimatedSize()),
-      "comparisonCache"           -> (comparisonCache.stats(), comparisonCache.estimatedSize())
-    )
   }
 
   /**
@@ -259,13 +247,11 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
   private val linkCountsCache: Cache[Long, CountsWithMax] =
     Scaffeine()
-      .recordStats()
       .maximumSize(cacheSize)
       .build()
 
   private val inLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
-      .recordStats()
       .maximumSize(cacheSize)
       .build(loader = (id: Int) => {
         val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
@@ -274,7 +260,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
   private val outLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
-      .recordStats()
       .maximumSize(cacheSize)
       .build(loader = (id: Int) => {
         val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
@@ -288,7 +273,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   // space caching large sequences of IDs.
   private val distinctLinkInCountCache: LoadingCache[Int, Int] =
     Scaffeine()
-      .recordStats()
       .maximumSize(cacheSize * 2)
       .build(
         loader = (id: Int) => {
@@ -332,7 +316,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
   // space caching large sequences of IDs.
   private val distinctLinkOutCountCache: LoadingCache[Int, Int] =
     Scaffeine()
-      .recordStats()
       .maximumSize(cacheSize)
       .build(
         loader = (id: Int) => {
@@ -371,8 +354,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
 
   private val comparisonCache: Cache[Long, Option[Comparison]] =
     Scaffeine()
-      .recordStats()
-      .maximumSize(cacheSize * 5)
+      .maximumSize(cacheSize)
       .build()
 
   private lazy val articleCount: Int =

@@ -139,7 +139,6 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
   private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
     Scaffeine()
-      .recordStats()
       .maximumSize(1_000_000)
       .build(
         loader = (labelId: Int) => {
