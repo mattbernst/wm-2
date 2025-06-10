@@ -3,8 +3,33 @@ package wiki.db
 import scalikejdbc.*
 import wiki.extractor.types.GroupedLinks
 
+import java.util
+
 case class ResolvedLink(source: Int, destination: Int, anchorText: String)
 case class DeadLink(source: Int, destination: String, anchorText: String)
+
+case class PageCount(pageIds: Array[Int], counts: Array[Int]) {
+  require(pageIds.length == counts.length)
+
+  def count(pageId: Int): Int = {
+    val index = util.Arrays.binarySearch(pageIds, pageId)
+    if (index > -1) {
+      counts(index)
+    } else {
+      0
+    }
+  }
+
+  def grouped(n: Int): Iterator[PageCount] = {
+    val groupedPages: Iterator[Array[Int]]  = pageIds.grouped(n)
+    val groupedCounts: Iterator[Array[Int]] = counts.grouped(n)
+
+    groupedPages.zip(groupedCounts).map {
+      case (pageGroup, countGroup) =>
+        PageCount(pageGroup, countGroup)
+    }
+  }
+}
 
 object LinkStorage {
 
@@ -138,6 +163,144 @@ object LinkStorage {
       .view
       .mapValues(_.map(_._2).toArray)
       .toMap
+  }
+
+  /**
+    * Retrieves the count of distinct page sources for each destination page
+    * from the database. For example, if only pages 3 and 7 link to page 123,
+    * the source_count for page 123 would be 2.
+    *
+    * @return GroupedCount with destination IDs sorted in ascending order and
+    *         their corresponding source counts. The sorted IDs enable efficient
+    *         binary search operations on the result.
+    */
+  def getSourceCountsByDestination(): PageCount = {
+    val rows: List[(Int, Int)] = DB.autoCommit { implicit session =>
+      sql"""SELECT destination, COUNT(DISTINCT source) AS source_count FROM $table GROUP BY destination"""
+        .map(rs => (rs.int("destination"), rs.int("source_count")))
+        .list()
+    }
+
+    val sortedRows    = rows.sortBy(_._1)
+    val (ids, counts) = sortedRows.unzip
+    PageCount(ids.toArray, counts.toArray)
+  }
+
+  /**
+    * Retrieves the count of distinct page destinations for each source page
+    * from the database. For example, if page 7 links to pages 123, 456, and 789,
+    * the destination_count for page 7 would be 3.
+    *
+    * @return GroupedCount with source IDs sorted in ascending order and their
+    *         corresponding destination counts. The sorted IDs enable efficient
+    *         binary search operations on the result.
+    */
+  def getDestinationCountsBySource(): PageCount = {
+    val rows: List[(Int, Int)] = DB.autoCommit { implicit session =>
+      sql"""SELECT source, COUNT(DISTINCT destination) AS dest_count FROM $table GROUP BY source"""
+        .map(rs => (rs.int("source"), rs.int("dest_count")))
+        .list()
+    }
+
+    val sortedRows    = rows.sortBy(_._1)
+    val (ids, counts) = sortedRows.unzip
+    PageCount(ids.toArray, counts.toArray)
+  }
+
+  /**
+    * Writes page source counts to the link_source_count table.
+    *
+    * Each page ID in the input represents a destination page, and the
+    * corresponding count represents how many source pages link to that
+    * destination. These counts are important during calculation of
+    * TF-IDF-like terms in the ArticleComparer.
+    *
+    * @param input PageCount containing destination page IDs and their source
+    *              counts
+    */
+  def writeSourceCountsByDestination(input: PageCount): Unit = {
+    val batched = input.grouped(Storage.batchSqlSize)
+    DB.autoCommit { implicit session =>
+      val cols: SQLSyntax = sqls"""destination, n"""
+      batched.foreach { batch =>
+        val params: Seq[Seq[SQLSyntax]] = batch.pageIds
+          .zip(batch.counts)
+          .map {
+            case (pageId, count) =>
+              Seq(sqls"$pageId", sqls"$count")
+          }
+          .toSeq
+        val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
+        sql"""INSERT INTO link_source_count ($cols) VALUES $values""".update()
+      }
+    }
+  }
+
+  /**
+    * Reads back the aggregated data previously stored by
+    * writeSourceCountsByDestination and instantiates it back
+    * into a PageCount object.
+    *
+    * @return PageCount containing destination page IDs and their source
+    *         counts
+    */
+  def readSourceCountsByDestination(): PageCount = {
+    DB.autoCommit { implicit session =>
+      val results = sql"""SELECT destination, n FROM link_source_count ORDER BY destination"""
+        .map(rs => (rs.int("destination"), rs.int("n")))
+        .list()
+
+      val (pageIds, counts) = results.unzip
+      PageCount(pageIds.toArray, counts.toArray)
+    }
+  }
+
+  /**
+    * Writes page destination counts to the link_destination_count table.
+    *
+    * Each page ID in the input represents a source page, and the
+    * corresponding count represents how many destination pages that source
+    * links to. These counts are important during calculation of
+    * TF-IDF-like terms in the ArticleComparer.
+    *
+    * @param input PageCount containing source page IDs and their destination
+    *              counts
+    */
+  def writeDestinationCountsBySource(input: PageCount): Unit = {
+    val batched = input.grouped(Storage.batchSqlSize)
+    DB.autoCommit { implicit session =>
+      val cols: SQLSyntax = sqls"""source, n"""
+      batched.foreach { batch =>
+        val params: Seq[Seq[SQLSyntax]] = batch.pageIds
+          .zip(batch.counts)
+          .map {
+            case (pageId, count) =>
+              Seq(sqls"$pageId", sqls"$count")
+          }
+          .toSeq
+        val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
+        sql"""INSERT INTO link_destination_count ($cols) VALUES $values""".update()
+      }
+    }
+  }
+
+  /**
+    * Reads back the aggregated data previously stored by
+    * writeDestinationCountsBySource and instantiates it back
+    * into a PageCount object.
+    *
+    * @return PageCount containing source page IDs and their destination
+    *         counts
+    */
+  def readDestinationCountsBySource(): PageCount = {
+    DB.autoCommit { implicit session =>
+      val results = sql"""SELECT source, n FROM link_destination_count ORDER BY source"""
+        .map(rs => (rs.int("source"), rs.int("n")))
+        .list()
+
+      val (pageIds, counts) = results.unzip
+      PageCount(pageIds.toArray, counts.toArray)
+    }
   }
 
   /**

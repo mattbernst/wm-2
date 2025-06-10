@@ -19,6 +19,14 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     DBLogging.info("Counting label senses")
     countSenses(targets)
     db.createIndexes(number)
+    DBLogging.info("Getting source counts by destination")
+    val sourceCounts = db.link.getSourceCountsByDestination()
+    DBLogging.info("Writing source counts by destination")
+    db.link.writeSourceCountsByDestination(sourceCounts)
+    DBLogging.info("Getting destination counts by source")
+    val destinationCounts = db.link.getDestinationCountsBySource()
+    DBLogging.info("Writing destination counts by source")
+    db.link.writeDestinationCountsBySource(destinationCounts)
     db.phase.completePhase(number)
   }
 

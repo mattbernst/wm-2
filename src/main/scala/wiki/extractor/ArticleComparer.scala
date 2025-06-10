@@ -1,8 +1,9 @@
 package wiki.extractor
 
 import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
-import wiki.db.Storage
+import wiki.db.{PageCount, Storage}
 import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
+import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
@@ -128,8 +129,8 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     val linksAOut = outLinkCache.get(a)
     val linksBOut = outLinkCache.get(b)
 
-    val ilvm = makeVectors(linksAIn, linksBIn, distinctLinkInCountCache)
-    val olvm = makeVectors(linksAOut, linksBOut, distinctLinkOutCountCache)
+    val ilvm = makeVectors(linksAIn, linksBIn, distinctLinksIn)
+    val olvm = makeVectors(linksAOut, linksBOut, distinctLinksOut)
 
     // The Google measure needs to be normalized using googleMeasureLowerLimit;
     // otherwise, all results are crammed into the upper portion of the 0-1
@@ -175,13 +176,13 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     * linked pages, and it uses the "augmented frequency" approach to term
     * (link) frequency.
     *
-    * @param a      A sequence of links from article A or to article A
-    * @param b      A sequence of links from article B or to article B
-    * @param cache  A cache for counts of distinct article occurrences, used
-    *               for calculating the inverse term frequency
-    * @return       A pair of vectors containing weights for matched terms
+    * @param a          A sequence of links from article A or to article A
+    * @param b          A sequence of links from article B or to article B
+    * @param pageCount  A counter for distinct article occurrences, used for
+    *                   calculating the inverse article frequency
+    * @return           A pair of vectors containing weights for matched terms
     */
-  private def makeVectors(a: LinkVector, b: LinkVector, cache: LoadingCache[Int, Int]): VectorPair = {
+  private def makeVectors(a: LinkVector, b: LinkVector, pageCount: PageCount): VectorPair = {
     if (a.links.nonEmpty && b.links.nonEmpty) {
       val linkACounts = getCounts(a)
       val linkBCounts = getCounts(b)
@@ -197,9 +198,8 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       }
 
       // Prime cache, retain only in-cache common links
-      val subArray = unFilteredCommonLinks.take(k)
-      cache.getAll(subArray)
-      val commonLinks = subArray.filter(link => cache.get(link) > 0)
+      val subArray    = unFilteredCommonLinks.take(k)
+      val commonLinks = subArray.filter(link => pageCount.count(link) > 0)
       k = commonLinks.length
 
       if (k > 0) {
@@ -209,7 +209,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
         var j = 0
         while (j < k) {
           val link                    = commonLinks(j)
-          val countDistinct           = cache.get(link)
+          val countDistinct           = pageCount.count(link)
           val inverseArticleFrequency = math.log(articleCount / countDistinct.toDouble)
           val linkFrequencyA          = 0.5 + (0.5 * (linkACounts.m(link) / linkACounts.max))
           val linkFrequencyB          = 0.5 + (0.5 * (linkBCounts.m(link) / linkBCounts.max))
@@ -267,90 +267,18 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       })
 
   // We need counts of how many distinct articles link to each page to
-  // calculate the inverse article frequency. Opportunistically try
-  // to get the count from values already present in the inLinkCache,
-  // but only cache the count (not the actual IDs) so that we don't waste
-  // space caching large sequences of IDs.
-  private val distinctLinkInCountCache: LoadingCache[Int, Int] =
-    Scaffeine()
-      .maximumSize(cacheSize * 2)
-      .build(
-        loader = (id: Int) => {
-          inLinkCache.getIfPresent(id) match {
-            case Some(sources) =>
-              sources.links.distinct.length
-            case None =>
-              db.link.getByDestination(id).map(_.source).distinct.length
-          }
-        },
-        allLoader = Some((ids: Iterable[Int]) => {
-          val idsSet = ids.toSet
-
-          // Get cached values first
-          val cachedResults = idsSet.flatMap { id =>
-            inLinkCache.getIfPresent(id).map(id -> _.links.distinct.length)
-          }.toMap
-
-          // Identify missing IDs that need to be loaded from DB
-          val missingIds = idsSet -- cachedResults.keySet
-
-          if (missingIds.nonEmpty) {
-            // Bulk load missing data from database
-            val dbResults = db.link.getSourcesByDestination(missingIds.toSeq).map {
-              case (id, links) =>
-                id -> links.distinct.length
-            }
-
-            // Combine cached and DB results
-            cachedResults ++ dbResults
-          } else {
-            cachedResults
-          }
-        })
-      )
+  // calculate the inverse article frequency.
+  private val distinctLinksIn: PageCount = {
+    DBLogging.info("Reading source counts by destination")
+    db.link.readSourceCountsByDestination()
+  }
 
   // We also need counts of how many distinct articles are linked from each
-  // page to calculate the inverse article frequency. Opportunistically try
-  // to get the count from values already present in the outLinkCache,
-  // but only cache the count (not the actual IDs) so that we don't waste
-  // space caching large sequences of IDs.
-  private val distinctLinkOutCountCache: LoadingCache[Int, Int] =
-    Scaffeine()
-      .maximumSize(cacheSize)
-      .build(
-        loader = (id: Int) => {
-          outLinkCache.getIfPresent(id) match {
-            case Some(destinations) =>
-              destinations.links.distinct.length
-            case None =>
-              db.link.getBySource(id).map(_.destination).distinct.length
-          }
-        },
-        allLoader = Some((ids: Iterable[Int]) => {
-          val idsSet = ids.toSet
-
-          // Get cached values first
-          val cachedResults = idsSet.flatMap { id =>
-            outLinkCache.getIfPresent(id).map(id -> _.links.distinct.length)
-          }.toMap
-
-          // Identify missing IDs that need to be loaded from DB
-          val missingIds = idsSet -- cachedResults.keySet
-
-          if (missingIds.nonEmpty) {
-            // Bulk load missing data from database
-            val dbResults = db.link.getDestinationsBySource(missingIds.toSeq).map {
-              case (id, links) =>
-                id -> links.distinct.length
-            }
-
-            // Combine cached and DB results
-            cachedResults ++ dbResults
-          } else {
-            cachedResults
-          }
-        })
-      )
+  // page to calculate the inverse article frequency.
+  private val distinctLinksOut: PageCount = {
+    DBLogging.info("Reading destination counts by source")
+    db.link.readDestinationCountsBySource()
+  }
 
   private val comparisonCache: Cache[Long, Option[Comparison]] =
     Scaffeine()
