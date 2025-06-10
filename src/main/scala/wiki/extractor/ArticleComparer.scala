@@ -187,20 +187,28 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
       val linkACounts = getCounts(a)
       val linkBCounts = getCounts(b)
 
+      var k = 0
+      // Set up outer/inner maps to minimize the number of keys that need
+      // to be iterated over
+      val outer = if (linkACounts.m.size < linkBCounts.m.size) {
+        linkACounts.m
+      } else {
+        linkBCounts.m
+      }
+      val inner = if (linkACounts.m.size < linkBCounts.m.size) {
+        linkBCounts.m
+      } else {
+        linkACounts.m
+      }
+
+      val commonLinks = Array.ofDim[Int](outer.size)
       // Find common links
-      val unFilteredCommonLinks = Array.ofDim[Int](math.min(linkACounts.m.size, linkBCounts.m.size))
-      var k                     = 0
-      linkACounts.m.keys.foreach { link =>
-        if (linkBCounts.m.contains(link)) {
-          unFilteredCommonLinks(k) = link
+      outer.keys.foreach { link =>
+        if (inner.contains(link) && pageCount.count(link) > 0) {
+          commonLinks(k) = link
           k += 1
         }
       }
-
-      // Prime cache, retain only in-cache common links
-      val subArray    = unFilteredCommonLinks.take(k)
-      val commonLinks = subArray.filter(link => pageCount.count(link) > 0)
-      k = commonLinks.length
 
       if (k > 0) {
         val vectorA = Array.ofDim[Double](k)
