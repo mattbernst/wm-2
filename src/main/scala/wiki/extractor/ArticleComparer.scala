@@ -330,8 +330,8 @@ object ArticleComparer {
     *
     * TODO: consider smoothing for the abrupt transition
     *
-    * @param linksA       Links into or out of article A
-    * @param linksB       Links into or out of article B
+    * @param linksA       Distinct links into or out of article A
+    * @param linksB       Distinct links into or out of article B
     * @param articleCount A count of the total number of Wikipedia articles
     * @return             A number between 0 and 1, with a high number
     *                     representing "more similar"
@@ -414,8 +414,11 @@ object ArticleComparer {
     count
   }
 
-  private[extractor] def hashLinks(input: Array[Int]): Long =
-    MurmurHash3
-      .arrayHash(input)
-      .toLong
+  private[extractor] def hashLinks(input: Array[Int]): Long = {
+    val seed1 = 0x9747b28c
+    val seed2 = 0x4b3f4e5a
+    val hash1 = MurmurHash3.arrayHash(input, seed1)
+    val hash2 = MurmurHash3.arrayHash(input, seed2)
+    (hash1.toLong << 32) | (hash2.toLong & 0xFFFFFFFFL)
+  }
 }

@@ -58,7 +58,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     // Training articles, disambiguation-test articles, topic-test articles
     //val sizes = Seq(1000, 500, 500)
     // val sizes = Seq(5, 2, 2)
-    val sizes = Seq(100)
+    val sizes = Seq(1000)
 
     val res = selector
       .extractSets(
