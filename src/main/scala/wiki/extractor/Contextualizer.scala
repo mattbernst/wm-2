@@ -172,9 +172,7 @@ class Contextualizer(
     * @return           Candidates reweighted, ranked, and limited to a maximum
     *                   of maxContextSize results
     */
-
   private def collectTopCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
-    println(s"Winnowed ${candidates.length} candidates down to $maxContextSize")
     val pages = ListBuffer[RepresentativePage]()
     var j     = 0
     comparer.primeCaches(candidates.map(_.pageId))

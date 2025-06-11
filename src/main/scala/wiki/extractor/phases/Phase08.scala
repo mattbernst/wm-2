@@ -24,6 +24,7 @@ case class ModelEntry(
   isCorrectSense: Boolean)
 
 case class SenseFeatures(page: Page, context: Context, examples: Array[ModelEntry])
+case class TextWithContext(text: String, labels: Seq[String], context: Context)
 
 class Phase08(db: Storage) extends Phase(db: Storage) {
 
@@ -56,6 +57,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
   override def run(): Unit = {
     db.phase.deletePhase(number)
     db.phase.createPhase(number, s"Building training/test data")
+    db.createTableDefinitions(number)
     val ll       = LanguageLogic.getLanguageLogic(props.language.code)
     val selector = new ArticleSelector(db, ll)
 
@@ -78,6 +80,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     res.foreach { subset =>
       subset.foreach { pageId =>
         BlackWhite.pprintln(articleToFeatures(pageId), height = 10000)
+        BlackWhite.pprintln(getBlindedPageContext(pageId), height = 10000)
       }
     }
 
@@ -152,6 +155,15 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       context = contextualizer.enrichContext(context),
       examples = buffer.toArray
     )
+  }
+
+  // Get a Context for the page from its plain text rendition, with no
+  // knowledge of its original links.
+  private def getBlindedPageContext(pageId: Int): TextWithContext = {
+    val pageText = db.page.readMarkupAuto(pageId).flatMap(_.parseResult).map(_.text).get
+    val linkLabels = contextualizer.getLinkLabels(pageText)
+    val context = contextualizer.getContext(linkLabels, minSenseProbability)
+    TextWithContext(pageText, linkLabels.toSeq, contextualizer.enrichContext(context))
   }
 
   private val minSenseProbability = 0.01
