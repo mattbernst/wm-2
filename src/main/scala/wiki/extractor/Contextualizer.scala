@@ -32,38 +32,72 @@ class Contextualizer(
     val parseResult = db.page.readMarkupAuto(pageId).flatMap(_.parseResult)
     val links       = parseResult.map(_.links).getOrElse(Seq())
 
-    val linkAnchorTexts = links.map(_.anchorText).mkString(" ")
+    val linkAnchorTexts = links
+      .map(_.anchorText)
+      .filter(n => goodLabels.contains(n))
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
+      .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
+      .distinct
+      .toArray
+
     getContext(linkAnchorTexts, minSenseProbability)
   }
 
   /**
     * Construct a context containing top candidate Wikipedia pages from an
-    * arbitrary text document.
+    * arbitrary array of labels. Labels can be generated from freeform text
+    * with getLinkLabels.
     *
-    * @param text                The document text
+    * @param labels              The document text
     * @param minSenseProbability The minimum prior probability for any sense
-    * @return                     A Context containing top candidate Wikipedia
-    *                             pages
+    * @return                    A Context containing top candidate Wikipedia
+    *                            pages
     */
-  def getContext(text: String, minSenseProbability: Double): Context = {
-    // Get distinct valid labels from document, only for labels with
-    // label.link_doc_count >= minLinksIn and
-    // (label.link_count / label.occurrence_count) >= minLinkProbability.
-    // A label is an NGram that has been used as anchor text anywhere in Wikipedia.
+  def getContext(labels: Array[String], minSenseProbability: Double): Context = {
+    val candidates    = collectCandidates(labels, minSenseProbability)
+    val topCandidates = collectTopCandidates(candidates)
+    Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
+  }
 
-    println(s"GETTING LABELS")
-    val labels = linkLabels(text)
+  /**
+    * Get distinct valid labels from a document, only for labels with
+    * label.link_doc_count >= minLinksIn and
+    * (label.link_count / label.occurrence_count) >= minLinkProbability.
+    *
+    * A label is an NGram that has been used as anchor text anywhere in
+    * Wikipedia.
+    *
+    * @param text A document or passage of text for extraction of labels
+    * @return     All eligible NGram strings derivable from input document
+    */
+  def getLinkLabels(text: String): Array[String] = {
+    languageLogic
+      .wordNGrams(language = language, documentText = text)
+      .filter(n => goodLabels.contains(n))
       .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
-    println(s"GOT LABELS")
+      .distinct
+  }
 
-    println(s"COLLECTING CANDIDATES ${System.currentTimeMillis()}")
-    val candidates = collectCandidates(labels, minSenseProbability)
-    println(s"COLLECTING TOP CANDIDATES from ${candidates.length} candidates ${System.currentTimeMillis()}")
-    val topCandidates = collectTopCandidates(candidates)
-    println(s"COLLECTED TOP CANDIDATES ${System.currentTimeMillis()}")
+  /**
+    * Enrich context by adding full Page objects to each representative page.
+    * This is useful for reading/debugging/understanding the Context output.
+    *
+    * @param context A Context object that may not yet have complete
+    *                page descriptions for representative pages
+    * @return        A Context object with complete page descriptions for
+    *                representative pages
+    */
+  def enrichContext(context: Context): Context = {
+    val enriched = context.pages.map { rep =>
+      if (rep.page.nonEmpty) {
+        rep
+      } else {
+        rep.copy(page = db.getPage(rep.pageId))
+      }
+    }
 
-    Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
+    context.copy(pages = enriched)
   }
 
   /**
@@ -106,7 +140,7 @@ class Contextualizer(
               val isDatePage            = datePageIds.contains(senseId)
               if (!isDatePage && sensePriorProbability > minSenseProbability) {
                 val weight = (linkProbability + sensePriorProbability) / 2
-                pages.append(RepresentativePage(senseId, weight))
+                pages.append(RepresentativePage(senseId, weight, page = None))
               }
             }
           }
@@ -140,6 +174,7 @@ class Contextualizer(
     */
 
   private def collectTopCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
+    println(s"Winnowed ${candidates.length} candidates down to $maxContextSize")
     val pages = ListBuffer[RepresentativePage]()
     var j     = 0
     comparer.primeCaches(candidates.map(_.pageId))
@@ -163,21 +198,13 @@ class Contextualizer(
       }
 
       val weight = a.weight + (4 * averageRelatedness) / 5
-      pages.append(RepresentativePage(pageId = a.pageId, weight = weight))
+      pages.append(RepresentativePage(pageId = a.pageId, weight = weight, page = None))
       j += 1
     }
 
     pages.toArray
       .sortBy(-_.weight)
       .take(maxContextSize)
-      .sortBy(_.pageId)
-  }
-
-  private def linkLabels(text: String): Array[String] = {
-    languageLogic
-      .wordNGrams(language = language, documentText = text)
-      .filter(n => goodLabels.contains(n))
-      .distinct
   }
 
   private val minLinkProbability = 0.0025
