@@ -151,8 +151,8 @@ class Contextualizer(
     // Sometimes a page may repeat with different weights. Keep only the
     // highest-weight page.
     val sorted = pages.toArray.sortBy(-_.weight)
-    val seen = mutable.Set[Int]()
-    var j = 0
+    val seen   = mutable.Set[Int]()
+    var j      = 0
     sorted.foreach { page =>
       if (!seen.contains(page.pageId)) {
         seen.add(page.pageId)

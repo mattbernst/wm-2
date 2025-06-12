@@ -71,10 +71,11 @@ object SenseTrainingStorage {
   ): Unit = {
     sql"""INSERT INTO $exampleTable
          (sense_page_id, context_id, group_name, source_page_id, link_destination, label,
-          sense_id, commonness, relatedness, context_quality, is_correct_sense)
+          sense_id, commonness, relatedness, context_quality, is_correct_sense, weight)
          VALUES ($sensePageId, $contextId, $group, ${example.sourcePageId}, ${example.linkDestination},
                  ${example.label}, ${example.senseId}, ${example.commonness},
-                 ${example.relatedness}, ${example.contextQuality}, ${example.isCorrectSense})"""
+                 ${example.relatedness}, ${example.contextQuality}, ${example.isCorrectSense},
+                 ${example.weight})"""
       .update()
   }
 

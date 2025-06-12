@@ -124,7 +124,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
                 commonness = sense.commonness(senseId),
                 relatedness = comparer.getRelatednessTo(senseId, context),
                 contextQuality = context.quality,
-                isCorrectSense = senseId == link.destination
+                isCorrectSense = senseId == link.destination,
+                weight = None
               )
             }
           } else {

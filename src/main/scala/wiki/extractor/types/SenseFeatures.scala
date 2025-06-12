@@ -9,7 +9,8 @@ case class ModelEntry(
   commonness: Double,
   relatedness: Double,
   contextQuality: Double,
-  isCorrectSense: Boolean)
+  isCorrectSense: Boolean,
+  weight: Option[Double])
 
 case class SenseFeatures(
   group: String,
