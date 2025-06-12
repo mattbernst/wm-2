@@ -147,9 +147,21 @@ class Contextualizer(
         }
     }
 
-    pages.toArray.distinct
-      .sortBy(-_.weight)
-      .take(maxContextSize * 5)
+    val result = Array.ofDim[RepresentativePage](maxContextSize * 5)
+    // Sometimes a page may repeat with different weights. Keep only the
+    // highest-weight page.
+    val sorted = pages.toArray.sortBy(-_.weight)
+    val seen = mutable.Set[Int]()
+    var j = 0
+    sorted.foreach { page =>
+      if (!seen.contains(page.pageId)) {
+        seen.add(page.pageId)
+        result(j) = page
+        j += 1
+      }
+    }
+
+    result.take(j)
   }
 
   /**

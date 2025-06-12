@@ -1,7 +1,6 @@
 package wiki.extractor.phases
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
-import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{Context, ModelEntry, Sense, SenseFeatures}
@@ -43,19 +42,22 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     */
   override def run(): Unit = {
     db.phase.deletePhase(number)
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context;")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context_page;")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_example;")
     db.phase.createPhase(number, s"Building training/test data")
     db.createTableDefinitions(number)
+
     val ll       = LanguageLogic.getLanguageLogic(props.language.code)
     val selector = new ArticleSelector(db, ll)
 
     // Training articles, disambiguation-test articles, topic-test articles
     //val sizes = Seq(1000, 500, 500)
-    // val sizes = Seq(5, 2, 2)
-    val sizes = Seq(1)
+    val groups = Seq(("training", 5), ("disambiguation-test", 2), ("topic-test", 2))
 
     val res = selector
       .extractSets(
-        sizes = sizes,
+        sizes = groups.map(_._2),
         minOutLinks = 15,
         minInLinks = 20,
         maxListProportion = 0.1,
@@ -64,9 +66,11 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       )
 
     // Generate features from the subsets of articles
-    res.foreach { subset =>
+    res.zip(groups).foreach { set =>
+      val subset    = set._1
+      val groupName = set._2._1
       subset.foreach { pageId =>
-        val senseFeatures = articleToFeatures(pageId)
+        val senseFeatures = articleToFeatures(pageId, groupName)
         db.senseTraining.write(senseFeatures)
       }
     }
@@ -81,9 +85,11 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     *
     * This encapsulates logic similar to "train" in Disambiguator.java
     *
-    * @param pageId The numeric ID of a Wikipedia page used for training
+    * @param pageId   The numeric ID of a Wikipedia page used for feature
+    *                  extraction
+    * @param groupName The name of the feature extraction group
     */
-  private def articleToFeatures(pageId: Int): SenseFeatures = {
+  private def articleToFeatures(pageId: Int, groupName: String): SenseFeatures = {
     val context = contextualizer.getContext(pageId, minSenseProbability)
     val buffer  = ListBuffer[ModelEntry]()
 
@@ -138,6 +144,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     }
 
     SenseFeatures(
+      group = groupName,
       page = db.getPage(pageId).get,
       context = contextualizer.enrichContext(context),
       examples = buffer.toArray

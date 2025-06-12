@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS sense_training_example (
     example_id INTEGER PRIMARY KEY AUTOINCREMENT,
     sense_page_id INTEGER NOT NULL,  -- References the page from SenseFeatures that contains this example
     context_id INTEGER NOT NULL,     -- References the context for this example
+    group_name TEXT NOT NULL,        -- Training group (e.g., "training", "test", "validation")
     source_page_id INTEGER NOT NULL,
     link_destination INTEGER NOT NULL,
     label TEXT NOT NULL,
