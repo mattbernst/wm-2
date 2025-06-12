@@ -225,6 +225,7 @@ class Storage(fileName: String) extends Logging {
   val page: PageStorage.type                   = PageStorage
   val phase: PhaseStorage.type                 = PhaseStorage
   val sense: SenseStorage.type                 = SenseStorage
+  val senseTraining: SenseTrainingStorage.type = SenseTrainingStorage
   val transclusion: TransclusionStorage.type   = TransclusionStorage
 
   private lazy val namespaceCache: LoadingCache[Int, Namespace] =

@@ -4,26 +4,13 @@ import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{Context, Page, Sense}
+import wiki.extractor.types.{Context, ModelEntry, Sense, SenseFeatures}
 import wiki.extractor.util.ConfiguredProperties
 import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-// TODO db storage
-case class ModelEntry(
-  sourcePageId: Int,
-  linkDestination: Int,
-  label: String,
-  sensePageTitle: String,
-  senseId: Int,
-  commonness: Double,
-  relatedness: Double,
-  contextQuality: Double,
-  isCorrectSense: Boolean)
-
-case class SenseFeatures(page: Page, context: Context, examples: Array[ModelEntry])
 case class TextWithContext(text: String, labels: Seq[String], context: Context)
 
 class Phase08(db: Storage) extends Phase(db: Storage) {
@@ -79,8 +66,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     // Generate features from the subsets of articles
     res.foreach { subset =>
       subset.foreach { pageId =>
-        BlackWhite.pprintln(articleToFeatures(pageId), height = 10000)
-        BlackWhite.pprintln(getBlindedPageContext(pageId), height = 10000)
+        val senseFeatures = articleToFeatures(pageId)
+        db.senseTraining.write(senseFeatures)
       }
     }
 
@@ -160,9 +147,9 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
   // Get a Context for the page from its plain text rendition, with no
   // knowledge of its original links.
   private def getBlindedPageContext(pageId: Int): TextWithContext = {
-    val pageText = db.page.readMarkupAuto(pageId).flatMap(_.parseResult).map(_.text).get
+    val pageText   = db.page.readMarkupAuto(pageId).flatMap(_.parseResult).map(_.text).get
     val linkLabels = contextualizer.getLinkLabels(pageText)
-    val context = contextualizer.getContext(linkLabels, minSenseProbability)
+    val context    = contextualizer.getContext(linkLabels, minSenseProbability)
     TextWithContext(pageText, linkLabels.toSeq, contextualizer.enrichContext(context))
   }
 
