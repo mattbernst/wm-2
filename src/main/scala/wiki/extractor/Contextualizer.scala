@@ -86,27 +86,6 @@ class Contextualizer(
   }
 
   /**
-    * Enrich context by adding full Page objects to each representative page.
-    * This is useful for reading/debugging/understanding the Context output.
-    *
-    * @param context A Context object that may not yet have complete
-    *                page descriptions for representative pages
-    * @return        A Context object with complete page descriptions for
-    *                representative pages
-    */
-  def enrichContext(context: Context): Context = {
-    val enriched = context.pages.map { rep =>
-      if (rep.page.nonEmpty) {
-        rep
-      } else {
-        rep.copy(page = db.getPage(rep.pageId))
-      }
-    }
-
-    context.copy(pages = enriched)
-  }
-
-  /**
     * Collect initial representative-page candidates to represent a document.
     * These initial candidates are more numerous than the final candidate set.
     * They include pages that meet the threshold minSenseProbability for a

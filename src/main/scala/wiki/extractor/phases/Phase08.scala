@@ -3,12 +3,13 @@ package wiki.extractor.phases
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{Context, Sense, SenseFeatures, SenseModelEntry}
-import wiki.extractor.util.ConfiguredProperties
+import wiki.extractor.types.{Context, Page, Sense, SenseFeatures, SenseModelEntry}
+import wiki.extractor.util.{ConfiguredProperties, DBLogging, Progress}
 import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.collection.parallel.CollectionConverters.*
 
 case class TextWithContext(text: String, labels: Seq[String], context: Context)
 
@@ -34,8 +35,11 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     val selector = new ArticleSelector(db, ll)
 
     // Training articles, disambiguation-test articles, topic-test articles
-    //val sizes = Seq(1000, 500, 500)
-    val groups = Seq(("training", 5), ("disambiguation-test", 2), ("topic-test", 2))
+    val groups = Seq(
+      ("training", 1000),
+      ("disambiguation-test", 500),
+      ("topic-test", 500)
+    )
 
     val res = selector
       .extractSets(
@@ -51,15 +55,16 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     res.zip(groups).foreach { set =>
       val subset    = set._1
       val groupName = set._2._1
-      subset.foreach { pageId =>
+      DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
+      subset.par.foreach { pageId =>
+        tick()
         val senseFeatures = articleToFeatures(pageId, groupName)
         db.senseTraining.write(senseFeatures)
       }
-
     }
 
     reweightTrainingData("training")
-    //db.phase.completePhase(number)
+    db.phase.completePhase(number)
   }
 
   /**
@@ -121,7 +126,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
             // destination, and several negative examples, namely the destinations that
             // have been chosen for this link text in other articles but not this one."
             sense.senseCounts.keys.toSeq.map { senseId =>
-              val sensePageTitle = db.getPage(senseId).map(_.title).getOrElse("UNKNOWN")
+              val sensePageTitle = pageCache.get(senseId).title
               SenseModelEntry(
                 sourcePageId = pageId,
                 linkDestination = link.destination,
@@ -153,8 +158,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
     SenseFeatures(
       group = groupName,
-      page = db.getPage(pageId).get,
-      context = contextualizer.enrichContext(context),
+      page = pageCache.get(pageId),
+      context = enrichContext(context),
       examples = buffer.toArray
     )
   }
@@ -165,10 +170,43 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     val pageText   = db.page.readMarkupAuto(pageId).flatMap(_.parseResult).map(_.text).get
     val linkLabels = contextualizer.getLinkLabels(pageText)
     val context    = contextualizer.getContext(linkLabels, minSenseProbability)
-    TextWithContext(pageText, linkLabels.toSeq, contextualizer.enrichContext(context))
+    TextWithContext(pageText, linkLabels.toSeq, enrichContext(context))
   }
 
+  private def tick(): Unit = this.synchronized {
+    Progress.tick(nProcessed, "+", 10)
+    nProcessed += 1
+  }
+
+  /**
+    * Enrich context by adding full Page objects to each representative page.
+    * This is useful for reading/debugging/understanding the Context output.
+    *
+    * @param context A Context object that may not yet have complete
+    *                page descriptions for representative pages
+    * @return        A Context object with complete page descriptions for
+    *                representative pages
+    */
+  private def enrichContext(context: Context): Context = {
+    val enriched = context.pages.map { rep =>
+      if (rep.page.nonEmpty) {
+        rep
+      } else {
+        rep.copy(page = Some(pageCache.get(rep.pageId)))
+      }
+    }
+
+    context.copy(pages = enriched)
+  }
+
+  private var nProcessed = 0
+
   private val minSenseProbability = 0.01
+
+  private val pageCache: LoadingCache[Int, Page] =
+    Scaffeine()
+      .maximumSize(500_000)
+      .build((pageId: Int) => db.getPage(pageId).get)
 
   private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
     Scaffeine()
