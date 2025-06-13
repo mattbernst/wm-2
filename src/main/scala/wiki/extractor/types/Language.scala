@@ -7,6 +7,7 @@ import java.text.BreakIterator
 import java.time.format.DateTimeFormatter
 import java.time.{MonthDay, YearMonth}
 import java.util.Locale
+import scala.collection.mutable
 
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
@@ -32,7 +33,7 @@ case class Language(
     *
     * @return A Set of all valid date strings in "MMMM d" format
     */
-  def generateValidDateStrings(): Set[String] = {
+  def generateValidDateStrings(): mutable.Set[String] = {
     val formatter = DateTimeFormatter.ofPattern("MMMM d", locale)
     val validStrings = for {
       month <- 1 to 12
@@ -43,7 +44,7 @@ case class Language(
       dateString = monthDay.format(formatter)
     } yield dateString
 
-    validStrings.toSet
+    mutable.Set.from(validStrings)
   }
 
   /**
@@ -134,8 +135,8 @@ case class Language(
     s":$prefix:"
   }
 
-  private val normalizedDisambiguationPrefixes: Set[String] =
-    disambiguationPrefixes.map(_.toLowerCase(locale)).toSet
+  private val normalizedDisambiguationPrefixes: mutable.Set[String] =
+    mutable.Set.from(disambiguationPrefixes.map(_.toLowerCase(locale)))
 }
 
 object Language {

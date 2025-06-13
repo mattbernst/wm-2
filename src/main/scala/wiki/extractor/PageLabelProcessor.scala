@@ -6,7 +6,7 @@ import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
 
-class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: collection.Set[String]) {
+class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: mutable.Set[String]) {
 
   /**
     * Get a count of all valid labels that could be extracted from the plain

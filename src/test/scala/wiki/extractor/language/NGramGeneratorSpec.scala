@@ -6,6 +6,7 @@ import wiki.extractor.language.types.NGram
 import wiki.extractor.util.UnitSpec
 
 import java.io.FileInputStream
+import scala.collection.mutable
 
 class NGramGeneratorSpec extends UnitSpec {
   behavior of "generate"
@@ -229,6 +230,17 @@ class NGramGeneratorSpec extends UnitSpec {
     combined shouldBe expected
   }
 
+  it should "remove special characters from beginning/end of NGrams" in {
+    val input       = """The start of "A Day in the Life" is cross-faded with the applause."""
+    val ngg         = generator(6)
+    val result      = ngg.generate(input).toList
+    val strings     = NGram.generateStrings(input, result)
+    val quoteEnds   = strings.count(_.endsWith("\""))
+    val quoteBegins = strings.count(_.startsWith("\""))
+    quoteEnds shouldBe 0
+    quoteBegins shouldBe 0
+  }
+
   behavior of "generateFast"
 
   it should "directly generate string-ngrams" in {
@@ -259,21 +271,13 @@ class NGramGeneratorSpec extends UnitSpec {
       "the bits varies",
       "the bits",
       "the",
-      "bits varies;",
       "bits varies",
       "bits",
       "varies; see",
-      "varies;",
       "varies",
-      "; see endianness",
-      "; see",
-      ";",
-      "see endianness.",
       "see endianness",
       "see",
-      "endianness.",
-      "endianness",
-      "."
+      "endianness"
     )
     val result = ngg.generateFast(input).toList
 
@@ -293,9 +297,19 @@ class NGramGeneratorSpec extends UnitSpec {
     strings.foreach(s => resultFast.contains(s) shouldBe true)
   }
 
+  it should "remove special characters from beginning/end of NGrams" in {
+    val input       = """The start of "A Day in the Life" is cross-faded with the applause."""
+    val ngg         = generator(6)
+    val strings     = ngg.generateFast(input).toList
+    val quoteEnds   = strings.count(_.endsWith("\""))
+    val quoteBegins = strings.count(_.startsWith("\""))
+    quoteEnds shouldBe 0
+    quoteBegins shouldBe 0
+  }
+
   it should "filter results by allowed strings" in {
     val ngg         = generator(10)
-    val nggFiltered = generator(10, collection.Set("figure skater", "Ando", "Japanese"))
+    val nggFiltered = generator(10, mutable.Set("figure skater", "Ando", "Japanese"))
     val input       = """Ando (Japanese: 安藤) is a common Japan surname. Notable people with this name are listed below.
                   |
                   |Momofuku Ando - founder and chairman of Nissin Food Products
@@ -334,7 +348,7 @@ class NGramGeneratorSpec extends UnitSpec {
     resultFiltered shouldBe expected
   }
 
-  def generator(maxTokens: Int, allowedStrings: collection.Set[String] = collection.Set()) = {
+  def generator(maxTokens: Int, allowedStrings: mutable.Set[String] = mutable.Set()) = {
     val sd = {
       val inStream = new FileInputStream("opennlp/en/opennlp-en-ud-ewt-sentence-1.1-2.4.0.bin")
       val model    = new SentenceModel(inStream)

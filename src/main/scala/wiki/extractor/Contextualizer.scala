@@ -203,7 +203,7 @@ class Contextualizer(
     DBLogging.info(s"Loading LabelCounter")
     db.label.read()
   }
-  private val goodLabels: collection.Set[String] = labelToId.keySet
-  private val dateStrings                        = language.generateValidDateStrings()
-  private val datePageIds                        = dateStrings.flatMap(d => db.getPage(d)).map(_.id)
+  private val goodLabels  = labelToId.keySet
+  private val dateStrings = language.generateValidDateStrings()
+  private val datePageIds = dateStrings.flatMap(d => db.getPage(d)).map(_.id)
 }

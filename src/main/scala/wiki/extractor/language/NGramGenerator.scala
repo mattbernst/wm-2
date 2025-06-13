@@ -11,13 +11,13 @@ class NGramGenerator(
   sentenceDetector: SentenceDetector,
   tokenizer: Tokenizer,
   maxTokens: Int = 10,
-  allowedStrings: collection.Set[String] = collection.Set()) {
+  allowedStrings: mutable.Set[String] = mutable.Set()) {
 
   /**
     * Generate token-based ngrams of up to maxTokens tokens per ngram. The
     * ngrams do not cross sentence boundaries. Errors from the OpenNLP
     * sentence detection model can prevent some valid ngrams from being
-    * generated (see docstring on generateSimple).
+    * generated (see docstring on generateFast).
     *
     * @param text Text of a document to convert to ngrams
     * @return     All ngrams generated from the input text
@@ -40,13 +40,11 @@ class NGramGenerator(
       tokenSpans: Array[Span] = tokenizer.tokenizePos(sentence)
       caseContext             = identifyCaseContext(sentence, tokenSpans)
       left <- tokenSpans.indices
-      //  An ngram cannot start with a punctuation token
-      if !(tokenSpans(left).length == 1 &&
-        !sentence.charAt(tokenSpans(left).getStart).isLetterOrDigit)
+      //  NGram cannot start with a punctuation token
+      if isAlphanumericToken(sentence, tokenSpans(left))
       right <- left.to(math.min(left + n, tokenSpans.length - 1))
-      //  An ngram cannot end with a punctuation token
-      if !(tokenSpans(right).length == 1 &&
-        !sentence.charAt(tokenSpans(right).getStart).isLetterOrDigit)
+      //  NGram cannot end with a punctuation token
+      if isAlphanumericToken(sentence, tokenSpans(right))
     } yield {
       val globalStart = lineStart + sentenceSpan.getStart + tokenSpans(left).getStart
       val globalEnd   = lineStart + sentenceSpan.getStart + tokenSpans(right).getEnd
@@ -70,6 +68,30 @@ class NGramGenerator(
     }
 
     ngramSpans
+  }
+
+  /**
+    * Helper method to check if a token span represents a single
+    * alphanumeric character. Properly handles Unicode supplementary
+    * characters.
+    *
+    * @param sentence  The originating sentence for the tokenSpan
+    * @param tokenSpan An OpenNLP Span representing part of the sentence
+    * @return          True if the span under inspection is alphanumeric,
+    *                  false otherwise
+    */
+  private def isAlphanumericToken(sentence: String, tokenSpan: Span): Boolean = {
+    // Check if it's a single character token (accounting for surrogate pairs)
+    val start          = tokenSpan.getStart
+    val end            = tokenSpan.getEnd
+    val codePointCount = sentence.codePointCount(start, end)
+    if (codePointCount != 1) {
+      true
+    } else {
+      // Get the single code point and check if it's a letter or digit
+      val codePoint = sentence.codePointAt(start)
+      Character.isLetterOrDigit(codePoint)
+    }
   }
 
   /**
@@ -113,7 +135,14 @@ class NGramGenerator(
 
           if (slice.nonEmpty) {
             val combined = line.substring(slice.head.getStart, slice.last.getEnd)
-            if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
+
+            // Check if combined string starts and ends with letter or digit
+            // Handle potential Unicode surrogate pairs properly
+            val isValidString = combined.nonEmpty &&
+              Character.isLetterOrDigit(combined.codePointAt(0)) &&
+              Character.isLetterOrDigit(combined.codePointBefore(combined.length))
+
+            if (isValidString && (allowedStrings.isEmpty || allowedStrings.contains(combined))) {
               result.append(combined)
             }
           }

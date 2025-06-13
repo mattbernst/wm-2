@@ -233,8 +233,11 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       language = props.language
     )
 
-  private lazy val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
-  private lazy val comparer                            = new ArticleComparer(db)
+  private lazy val labelToId: mutable.Map[String, Int] = db.label
+    .readKnownLabels()
+    // Empirical hack: very short labels like "$" or "2nd" are poor labels
+    .filter(_._1.length > 3)
+  private lazy val comparer = new ArticleComparer(db)
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()

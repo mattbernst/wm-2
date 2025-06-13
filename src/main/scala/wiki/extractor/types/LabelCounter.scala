@@ -117,8 +117,8 @@ class LabelCounter {
   def getEntries(): Iterator[(String, Array[Int])] =
     labelToCount.iterator
 
-  def getLabels(): collection.Set[String] =
-    labelToCount.keySet
+  def getLabels(): mutable.Set[String] =
+    mutable.Set.from(labelToCount.keySet)
 
   def canEqual(that: Any): Boolean = that.isInstanceOf[LabelCounter]
 

@@ -6,6 +6,7 @@ import wiki.extractor.language.types.Snippet
 import wiki.extractor.types.Language
 import wiki.extractor.util.Logging
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -56,7 +57,7 @@ trait LanguageLogic {
     * @param valid             The set of valid strings to retain
     * @return                  An array of word-level NGrams as strings
     */
-  def wikiWordNGrams(wikiPagePlainText: String, valid: collection.Set[String]): Array[String] =
+  def wikiWordNGrams(wikiPagePlainText: String, valid: mutable.Set[String]): Array[String] =
     fastNGrams(wikiPagePlainText, valid)
 
   /**
@@ -84,7 +85,7 @@ trait LanguageLogic {
     buffer.toArray
   }
 
-  private[language] def fastNGrams(input: String, valid: collection.Set[String]): Array[String] = {
+  private[language] def fastNGrams(input: String, valid: mutable.Set[String]): Array[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
     ngg.generateFast(input)
   }
