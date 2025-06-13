@@ -1,7 +1,7 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.extractor.types.{Context, ModelEntry, SenseFeatures}
+import wiki.extractor.types.{Context, SenseFeatures, SenseModelEntry, SenseTrainingFields}
 
 object SenseTrainingStorage {
 
@@ -19,6 +19,65 @@ object SenseTrainingStorage {
       // Then insert all training examples with the context ID
       input.examples.foreach { example =>
         writeTrainingExample(input.page.id, input.group, contextId, example)
+      }
+    }
+  }
+
+  /**
+    * Get rows of sense training examples, containing just minimal fields,
+    * by group name. This is used for CSV preparation and for weighting
+    * training data after the initial training group rows have been written.
+    *
+    * @param groupName Name of the data group to retrieve
+    * @return          All matched-by-name rows of data
+    */
+  def getTrainingFields(groupName: String): Seq[SenseTrainingFields] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT example_id, commonness, relatedness, context_quality, is_correct_sense, weight
+           FROM $exampleTable WHERE group_name=$groupName"""
+        .map(
+          rs =>
+            SenseTrainingFields(
+              exampleId = rs.int("example_id"),
+              commonness = rs.double("commonness"),
+              relatedness = rs.double("relatedness"),
+              contextQuality = rs.double("context_quality"),
+              isCorrectSense = if (rs.int("is_correct_sense") == 1) true else false,
+              weight = rs.doubleOpt("weight")
+            )
+        )
+        .list()
+    }
+  }
+
+  /**
+    * Update previously written training data following groupwise adjustment.
+    *
+    * @param input A non-empty sequence of SenseTrainingFields to update
+    */
+  def updateTrainingFields(input: Seq[SenseTrainingFields]): Unit = {
+    require(input.nonEmpty, s"Tried to update nothing -- check $exampleTable for data")
+
+    DB.autoCommit { implicit session =>
+      val batch = sql"""UPDATE $exampleTable
+                     SET commonness = ?,
+                         relatedness = ?,
+                         context_quality = ?,
+                         is_correct_sense = ?,
+                         weight = ?
+                     WHERE example_id = ?"""
+
+      input.foreach { fields =>
+        batch
+          .bind(
+            fields.commonness,
+            fields.relatedness,
+            fields.contextQuality,
+            if (fields.isCorrectSense) 1 else 0,
+            fields.weight.orNull,
+            fields.exampleId
+          )
+          .update()
       }
     }
   }
@@ -66,7 +125,7 @@ object SenseTrainingStorage {
     sensePageId: Int,
     group: String,
     contextId: Long,
-    example: ModelEntry
+    example: SenseModelEntry
   )(implicit session: DBSession
   ): Unit = {
     sql"""INSERT INTO $exampleTable

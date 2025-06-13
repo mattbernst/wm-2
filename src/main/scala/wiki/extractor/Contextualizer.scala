@@ -48,6 +48,12 @@ class Contextualizer(
     * arbitrary array of labels. Labels can be generated from freeform text
     * with getLinkLabels.
     *
+    * The Milne papers say things like "The context is obtained by
+    * gathering all concepts that relate to unambiguous labels within
+    * the document." However, looking at the Context.java this appears
+    * to be incorrect. The Context is actually initialized with *all* labels,
+    * retaining the top N candidates after weighting/sorting.
+    *
     * @param labels              The document text
     * @param minSenseProbability The minimum prior probability for any sense
     * @return                    A Context containing top candidate Wikipedia
@@ -147,21 +153,13 @@ class Contextualizer(
         }
     }
 
-    val result = Array.ofDim[RepresentativePage](maxContextSize * 5)
     // Sometimes a page may repeat with different weights. Keep only the
-    // highest-weight page.
-    val sorted = pages.toArray.sortBy(-_.weight)
-    val seen   = mutable.Set[Int]()
-    var j      = 0
-    sorted.foreach { page =>
-      if (!seen.contains(page.pageId)) {
-        seen.add(page.pageId)
-        result(j) = page
-        j += 1
-      }
-    }
-
-    result.take(j)
+    // highest-weight page for each page ID.
+    pages
+      .sortBy(-_.weight)
+      .distinctBy(_.pageId)
+      .take(maxContextSize * 5)
+      .toArray
   }
 
   /**

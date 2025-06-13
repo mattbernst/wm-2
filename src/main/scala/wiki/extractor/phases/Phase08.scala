@@ -3,7 +3,7 @@ package wiki.extractor.phases
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{Context, ModelEntry, Sense, SenseFeatures}
+import wiki.extractor.types.{Context, Sense, SenseFeatures, SenseModelEntry}
 import wiki.extractor.util.ConfiguredProperties
 import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 
@@ -20,25 +20,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     *  - Disambiguation test set
     *  - Topic detector test set
     *
-    *  The article set only contains PageType.ARTICLE
-    *
-    *  We need to implement data extraction for train and test. The Context is
-    *  also part of this.
-    *
-    *  Implement equivalent of Context with:
-    *  getRelatednessTo
-    *  getQuality
-    *  constructor (including isDate)
-    *  The Milne papers say things like
-    *  "The context is obtained by gathering all concepts that relate to
-    *  unambiguous labels within the document." However, looking at the
-    *  Context.java this appears to be incorrect. The Context is actually
-    *  initialized with *all* labels, retaining the top N candidates after sorting/weighting.
-    *
-    *  Also need to implement ArticleComparer getRelatedness (without-ml path only)
-    *  e.g. def getRelatedness(a, b) = getRelatednessNoML(a, b)
-    *  see also setPageLinkFeatures where googleMeasure, vectorMeasure, union, intersectionProportion get set
-    *  We're going to always implement these features for page links in AND page links out
+    *  The article set only contains PageType.ARTICLE.
     */
   override def run(): Unit = {
     db.phase.deletePhase(number)
@@ -73,9 +55,34 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
         val senseFeatures = articleToFeatures(pageId, groupName)
         db.senseTraining.write(senseFeatures)
       }
+
     }
 
+    reweightTrainingData("training")
     //db.phase.completePhase(number)
+  }
+
+  /**
+    * Reweight training data to balance classes once the training group
+    * is ready, as in Disambiguator.java's weightTrainingInstances method.
+    *
+    * @param trainGroup The named data group to reweight
+    */
+  private def reweightTrainingData(trainGroup: String): Unit = {
+    val trainingRows      = db.senseTraining.getTrainingFields(trainGroup)
+    val positiveInstances = trainingRows.count(_.isCorrectSense).toDouble
+    val negativeInstances = trainingRows.count(!_.isCorrectSense).toDouble
+    val p                 = positiveInstances / (positiveInstances + negativeInstances)
+
+    val reweighted = trainingRows.map { r =>
+      if (r.isCorrectSense) {
+        r.copy(weight = Some(0.5 * (1.0 / p)))
+      } else {
+        r.copy(weight = Some(0.5 * (1.0 / (1 - p))))
+      }
+    }
+
+    db.senseTraining.updateTrainingFields(reweighted)
   }
 
   /**
@@ -91,7 +98,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     */
   private def articleToFeatures(pageId: Int, groupName: String): SenseFeatures = {
     val context = contextualizer.getContext(pageId, minSenseProbability)
-    val buffer  = ListBuffer[ModelEntry]()
+    val buffer  = ListBuffer[SenseModelEntry]()
 
     val links = db.link
       .getBySource(pageId)
@@ -104,7 +111,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     // Identify ambiguous-sense links from article.
     // Ambiguous links go into the training data.
     links.foreach { link =>
-      val batch: Seq[ModelEntry] = labelIdToSense.get(labelToId(link.anchorText)) match {
+      val batch: Seq[SenseModelEntry] = labelIdToSense.get(labelToId(link.anchorText)) match {
         case Some(sense) =>
           // An ambiguous label must have multiple senses and must not be totally
           // dominated by the commonest sense.
@@ -115,7 +122,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
             // have been chosen for this link text in other articles but not this one."
             sense.senseCounts.keys.toSeq.map { senseId =>
               val sensePageTitle = db.getPage(senseId).map(_.title).getOrElse("UNKNOWN")
-              ModelEntry(
+              SenseModelEntry(
                 sourcePageId = pageId,
                 linkDestination = link.destination,
                 label = link.anchorText,
@@ -180,7 +187,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
   private lazy val contextualizer =
     new Contextualizer(
-      maxContextSize = 64,
+      maxContextSize = 32,
       labelIdToSense = labelIdToSense,
       labelToId = labelToId,
       comparer = comparer,
