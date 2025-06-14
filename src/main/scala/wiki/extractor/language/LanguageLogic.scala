@@ -3,8 +3,11 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
 import wiki.extractor.language.types.Snippet
+import wiki.extractor.types.Language
 import wiki.extractor.util.Logging
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 trait LanguageLogic {
@@ -22,7 +25,7 @@ trait LanguageLogic {
     * at all, then both firstParagraph and firstSentence are None.
     *
     * @param input Text to process for extraction
-    * @return A snippet of extracted text content
+    * @return      A snippet of extracted text content
     */
   def getSnippet(input: String): Snippet = {
     val lines = input.split('\n')
@@ -45,23 +48,46 @@ trait LanguageLogic {
   }
 
   /**
-    * Generate word ngrams and filter them against the "valid" set of ngrams.
-    * This is intended for use during document label counting, where the only
-    * labels we want to count are those that have been previously identified
-    * as anchor text from links.
+    * Generate word NGrams and filter them against the valid set of NGrams.
+    * This is intended for use during Wikipedia document label counting, where
+    * the only labels we want to count are those that have been previously
+    * identified as anchor text from links.
     *
-    * @param input A full document (e.g. a plain-text rendition of a WP entry)
-    * @param valid The set of valid strings to retain
-    * @return      An iterator of word-level ngrams as strings
+    * @param wikiPagePlainText A plain-text rendition of a Wikipedia entry
+    * @param valid             The set of valid strings to retain
+    * @return                  An array of word-level NGrams as strings
     */
-  def wordNgrams(input: String, valid: collection.Set[String]): Iterator[String] =
-    ngrams(input, valid)
+  def wikiWordNGrams(wikiPagePlainText: String, valid: mutable.Set[String]): Array[String] =
+    fastNGrams(wikiPagePlainText, valid)
 
-  private[language] def ngrams(input: String, valid: collection.Set[String]): Iterator[String] = {
+  /**
+    * Generate word NGrams from a text document. This is a more general
+    * function that can handle any kind of document. The main different
+    * from wikiWordNGrams is that it will generate lower-cased variants of
+    * NGrams for beginning-of-sentence NGrams. This requires a slower code path
+    * than wikiWordNGrams.
+    *
+    * @param language     The language to use for processing the document
+    * @param documentText The plain text of a document
+    * @return             An array of word-level NGrams as strings
+    */
+  def wordNGrams(language: Language, documentText: String): Array[String] = {
+    val buffer = ListBuffer[String]()
+    val ngg    = new NGramGenerator(sentenceDetector.get(), tokenizer.get())
+
+    ngg.generate(documentText).foreach { ng =>
+      buffer.append(ng.getNgramAsString(documentText))
+      if (ng.isSentenceStart) {
+        buffer.append(language.unCapitalizeFirst(ng.getNgramAsString(documentText)))
+      }
+    }
+
+    buffer.toArray
+  }
+
+  private[language] def fastNGrams(input: String, valid: mutable.Set[String]): Array[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
-    ngg
-      .generateFast(input)
-      .iterator
+    ngg.generateFast(input)
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]

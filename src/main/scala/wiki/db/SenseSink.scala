@@ -16,11 +16,10 @@ import scala.collection.mutable.ListBuffer
 class SenseSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
 
   /**
-    * Enqueue one link (resolved or dead) for writing. The data will be
-    * automatically written by the continually running writerThread.
+    * Enqueue one Sense for writing. The data will be automatically written
+    * by the continually running writerThread.
     *
-    * @param resolvedLink A link with link text mapped to numeric IDs
-    * @param deadLink A link that could not resolve to a numeric destination
+    * @param sense A Sense mapping a label ID to counts of its various senses
     */
   def addSense(sense: Sense): Unit = {
     queue.put(QueueEntry(sense))

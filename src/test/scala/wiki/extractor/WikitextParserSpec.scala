@@ -1,6 +1,7 @@
 package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
+import org.sweble.wikitext.parser.nodes.WtListItem
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.Link
 import wiki.extractor.util.{FileHelpers, UnitSpec}
@@ -144,6 +145,14 @@ class WikitextParserSpec extends UnitSpec {
     assertThrows[VisitingException] {
       parser.parse(title, markup)
     }
+  }
+
+  "extractNodes" should "extract only nodes of matching type" in {
+    val markup = FileHelpers.readTextFile("src/test/resources/mercury.wikitext")
+    val parsed = parser.parse("Mercury", markup)
+
+    val listItems = parser.extractNodes[WtListItem](parsed)
+    listItems.length shouldBe 116
   }
 
   private lazy val parser = new WikitextParser(EnglishLanguageLogic)

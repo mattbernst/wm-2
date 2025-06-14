@@ -12,6 +12,9 @@ abstract class UnitSpec extends AnyFlatSpec with OptionValues with Matchers with
 
   protected def randomInt(): Int = Random.nextInt().abs
 
+  protected def randomInts(n: Int): List[Int] =
+    0.until(n).map(_ => randomInt()).toList
+
   protected def randomString(n: Int = 10): String = {
     val prettyChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toCharArray
     val chars       = new Array[Char](n)

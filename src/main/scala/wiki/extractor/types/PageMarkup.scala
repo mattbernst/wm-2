@@ -3,7 +3,14 @@ package wiki.extractor.types
 import upickle.default.*
 import wiki.extractor.util.Compressor
 
-case class TypedPageMarkup(pmu: Option[PageMarkup_U], pmz: Option[PageMarkup_Z], pageType: PageType)
+case class TypedPageMarkup(pmu: Option[PageMarkup_U], pmz: Option[PageMarkup_Z], pageType: PageType) {
+
+  lazy val markup: PageMarkup = if (pmu.nonEmpty) {
+    PageMarkup.deserializeUncompressed(pmu.get)
+  } else {
+    PageMarkup.deserializeCompressed(pmz.get)
+  }
+}
 case class PageMarkup(pageId: Int, wikitext: Option[String], parseResult: Option[ParseResult])
 
 // These uncompressed/compressed variants exist so that storage of the

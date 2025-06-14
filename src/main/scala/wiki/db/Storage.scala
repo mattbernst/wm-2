@@ -68,6 +68,15 @@ class Storage(fileName: String) extends Logging {
   }
 
   /**
+    * Try to get a single Page from storage by ID.
+    *
+    * @param pageId Numeric ID for page to retrieve
+    * @return The full page record for the ID, if retrievable
+    */
+  def getPage(pageId: Int): Option[Page] =
+    getPages(Seq(pageId)).headOption
+
+  /**
     * Get links from the link table.
     * Only includes links to articles and disambiguation pages. This is used to
     * set up the LabelCounter data before processing raw text of each page.
@@ -92,9 +101,7 @@ class Storage(fileName: String) extends Logging {
         val pageIds = targets.slice(offset, offset + batchSize)
         val lower   = pageIds.headOption.getOrElse(Int.MaxValue)
         val upper   = pageIds.lastOption.map(_ + 1).getOrElse(Int.MaxValue)
-        if (pageIds.length < batchSize) {
-          println(s"SHORTFALL $offset ${pageIds.length} $batchSize")
-        }
+
         val rows = DB.autoCommit { implicit session =>
           sql"""SELECT source, destination, anchor_text
              FROM link
@@ -218,6 +225,7 @@ class Storage(fileName: String) extends Logging {
   val page: PageStorage.type                   = PageStorage
   val phase: PhaseStorage.type                 = PhaseStorage
   val sense: SenseStorage.type                 = SenseStorage
+  val senseTraining: SenseTrainingStorage.type = SenseTrainingStorage
   val transclusion: TransclusionStorage.type   = TransclusionStorage
 
   private lazy val namespaceCache: LoadingCache[Int, Namespace] =

@@ -94,7 +94,7 @@ object LabelStorage {
       current += batchSize
     }
 
-    result
+    result.withDefaultValue(0)
   }
 
   /**

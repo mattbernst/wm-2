@@ -1,36 +1,31 @@
 package wiki.extractor
 
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{PageMarkup, TypedPageMarkup, Worker}
+import wiki.extractor.types.{TypedPageMarkup, Worker}
 import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable
 
-class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: collection.Set[String]) {
+class PageLabelProcessor(languageLogic: LanguageLogic, goodLabels: mutable.Set[String]) {
 
   /**
     * Get a count of all valid labels that could be extracted from the plain
     * text version of a Wikipedia page. The plain text version of the page gets
-    * converted to a sequence of token based ngrams which are then filtered against
-    * goodLabels before their counts get added up in the return map.
+    * converted to a sequence of token based ngrams which are then filtered
+    * against goodLabels before their counts get added up in the return map.
     *
     * @param tpm PageMarkup data, including plain text version of page
     * @return    A map of valid labels to counts from within the page
     */
   def extract(tpm: TypedPageMarkup): mutable.Map[String, Int] = {
-    val pm: PageMarkup = if (tpm.pmu.nonEmpty) {
-      PageMarkup.deserializeUncompressed(tpm.pmu.get)
-    } else {
-      PageMarkup.deserializeCompressed(tpm.pmz.get)
-    }
+    val pageNgrams  = mutable.Map[String, Int]().withDefaultValue(0)
+    val parseResult = tpm.markup.parseResult
 
-    val pageNgrams = mutable.Map[String, Int]().withDefaultValue(0)
-
-    pm.parseResult
+    parseResult
       .map(_.text)
       .foreach { plainText =>
         languageLogic
-          .wordNgrams(plainText, goodLabels)
+          .wikiWordNGrams(plainText, goodLabels)
           .foreach(label => pageNgrams(label) += 1)
       }
 

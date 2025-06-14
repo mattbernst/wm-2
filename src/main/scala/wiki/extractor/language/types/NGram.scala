@@ -2,8 +2,6 @@ package wiki.extractor.language.types
 
 import opennlp.tools.util.Span
 
-import java.util.Locale
-
 case class NGram(
   start: Int,
   end: Int,
@@ -12,16 +10,8 @@ case class NGram(
   isSentenceStart: Boolean)
     extends Span(start, end) {
 
-  def getNgram(sourceText: String): String =
+  def getNgramAsString(sourceText: String): String =
     sourceText.substring(start, end)
-
-  def getNgramUpperFirst(sourceText: String, locale: Locale): String = {
-    val ngram = getNgram(sourceText).toLowerCase(locale).toCharArray
-    tokenSpans.foreach { span =>
-      ngram(span.getStart) = ngram(span.getStart).toUpper
-    }
-    new String(ngram)
-  }
 }
 
 object NGram {
@@ -36,10 +26,10 @@ object NGram {
     * @param ngrams       A sequence of ngrams extracted from the source string
     * @return             Pieces of the original source string
     */
-  def sliceString(sourceString: String, ngrams: Seq[NGram]): Seq[String] = {
-    ngrams.map(ngram => sliceString(sourceString, ngram))
+  def generateStrings(sourceString: String, ngrams: Seq[NGram]): Seq[String] = {
+    ngrams.map(ngram => generateString(sourceString, ngram))
   }
 
-  def sliceString(sourceString: String, ngram: NGram): String =
+  def generateString(sourceString: String, ngram: NGram): String =
     sourceString.slice(ngram.start, ngram.end)
 }

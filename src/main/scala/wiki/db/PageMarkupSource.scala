@@ -16,7 +16,7 @@ class PageMarkupSource(db: Storage, queueSize: Int = 40_000) {
     *
     */
   def enqueueMarkup(relevantPages: Set[PageType]): Unit = {
-    val max = Math.max(db.page.compressedMax, db.page.uncompressedMax)
+    val max = math.max(db.page.compressedMax, db.page.uncompressedMax)
     val fetch: (Int, Int) => Seq[TypedPageMarkup] = if (db.page.usingCompression) {
       db.page.readMarkupSlice_Z
     } else {

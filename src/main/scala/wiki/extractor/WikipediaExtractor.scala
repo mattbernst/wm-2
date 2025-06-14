@@ -22,7 +22,8 @@ object WikipediaExtractor extends Logging {
       new Phase04(db),
       new Phase05(db),
       new Phase06(db),
-      new Phase07(db)
+      new Phase07(db),
+      new Phase08(db)
     )
 
     // Update lastPhase whenever adding a new phase

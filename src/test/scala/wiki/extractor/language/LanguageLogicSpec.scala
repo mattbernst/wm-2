@@ -1,6 +1,7 @@
 package wiki.extractor.language
 
 import wiki.extractor.language.types.Snippet
+import wiki.extractor.types.Language
 import wiki.extractor.util.UnitSpec
 
 class LanguageLogicSpec extends UnitSpec {
@@ -71,4 +72,80 @@ class LanguageLogicSpec extends UnitSpec {
       "Le 1er novembre 2000, Sega Enterprises, Ltd."
     )
   }
+
+  behavior of "EnglishLanguageLogic.wordNGrams"
+
+  it should "generate NGrams with beginning-of-sentence casing variants" in {
+    val input = "Mercury has been smelted from cinnabar since antiquity. It dissolves many metals."
+    val expected = Array(
+      "Mercury",
+      "mercury",
+      "Mercury has",
+      "mercury has",
+      "Mercury has been",
+      "mercury has been",
+      "Mercury has been smelted",
+      "mercury has been smelted",
+      "Mercury has been smelted from",
+      "mercury has been smelted from",
+      "Mercury has been smelted from cinnabar",
+      "mercury has been smelted from cinnabar",
+      "Mercury has been smelted from cinnabar since",
+      "mercury has been smelted from cinnabar since",
+      "Mercury has been smelted from cinnabar since antiquity",
+      "mercury has been smelted from cinnabar since antiquity",
+      "has",
+      "has been",
+      "has been smelted",
+      "has been smelted from",
+      "has been smelted from cinnabar",
+      "has been smelted from cinnabar since",
+      "has been smelted from cinnabar since antiquity",
+      "been",
+      "been smelted",
+      "been smelted from",
+      "been smelted from cinnabar",
+      "been smelted from cinnabar since",
+      "been smelted from cinnabar since antiquity",
+      "smelted",
+      "smelted from",
+      "smelted from cinnabar",
+      "smelted from cinnabar since",
+      "smelted from cinnabar since antiquity",
+      "from",
+      "from cinnabar",
+      "from cinnabar since",
+      "from cinnabar since antiquity",
+      "cinnabar",
+      "cinnabar since",
+      "cinnabar since antiquity",
+      "since",
+      "since antiquity",
+      "antiquity",
+      "It",
+      "it",
+      "It dissolves",
+      "it dissolves",
+      "It dissolves many",
+      "it dissolves many",
+      "It dissolves many metals",
+      "it dissolves many metals",
+      "dissolves",
+      "dissolves many",
+      "dissolves many metals",
+      "many",
+      "many metals",
+      "metals"
+    )
+
+    val nGrams = EnglishLanguageLogic.wordNGrams(language = englishLanguage, documentText = input)
+    nGrams.toList shouldBe expected.toList
+  }
+
+  private lazy val englishLanguage = Language(
+    code = "en",
+    name = "English",
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    rootPage = "Category:Main topic classifications"
+  )
 }

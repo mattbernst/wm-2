@@ -3,7 +3,11 @@ package wiki.extractor.types
 import upickle.default.*
 import wiki.extractor.util.FileHelpers
 
+import java.text.BreakIterator
+import java.time.format.DateTimeFormatter
+import java.time.{MonthDay, YearMonth}
 import java.util.Locale
+import scala.collection.mutable
 
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
@@ -23,15 +27,24 @@ case class Language(
    */
   rootPage: String) {
 
-  val locale: Locale = {
-    val cc = if (code == "en_simple") {
-      "en"
-    } else {
-      code
-    }
+  /**
+    * Generate all possible "MMMM d" combinations (full month name + day) that are valid
+    * in the current locale.
+    *
+    * @return A Set of all valid date strings in "MMMM d" format
+    */
+  def generateValidDateStrings(): mutable.Set[String] = {
+    val formatter = DateTimeFormatter.ofPattern("MMMM d", locale)
+    val validStrings = for {
+      month <- 1 to 12
+      // Get the maximum days for this month (using a leap year)
+      maxDay = YearMonth.of(2024, month).lengthOfMonth()
+      day <- 1 to maxDay
+      monthDay   = MonthDay.of(month, day)
+      dateString = monthDay.format(formatter)
+    } yield dateString
 
-    // Should be Locale.of(cc) for Java 19+, but that doesn't work before 19
-    new Locale(cc)
+    mutable.Set.from(validStrings)
   }
 
   /**
@@ -48,6 +61,69 @@ case class Language(
     normalizedDisambiguationPrefixes.contains(tHead)
   }
 
+  val locale: Locale = {
+    val cc = if (code == "en_simple") {
+      "en"
+    } else {
+      code
+    }
+
+    // Should be Locale.of(cc) for Java 19+, but that doesn't work before 19
+    new Locale(cc)
+  }
+
+  /**
+    * Capitalize the first visual character of a string according to the
+    * current locale.
+    *
+    * @param input A string that may or may not already start with a capital
+    * @return      A capital-character-first string
+    */
+  def capitalizeFirst(input: String): String = {
+    if (input.nonEmpty) {
+      // Use BreakIterator to find the first grapheme cluster (visual character)
+      val boundary = BreakIterator.getCharacterInstance(locale)
+      boundary.setText(input)
+
+      val firstBoundary = boundary.next()
+      if (firstBoundary == BreakIterator.DONE || firstBoundary <= 0) {
+        input
+      } else {
+        val firstGrapheme = input.substring(0, firstBoundary)
+        val upperFirst    = firstGrapheme.toUpperCase(locale)
+        upperFirst + input.substring(firstBoundary)
+      }
+    } else {
+      input
+    }
+  }
+
+  /**
+    * Un-capitalize the first visual character of a string according to the
+    * current locale.
+    *
+    * @param input A string that may or may not already start with a capital
+    * @return      A non-capital-character-first string
+    */
+  def unCapitalizeFirst(input: String): String = {
+    if (input.nonEmpty) {
+      // Use BreakIterator to find the first grapheme cluster (visual character)
+      val boundary = BreakIterator.getCharacterInstance(locale)
+      boundary.setText(input)
+
+      val firstBoundary = boundary.next()
+      if (firstBoundary == BreakIterator.DONE || firstBoundary <= 0) {
+        input
+      } else {
+        val firstGrapheme = input.substring(0, firstBoundary)
+        val upperFirst    = firstGrapheme.toLowerCase(locale)
+        upperFirst + input.substring(firstBoundary)
+      }
+    } else {
+      input
+    }
+  }
+
   // Normally this is based on the language code, but in the case of the Simple
   // English Wikipedia it's "simple".
   val currentWikiPrefix: String = {
@@ -59,8 +135,8 @@ case class Language(
     s":$prefix:"
   }
 
-  private val normalizedDisambiguationPrefixes: Set[String] =
-    disambiguationPrefixes.map(_.toLowerCase(locale)).toSet
+  private val normalizedDisambiguationPrefixes: mutable.Set[String] =
+    mutable.Set.from(disambiguationPrefixes.map(_.toLowerCase(locale)))
 }
 
 object Language {
