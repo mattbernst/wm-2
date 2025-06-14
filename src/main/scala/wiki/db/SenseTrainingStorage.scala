@@ -136,7 +136,7 @@ object SenseTrainingStorage {
                  ${example.relatedness}, ${example.contextQuality},
                  ${example.isCorrectSense},${example.weight})
        """
-      .update()
+      .update(): Unit
   }
 
   private val contextTable     = Storage.table("sense_training_context")

@@ -3,10 +3,11 @@ package wiki.extractor.phases
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{Context, Page, Sense, SenseFeatures, SenseModelEntry}
+import wiki.extractor.types.*
 import wiki.extractor.util.{ConfiguredProperties, DBLogging, Progress}
 import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 
+import java.io.{File, PrintWriter}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.parallel.CollectionConverters.*
@@ -34,11 +35,10 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     val ll       = LanguageLogic.getLanguageLogic(props.language.code)
     val selector = new ArticleSelector(db, ll)
 
-    // Training articles, disambiguation-test articles, topic-test articles
     val groups = Seq(
-      ("training", 1000),
-      ("disambiguation-test", 500),
-      ("topic-test", 500)
+      ("training", 2000),
+      ("disambiguation-test", 1000),
+      ("topic-test", 1000)
     )
 
     val res = selector
@@ -64,6 +64,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     }
 
     reweightTrainingData("training")
+    groups.foreach(t => writeCSV(t._1))
     db.phase.completePhase(number)
   }
 
@@ -88,6 +89,31 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     }
 
     db.senseTraining.updateTrainingFields(reweighted)
+  }
+
+  /**
+    * Write each named group of data to a separate CSV file. This is used
+    * for external model training and validation.
+    *
+    * @param groupName The name of the data group to write
+    */
+  private def writeCSV(groupName: String): Unit = {
+    val rows     = db.senseTraining.getTrainingFields(groupName)
+    val fileName = s"wiki_${props.language.code}_$groupName.csv"
+    val file     = new File(fileName)
+    val writer   = new PrintWriter(file)
+
+    try {
+      writer.println("commonness,relatedness,contextQuality,isCorrectSense,weight")
+      rows.foreach { row =>
+        val weightStr = row.weight.map(_.toString).getOrElse("")
+        writer.println(
+          s"${row.commonness},${row.relatedness},${row.contextQuality},${row.isCorrectSense},$weightStr"
+        )
+      }
+    } finally {
+      writer.close()
+    }
   }
 
   /**
@@ -235,8 +261,9 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
 
   private lazy val labelToId: mutable.Map[String, Int] = db.label
     .readKnownLabels()
-    // Empirical hack: very short labels like "$" or "2nd" are poor labels
-    .filter(_._1.length > 3)
+    // Empirical hack: very short labels like "$" or "2d" are poor labels
+    .filter(_._1.length > 2)
+
   private lazy val comparer = new ArticleComparer(db)
 
   private lazy val props: ConfiguredProperties =
