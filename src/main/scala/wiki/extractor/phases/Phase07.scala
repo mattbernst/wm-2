@@ -1,94 +1,270 @@
 package wiki.extractor.phases
 
-import wiki.db.{SenseSink, Storage}
-import wiki.extractor.AnchorLogic
-import wiki.extractor.types.Sense
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
+import wiki.db.Storage
+import wiki.extractor.language.LanguageLogic
+import wiki.extractor.types.*
+import wiki.extractor.util.{ConfiguredProperties, DBLogging, Progress}
+import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
 
-import java.util
+import java.io.{File, PrintWriter}
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.collection.parallel.CollectionConverters.*
+
+case class TextWithContext(text: String, labels: Seq[String], context: Context)
 
 class Phase07(db: Storage) extends Phase(db: Storage) {
 
+  /**
+    * Generate 3 randomized exclusive sets of articles:
+    *  - Training set
+    *  - Disambiguation test set
+    *  - Topic detector test set
+    *
+    *  The article set only contains PageType.ARTICLE.
+    */
   override def run(): Unit = {
     db.phase.deletePhase(number)
-    db.phase.createPhase(number, s"Gathering label senses")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context;")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context_page;")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_example;")
+    db.phase.createPhase(number, s"Building training/test data")
     db.createTableDefinitions(number)
-    DBLogging.info("Loading known labels from db")
-    val targets = db.label.readKnownLabels()
-    DBLogging.info("Counting label senses")
-    countSenses(targets)
-    db.createIndexes(number)
-    DBLogging.info("Getting source counts by destination")
-    val sourceCounts = db.link.getSourceCountsByDestination()
-    DBLogging.info("Writing source counts by destination")
-    db.link.writeSourceCountsByDestination(sourceCounts)
-    DBLogging.info("Getting destination counts by source")
-    val destinationCounts = db.link.getDestinationCountsBySource()
-    DBLogging.info("Writing destination counts by source")
-    db.link.writeDestinationCountsBySource(destinationCounts)
+
+    val ll       = LanguageLogic.getLanguageLogic(props.language.code)
+    val selector = new ArticleSelector(db, ll)
+
+    val groups = Seq(
+      ("training", 2000),
+      ("disambiguation-test", 1000),
+      ("topic-test", 1000)
+    )
+
+    val res = selector
+      .extractSets(
+        sizes = groups.map(_._2),
+        minOutLinks = 15,
+        minInLinks = 20,
+        maxListProportion = 0.1,
+        minWordCount = 400,
+        maxWordCount = 4000
+      )
+
+    // Generate features from the subsets of articles
+    res.zip(groups).foreach { set =>
+      val subset    = set._1
+      val groupName = set._2._1
+      DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
+      subset.par.foreach { pageId =>
+        tick()
+        val senseFeatures = articleToFeatures(pageId, groupName)
+        db.senseTraining.write(senseFeatures)
+      }
+    }
+
+    reweightTrainingData("training")
+    groups.foreach(t => writeCSV(t._1))
     db.phase.completePhase(number)
   }
 
   /**
-    * Count the number of valid senses for labels.
+    * Reweight training data to balance classes once the training group
+    * is ready, as in Disambiguator.java's weightTrainingInstances method.
     *
-    * @param targets Valid labels mapped to their label IDs
+    * @param trainGroup The named data group to reweight
     */
-  private def countSenses(targets: mutable.Map[String, Int]): Unit = {
-    val anchorLogic = new AnchorLogic(props.language)
-    DBLogging.info("Loading relevant pages from db")
-    val anchorPages = db.page.getAnchorPages()
-    DBLogging.info("Loading grouped links from db")
-    val groupedLinks = db.link.getGroupedLinks()
-    DBLogging.info("Loaded grouped links from db")
-    val sink = new SenseSink(db)
+  private def reweightTrainingData(trainGroup: String): Unit = {
+    val trainingRows      = db.senseTraining.getTrainingFields(trainGroup)
+    val positiveInstances = trainingRows.count(_.isCorrectSense).toDouble
+    val negativeInstances = trainingRows.count(!_.isCorrectSense).toDouble
+    val p                 = positiveInstances / (positiveInstances + negativeInstances)
 
-    // Clean anchors in-place. Bad anchors become empty strings,
-    // and will not match anything in targets.
-    groupedLinks.labels.mapInPlace(l => anchorLogic.cleanAnchor(l))
-    val transitions = changes(groupedLinks.labels)
-
-    DBLogging.info("Storing sense counts for labels")
-    if (transitions.isEmpty) {
-      DBLogging.error(s"Did not find any link groups to process")
-    } else {
-      var left  = 0
-      var right = 0
-      var j     = 0
-      while (j < transitions.length) {
-        right = transitions(j)
-        val cleanSlice = groupedLinks
-          .slice(left, right)
-          .filter(e => targets.contains(e.label))
-          .filter(e => util.Arrays.binarySearch(anchorPages, e.destination) >= 0)
-
-        if (cleanSlice.nonEmpty) {
-          val labelId           = targets(cleanSlice.head.label)
-          val destinationCounts = mutable.Map[Int, Int]()
-          cleanSlice.foreach(e => destinationCounts.put(e.destination, e.count))
-          sink.addSense(Sense(labelId = labelId, senseCounts = destinationCounts))
-        }
-
-        j += 1
-        left = right
+    val reweighted = trainingRows.map { r =>
+      if (r.isCorrectSense) {
+        r.copy(weight = Some(0.5 * (1.0 / p)))
+      } else {
+        r.copy(weight = Some(0.5 * (1.0 / (1 - p))))
       }
     }
 
-    sink.stopWriting()
-    sink.writerThread.join()
+    db.senseTraining.updateTrainingFields(reweighted)
   }
 
-  private def changes(arr: Array[String]): Array[Int] = {
-    if (arr.isEmpty) {
-      Array.empty
-    } else {
-      arr.zipWithIndex
-        .sliding(2)
-        .collect { case Array((a, _), (b, idx)) if a != b => idx }
-        .toArray
+  /**
+    * Write each named group of data to a separate CSV file. This is used
+    * for external model training and validation.
+    *
+    * @param groupName The name of the data group to write
+    */
+  private def writeCSV(groupName: String): Unit = {
+    val rows     = db.senseTraining.getTrainingFields(groupName)
+    val fileName = s"wiki_${props.language.code}_$groupName.csv"
+    val file     = new File(fileName)
+    val writer   = new PrintWriter(file)
+
+    try {
+      writer.println("commonness,relatedness,contextQuality,isCorrectSense,weight")
+      rows.foreach { row =>
+        val weightStr = row.weight.map(_.toString).getOrElse("")
+        writer.println(
+          s"${row.commonness},${row.relatedness},${row.contextQuality},${row.isCorrectSense},$weightStr"
+        )
+      }
+    } finally {
+      writer.close()
     }
   }
+
+  /**
+    * Get features to train on from a Wikipedia article. We're trying
+    * to predict the correct sense of an ambiguous term from commonness,
+    * relatedness, and context quality.
+    *
+    * This encapsulates logic similar to "train" in Disambiguator.java
+    *
+    * @param pageId   The numeric ID of a Wikipedia page used for feature
+    *                  extraction
+    * @param groupName The name of the feature extraction group
+    */
+  private def articleToFeatures(pageId: Int, groupName: String): SenseFeatures = {
+    val context = contextualizer.getContext(pageId, minSenseProbability)
+    val buffer  = ListBuffer[SenseModelEntry]()
+
+    val links = db.link
+      .getBySource(pageId)
+      .filter(l => labelToId(l.anchorText) > 0)
+      .distinctBy(rl => (rl.anchorText, rl.destination))
+
+    // Prime label cache
+    labelIdToSense.getAll(links.map(link => labelToId(link.anchorText)))
+
+    // Identify ambiguous-sense links from article.
+    // Ambiguous links go into the training data.
+    links.foreach { link =>
+      val batch: Seq[SenseModelEntry] = labelIdToSense.get(labelToId(link.anchorText)) match {
+        case Some(sense) =>
+          // An ambiguous label must have multiple senses and must not be totally
+          // dominated by the commonest sense.
+          val dominated = sense.commonness(sense.commonestSense) > 1.0 - minSenseProbability
+          if (sense.senseCounts.size > 1 && !dominated) {
+            // "Each existing link provides one positive example, namely its chosen
+            // destination, and several negative examples, namely the destinations that
+            // have been chosen for this link text in other articles but not this one."
+            sense.senseCounts.keys.toSeq.map { senseId =>
+              val sensePageTitle = pageCache.get(senseId).title
+              SenseModelEntry(
+                sourcePageId = pageId,
+                linkDestination = link.destination,
+                label = link.anchorText,
+                sensePageTitle = sensePageTitle,
+                senseId = senseId,
+                commonness = sense.commonness(senseId),
+                relatedness = comparer.getRelatednessTo(senseId, context),
+                contextQuality = context.quality,
+                isCorrectSense = senseId == link.destination,
+                weight = None
+              )
+            }
+          } else {
+            Seq()
+          }
+        case None =>
+          Seq()
+      }
+
+      // Only add the batch to the buffer if one of them has the correct
+      // sense. There are some cases where isCorrectSense is false for all
+      // of them, e.g. for rare senses that have been excluded from
+      // labelIdToSense.
+      if (batch.exists(_.isCorrectSense)) {
+        buffer.addAll(batch)
+      }
+    }
+
+    SenseFeatures(
+      group = groupName,
+      page = pageCache.get(pageId),
+      context = enrichContext(context),
+      examples = buffer.toArray
+    )
+  }
+
+  // Get a Context for the page from its plain text rendition, with no
+  // knowledge of its original links.
+  private def getBlindedPageContext(pageId: Int): TextWithContext = {
+    val pageText   = db.page.readMarkupAuto(pageId).flatMap(_.parseResult).map(_.text).get
+    val linkLabels = contextualizer.getLinkLabels(pageText)
+    val context    = contextualizer.getContext(linkLabels, minSenseProbability)
+    TextWithContext(pageText, linkLabels.toSeq, enrichContext(context))
+  }
+
+  private def tick(): Unit = this.synchronized {
+    Progress.tick(count = nProcessed, marker = "+", n = 10)
+    nProcessed += 1
+  }
+
+  /**
+    * Enrich context by adding full Page objects to each representative page.
+    * This is useful for reading/debugging/understanding the Context output.
+    *
+    * @param context A Context object that may not yet have complete
+    *                page descriptions for representative pages
+    * @return        A Context object with complete page descriptions for
+    *                representative pages
+    */
+  private def enrichContext(context: Context): Context = {
+    val enriched = context.pages.map { rep =>
+      if (rep.page.nonEmpty) {
+        rep
+      } else {
+        rep.copy(page = Some(pageCache.get(rep.pageId)))
+      }
+    }
+
+    context.copy(pages = enriched)
+  }
+
+  private var nProcessed = 0
+
+  private val minSenseProbability = 0.01
+
+  private val pageCache: LoadingCache[Int, Page] =
+    Scaffeine()
+      .maximumSize(500_000)
+      .build((pageId: Int) => db.getPage(pageId).get)
+
+  private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
+    Scaffeine()
+      .maximumSize(1_000_000)
+      .build(
+        loader = (labelId: Int) => {
+          db.sense.getSenseByLabelId(labelId).map(_.pruned(minSenseProbability))
+        },
+        allLoader = Some((labelIds: Iterable[Int]) => {
+          val bulkResults = db.sense.getSensesByLabelIds(labelIds.toSeq)
+          labelIds.map { labelId =>
+            labelId -> bulkResults.get(labelId).map(_.pruned(minSenseProbability))
+          }.toMap
+        })
+      )
+
+  private lazy val contextualizer =
+    new Contextualizer(
+      maxContextSize = 32,
+      labelIdToSense = labelIdToSense,
+      labelToId = labelToId,
+      comparer = comparer,
+      db = db,
+      language = props.language
+    )
+
+  private lazy val labelToId: mutable.Map[String, Int] = db.label
+    .readKnownLabels()
+    // Empirical hack: very short labels like "$" or "2d" are poor labels
+    .filter(_._1.length > 2)
+
+  private lazy val comparer = new ArticleComparer(db)
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()

@@ -1,57 +1,47 @@
 package wiki.extractor.phases
 
-import wiki.db.Storage
-import wiki.extractor.AnchorLogic
-import wiki.extractor.types.{Anchor, LabelCounter}
+import wiki.db.{PageMarkupSource, Storage}
+import wiki.extractor.language.LanguageLogic
+import wiki.extractor.types.{PageType, TypedPageMarkup, Worker}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
-
-import scala.collection.mutable.ListBuffer
+import wiki.extractor.{LabelAccumulator, PageLabelProcessor}
 
 class Phase05(db: Storage) extends Phase(db: Storage) {
 
   override def run(): Unit = {
     db.phase.deletePhase(number)
-    db.phase.createPhase(number, s"Gathering link label statistics")
-    db.createTableDefinitions(number)
-    db.label.delete()
-    DBLogging.info("Collecting link label statistics from db")
-    val counter = prepareLabelCounter()
-    DBLogging.info("Storing link label statistics to db")
+    db.phase.createPhase(number, s"Gathering page-level label statistics")
+    db.label.clearOccurrenceCounts()
+    DBLogging.info("Loading link label statistics from db")
+    val counter     = db.label.read()
+    val ll          = LanguageLogic.getLanguageLogic(props.language.code)
+    val goodLabels  = counter.getLabels()
+    val source      = new PageMarkupSource(db)
+    val accumulator = new LabelAccumulator(counter)
+    val processor   = new PageLabelProcessor(ll, goodLabels)
+    val workers     = assignLabelWorkers(props.nWorkers, processor, source.getFromQueue _, accumulator)
+    DBLogging.info("Gathering page label statistics")
+    val relevantPages: Set[PageType] = Set(PageType.ARTICLE, PageType.DISAMBIGUATION)
+    source.enqueueMarkup(relevantPages)
+    workers.foreach(_.thread.join())
+    accumulator.stopWriting()
+    accumulator.accumulatorThread.join()
+
+    val completed = accumulator.count
+    DBLogging.info(s"Storing page label statistics to db (processed $completed pages)")
     db.label.write(counter)
-    db.createIndexes(number)
     db.phase.completePhase(number)
   }
 
-  private def prepareLabelCounter(): LabelCounter = {
-    val anchorLogic = new AnchorLogic(props.language)
-    val counter     = new LabelCounter
-    val anchorIterator = db
-      .getLinkAnchors()
-      .filter(a => anchorLogic.cleanAnchor(a.text).nonEmpty)
-    var label = anchorIterator
-      .nextOption()
-      .map(_.text)
-      .getOrElse(throw new IndexOutOfBoundsException("No starting label found!"))
-
-    val buffer = ListBuffer[Anchor]()
-    anchorIterator.foreach { anchor =>
-      // Keep appending destinations if still processing same label
-      if (anchor.text == label) {
-        buffer.append(anchor)
-      } else {
-        // Set link occurrence count, link document count for completed label
-        val linkOccurrenceCount = buffer.length
-        val linkDocCount        = buffer.map(_.source).toSet.size
-        counter.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
-
-        // Clear buffer, update label, append latest
-        buffer.clear()
-        label = anchor.text
-        buffer.append(anchor)
-      }
+  private def assignLabelWorkers(
+    n: Int,
+    processor: PageLabelProcessor,
+    source: () => Option[TypedPageMarkup],
+    accumulator: LabelAccumulator
+  ): Seq[Worker] = {
+    0.until(n).map { id =>
+      processor.worker(id = id, source = source, accumulator = accumulator)
     }
-
-    counter
   }
 
   private lazy val props: ConfiguredProperties =
