@@ -19,7 +19,6 @@ object WikipediaExtractor extends Logging {
       new Phase01(db),
       new Phase02(db),
       new Phase03(db),
-      new Phase04(db),
       new Phase05(db),
       new Phase06(db),
       new Phase07(db),
