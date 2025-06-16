@@ -78,6 +78,36 @@ class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
     }
   }
 
+  def getRelatednessByFeature(pageId: Int, context: Context): mutable.Map[String, Double] = {
+    val result: mutable.Map[String, Double] = mutable.Map(
+      "inLinkVectorMeasure"  -> 0.0,
+      "outLinkVectorMeasure" -> 0.0,
+      "inLinkGoogleMeasure"  -> 0.0,
+      "outLinkGoogleMeasure" -> 0.0
+    )
+
+    if (context.quality > 0.0 && context.pages.nonEmpty) {
+      val pageIds = (Array(pageId) ++ context.pages.map(_.pageId)).distinct
+      primeCaches(pageIds)
+
+      context.pages.foreach { page =>
+        compare(page.pageId, pageId).foreach { comparison =>
+          result("inLinkVectorMeasure") += comparison.inLinkVectorMeasure
+          result("outLinkVectorMeasure") += comparison.outLinkVectorMeasure
+          result("inLinkGoogleMeasure") += comparison.inLinkGoogleMeasure
+          result("outLinkGoogleMeasure") += comparison.outLinkGoogleMeasure
+        }
+      }
+
+      result("inLinkVectorMeasure") /= context.pages.length
+      result("outLinkVectorMeasure") /= context.pages.length
+      result("inLinkGoogleMeasure") /= context.pages.length
+      result("outLinkGoogleMeasure") /= context.pages.length
+    }
+
+    result
+  }
+
   /**
     * Populate in/out link caches with the data needed for comparisons. This is
     * more efficient than loading everything on a cache miss because we can

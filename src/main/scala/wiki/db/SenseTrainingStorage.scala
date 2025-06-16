@@ -32,14 +32,17 @@ object SenseTrainingStorage {
     */
   def getTrainingFields(groupName: String): Seq[SenseTrainingFields] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT example_id, commonness, relatedness, context_quality, is_correct_sense
+      sql"""SELECT *
            FROM $exampleTable WHERE group_name=$groupName"""
         .map(
           rs =>
             SenseTrainingFields(
               exampleId = rs.int("example_id"),
               commonness = rs.double("commonness"),
-              relatedness = rs.double("relatedness"),
+              inLinkVectorMeasure = rs.double("in_link_vector_measure"),
+              outLinkVectorMeasure = rs.double("out_link_vector_measure"),
+              inLinkGoogleMeasure = rs.double("in_link_google_measure"),
+              outLinkGoogleMeasure = rs.double("out_link_google_measure"),
               contextQuality = rs.double("context_quality"),
               isCorrectSense = if (rs.int("is_correct_sense") == 1) true else false
             )
@@ -59,7 +62,10 @@ object SenseTrainingStorage {
     DB.autoCommit { implicit session =>
       val batch = sql"""UPDATE $exampleTable
                      SET commonness = ?,
-                         relatedness = ?,
+                         in_link_vector_measure = ?,
+                         out_link_vector_measure = ?,
+                         in_link_google_measure = ?,
+                         out_link_google_measure = ?,
                          context_quality = ?,
                          is_correct_sense = ?
                      WHERE example_id = ?"""
@@ -68,7 +74,10 @@ object SenseTrainingStorage {
         batch
           .bind(
             fields.commonness,
-            fields.relatedness,
+            fields.inLinkVectorMeasure,
+            fields.outLinkVectorMeasure,
+            fields.inLinkGoogleMeasure,
+            fields.outLinkGoogleMeasure,
             fields.contextQuality,
             if (fields.isCorrectSense) 1 else 0,
             fields.exampleId
@@ -126,11 +135,14 @@ object SenseTrainingStorage {
   ): Unit = {
     sql"""INSERT INTO $exampleTable
          (sense_page_id, context_id, group_name, link_destination, label,
-          sense_id, commonness, relatedness, context_quality, is_correct_sense)
+          sense_id, commonness, in_link_vector_measure, out_link_vector_measure,
+          in_link_google_measure, out_link_google_measure, context_quality,
+          is_correct_sense)
          VALUES ($sensePageId, $contextId, $group, ${example.linkDestination},
                  ${example.label}, ${example.senseId}, ${example.commonness},
-                 ${example.relatedness}, ${example.contextQuality},
-                 ${example.isCorrectSense})
+                 ${example.inLinkVectorMeasure}, ${example.outLinkVectorMeasure},
+                 ${example.inLinkGoogleMeasure}, ${example.outLinkGoogleMeasure},
+                 ${example.contextQuality}, ${example.isCorrectSense})
        """
       .update(): Unit
   }

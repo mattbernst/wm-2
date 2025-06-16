@@ -21,7 +21,8 @@ class CatBoostTrainer:
         self.train_file = train_file
         self.val_file = val_file
         self.cv_folds = cv_folds
-        self.feature_cols = ['commonness', 'relatedness', 'contextQuality']
+        self.feature_cols = ['commonness', 'inLinkVectorMeasure', 'outLinkVectorMeasure',
+                             'inLinkGoogleMeasure', 'outLinkGoogleMeasure', 'contextQuality']
         self.target_col = 'isCorrectSense'
         self.model = None
         self.train_df = None

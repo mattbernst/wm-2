@@ -83,10 +83,19 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val writer   = new PrintWriter(file)
 
     try {
-      writer.println("commonness,relatedness,contextQuality,isCorrectSense")
+      val headerFields = Seq(
+        "commonness",
+        "inLinkVectorMeasure",
+        "outLinkVectorMeasure",
+        "inLinkGoogleMeasure",
+        "outLinkGoogleMeasure",
+        "contextQuality",
+        "isCorrectSense"
+      )
+      writer.println(headerFields.mkString(","))
       rows.foreach { row =>
         writer.println(
-          s"${row.commonness},${row.relatedness},${row.contextQuality},${row.isCorrectSense}"
+          s"${row.commonness},${row.inLinkVectorMeasure},${row.outLinkVectorMeasure},${row.inLinkGoogleMeasure},${row.outLinkGoogleMeasure},${row.contextQuality},${row.isCorrectSense}"
         )
       }
     } finally {
