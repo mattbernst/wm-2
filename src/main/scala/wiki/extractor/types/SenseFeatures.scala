@@ -9,16 +9,14 @@ case class SenseModelEntry(
   commonness: Double,
   relatedness: Double,
   contextQuality: Double,
-  isCorrectSense: Boolean,
-  weight: Option[Double])
+  isCorrectSense: Boolean)
 
 case class SenseTrainingFields(
   exampleId: Int,
   commonness: Double,
   relatedness: Double,
   contextQuality: Double,
-  isCorrectSense: Boolean,
-  weight: Option[Double])
+  isCorrectSense: Boolean)
 
 case class SenseFeatures(
   group: String,

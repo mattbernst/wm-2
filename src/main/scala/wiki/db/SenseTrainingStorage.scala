@@ -25,15 +25,14 @@ object SenseTrainingStorage {
 
   /**
     * Get rows of sense training examples, containing just minimal fields,
-    * by group name. This is used for CSV preparation and for weighting
-    * training data after the initial training group rows have been written.
+    * by group name. This is used for CSV preparation.
     *
     * @param groupName Name of the data group to retrieve
     * @return          All matched-by-name rows of data
     */
   def getTrainingFields(groupName: String): Seq[SenseTrainingFields] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT example_id, commonness, relatedness, context_quality, is_correct_sense, weight
+      sql"""SELECT example_id, commonness, relatedness, context_quality, is_correct_sense
            FROM $exampleTable WHERE group_name=$groupName"""
         .map(
           rs =>
@@ -42,8 +41,7 @@ object SenseTrainingStorage {
               commonness = rs.double("commonness"),
               relatedness = rs.double("relatedness"),
               contextQuality = rs.double("context_quality"),
-              isCorrectSense = if (rs.int("is_correct_sense") == 1) true else false,
-              weight = rs.doubleOpt("weight")
+              isCorrectSense = if (rs.int("is_correct_sense") == 1) true else false
             )
         )
         .list()
@@ -63,8 +61,7 @@ object SenseTrainingStorage {
                      SET commonness = ?,
                          relatedness = ?,
                          context_quality = ?,
-                         is_correct_sense = ?,
-                         weight = ?
+                         is_correct_sense = ?
                      WHERE example_id = ?"""
 
       input.foreach { fields =>
@@ -74,7 +71,6 @@ object SenseTrainingStorage {
             fields.relatedness,
             fields.contextQuality,
             if (fields.isCorrectSense) 1 else 0,
-            fields.weight.orNull,
             fields.exampleId
           )
           .update()
@@ -130,11 +126,11 @@ object SenseTrainingStorage {
   ): Unit = {
     sql"""INSERT INTO $exampleTable
          (sense_page_id, context_id, group_name, link_destination, label,
-          sense_id, commonness, relatedness, context_quality, is_correct_sense, weight)
+          sense_id, commonness, relatedness, context_quality, is_correct_sense)
          VALUES ($sensePageId, $contextId, $group, ${example.linkDestination},
                  ${example.label}, ${example.senseId}, ${example.commonness},
                  ${example.relatedness}, ${example.contextQuality},
-                 ${example.isCorrectSense},${example.weight})
+                 ${example.isCorrectSense})
        """
       .update(): Unit
   }

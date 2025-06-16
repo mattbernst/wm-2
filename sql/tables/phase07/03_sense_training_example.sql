@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS sense_training_example (
     relatedness REAL NOT NULL,
     context_quality REAL NOT NULL,
     is_correct_sense BOOLEAN NOT NULL,
-    weight REAL,
     FOREIGN KEY (sense_page_id) REFERENCES page(id),
     FOREIGN KEY (context_id) REFERENCES sense_training_context(context_id),
     FOREIGN KEY (link_destination) REFERENCES page(id)

@@ -57,8 +57,7 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
                 commonness = sense.commonness(senseId),
                 relatedness = comparer.getRelatednessTo(senseId, context),
                 contextQuality = context.quality,
-                isCorrectSense = senseId == link.destination,
-                weight = None
+                isCorrectSense = senseId == link.destination
               )
             }
           } else {
