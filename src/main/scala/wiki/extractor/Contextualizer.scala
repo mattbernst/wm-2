@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 
 class Contextualizer(
   maxContextSize: Int,
-  labelIdToSense: LoadingCache[Int, Option[Sense]],
+  labelIdToSense: LoadingCache[Int, Option[WordSense]],
   labelToId: mutable.Map[String, Int],
   comparer: ArticleComparer,
   db: Storage,
@@ -24,7 +24,8 @@ class Contextualizer(
     * This is used for generating model training data.
     *
     * @param pageId              The numeric ID of the Wikipedia page
-    * @param minSenseProbability The minimum prior probability for any sense
+    * @param minSenseProbability The minimum prior probability for any word
+    *                            sense
     * @return                    A Context containing top candidate Wikipedia
     *                            pages
     */
@@ -55,7 +56,8 @@ class Contextualizer(
     * retaining the top N candidates after weighting/sorting.
     *
     * @param labels              The document text
-    * @param minSenseProbability The minimum prior probability for any sense
+    * @param minSenseProbability The minimum prior probability for any word
+    *                            sense
     * @return                    A Context containing top candidate Wikipedia
     *                            pages
     */
@@ -89,11 +91,11 @@ class Contextualizer(
     * Collect initial representative-page candidates to represent a document.
     * These initial candidates are more numerous than the final candidate set.
     * They include pages that meet the threshold minSenseProbability for a
-    * certain sense, but discard especially rare senses. For example, "Mercury"
-    * might be interpreted as Mercury the planet, Mercury the god, or mercury
-    * the element, but at a typical minSenseProbability it won't include Mercury
-    * the Marvel Comics character. The last sense of usage is very rare in
-    * Wikipedia.
+    * certain word sense, but discard especially rare senses. For example,
+    * "Mercury" might be interpreted as Mercury the planet, Mercury the god,
+    * or mercury the element, but at a typical minSenseProbability it won't
+    * include Mercury the Marvel Comics character. The last sense of usage
+    * is very rare in Wikipedia.
     *
     * @param labels               Distinct labels from a single document
     * @param minSenseProbability  Minimum sense prior probability allowed in
@@ -149,8 +151,8 @@ class Contextualizer(
     * thematically adjacent.
     *
     * A document that mentions "Mercury", "chondrite", and "orbit" is likelier
-    * to have Mercury-the-planet as one of its top candidates senses than a
-    * document mentioning "Mercury", "vermilion", and "alchemy"; the latter
+    * to have Mercury-the-planet as one of its top candidates word senses than
+    * a document mentioning "Mercury", "vermilion", and "alchemy"; the latter
     * will have Mercury-the-element as a top representative page.
     *
     * This is less effective for very short documents, like photo captions,

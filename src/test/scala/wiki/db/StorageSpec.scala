@@ -175,7 +175,7 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     val labelId = randomInt()
     val d1      = randomInt()
     val d2      = randomInt()
-    val sense = Sense(
+    val sense = WordSense(
       labelId = labelId,
       senseCounts = mutable.Map.from(
         Map(

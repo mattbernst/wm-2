@@ -1,6 +1,6 @@
 package wiki.db
 
-import wiki.extractor.types.Sense
+import wiki.extractor.types.WordSense
 import wiki.extractor.util.{DBLogging, Progress}
 
 import java.util.concurrent.{ArrayBlockingQueue, TimeUnit}
@@ -21,7 +21,7 @@ class SenseSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
     *
     * @param sense A Sense mapping a label ID to counts of its various senses
     */
-  def addSense(sense: Sense): Unit = {
+  def addSense(sense: WordSense): Unit = {
     queue.put(QueueEntry(sense))
   }
 
@@ -80,7 +80,7 @@ class SenseSink(db: Storage, queueSize: Int = Storage.batchSqlSize * 2) {
     }
   }
 
-  private case class QueueEntry(sense: Sense)
+  private case class QueueEntry(sense: WordSense)
 
   var senseCount: Int                      = 0
   private var availableForWriting: Boolean = true

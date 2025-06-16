@@ -12,7 +12,7 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   /**
     * Get features to train on from a Wikipedia article. We're trying
-    * to predict the correct sense of an ambiguous term from commonness,
+    * to predict the correct word sense of an ambiguous term from commonness,
     * relatedness, and context quality.
     *
     * This encapsulates logic similar to "train" in Disambiguator.java
@@ -120,7 +120,7 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
       .maximumSize(500_000)
       .build((pageId: Int) => db.getPage(pageId).get)
 
-  private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
+  private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
     Scaffeine()
       .maximumSize(1_000_000)
       .build(

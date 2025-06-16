@@ -1,7 +1,7 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.extractor.types.Sense
+import wiki.extractor.types.WordSense
 
 import scala.collection.mutable
 
@@ -12,7 +12,7 @@ object SenseStorage {
     *
     * @param input Label senses to write
     */
-  def write(input: Seq[Sense]): Unit = {
+  def write(input: Seq[WordSense]): Unit = {
     if (input.nonEmpty) {
       val batches = input.grouped(Storage.batchSqlSize)
       DB.autoCommit { implicit session =>
@@ -81,7 +81,7 @@ object SenseStorage {
     * @param labelId The numeric ID of the label
     * @return        Senses for the label, if found in the table
     */
-  def getSenseByLabelId(labelId: Int): Option[Sense] = {
+  def getSenseByLabelId(labelId: Int): Option[WordSense] = {
     val senseCounts = mutable.Map[Int, Int]()
     DB.autoCommit { implicit session =>
       sql"""SELECT destination, n FROM $table WHERE label_id=$labelId""".foreach { r =>
@@ -91,7 +91,7 @@ object SenseStorage {
     if (senseCounts.isEmpty) {
       None
     } else {
-      Some(Sense(labelId = labelId, senseCounts = senseCounts))
+      Some(WordSense(labelId = labelId, senseCounts = senseCounts))
     }
   }
 
@@ -105,7 +105,7 @@ object SenseStorage {
     * @return Map where keys are label IDs and values are their corresponding
     *         Sense objects.
     */
-  def getSensesByLabelIds(labelIds: Seq[Int]): Map[Int, Sense] = {
+  def getSensesByLabelIds(labelIds: Seq[Int]): Map[Int, WordSense] = {
     if (labelIds.nonEmpty) {
       val batches = labelIds.grouped(Storage.batchSqlSize).toSeq
       val rows: Seq[(Int, Int, Int)] = DB.autoCommit { implicit session =>
@@ -126,7 +126,7 @@ object SenseStorage {
             case (_, destination, n) =>
               senseCounts.put(destination, n)
           }
-          Sense(labelId = labelRows.head._1, senseCounts = senseCounts)
+          WordSense(labelId = labelRows.head._1, senseCounts = senseCounts)
         }
         .toMap
     } else {

@@ -2,7 +2,7 @@ package wiki.extractor.phases
 
 import wiki.db.{SenseSink, Storage}
 import wiki.extractor.AnchorLogic
-import wiki.extractor.types.Sense
+import wiki.extractor.types.WordSense
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
 import java.util
@@ -67,7 +67,7 @@ class Phase06(db: Storage) extends Phase(db: Storage) {
           val labelId           = targets(cleanSlice.head.label)
           val destinationCounts = mutable.Map[Int, Int]()
           cleanSlice.foreach(e => destinationCounts.put(e.destination, e.count))
-          sink.addSense(Sense(labelId = labelId, senseCounts = destinationCounts))
+          sink.addSense(WordSense(labelId = labelId, senseCounts = destinationCounts))
         }
 
         j += 1
