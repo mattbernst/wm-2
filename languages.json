@@ -12,8 +12,7 @@
          "airport disambiguation",
          "genus disambiguation",
          "school disambiguation"
-      ],
-      "rootPage" : "Kevin Bacon"
+      ]
    },
    {
       "code" : "en_simple",
@@ -23,16 +22,14 @@
          "disambiguation",
          "disambig",
          "geodis"
-      ],
-      "rootPage" : "Kevin Bacon"
+      ]
    },
    {
       "code" : "fr",
       "name" : "Français",
       "disambiguationPrefixes" : [
          "homonymie"
-      ],
-      "rootPage" : "Catégorie:Espace encyclopédique"
+      ]
    }
 ]
 

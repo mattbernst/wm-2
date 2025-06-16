@@ -1,124 +1,18 @@
-package wiki.extractor.phases
+package wiki.extractor
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
-import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.{ConfiguredProperties, DBLogging, Progress}
-import wiki.extractor.{ArticleComparer, ArticleSelector, Contextualizer}
+import wiki.extractor.util.{ConfiguredProperties, Progress}
 
-import java.io.{File, PrintWriter}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.collection.parallel.CollectionConverters.*
 
-case class TextWithContext(text: String, labels: Seq[String], context: Context)
-
-class Phase08(db: Storage) extends Phase(db: Storage) {
-
-  /**
-    * Generate 3 randomized exclusive sets of articles:
-    *  - Training set
-    *  - Disambiguation test set
-    *  - Topic detector test set
-    *
-    *  The article set only contains PageType.ARTICLE.
-    */
-  override def run(): Unit = {
-    db.phase.deletePhase(number)
-    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context;")
-    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context_page;")
-    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_example;")
-    db.phase.createPhase(number, s"Building training/test data")
-    db.createTableDefinitions(number)
-
-    val ll       = LanguageLogic.getLanguageLogic(props.language.code)
-    val selector = new ArticleSelector(db, ll)
-
-    val groups = Seq(
-      ("training", 2000),
-      ("disambiguation-test", 1000),
-      ("topic-test", 1000)
-    )
-
-    val res = selector
-      .extractSets(
-        sizes = groups.map(_._2),
-        minOutLinks = 15,
-        minInLinks = 20,
-        maxListProportion = 0.1,
-        minWordCount = 400,
-        maxWordCount = 4000
-      )
-
-    // Generate features from the subsets of articles
-    res.zip(groups).foreach { set =>
-      val subset    = set._1
-      val groupName = set._2._1
-      DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
-      subset.par.foreach { pageId =>
-        tick()
-        val senseFeatures = articleToFeatures(pageId, groupName)
-        db.senseTraining.write(senseFeatures)
-      }
-    }
-
-    reweightTrainingData("training")
-    groups.foreach(t => writeCSV(t._1))
-    db.phase.completePhase(number)
-  }
-
-  /**
-    * Reweight training data to balance classes once the training group
-    * is ready, as in Disambiguator.java's weightTrainingInstances method.
-    *
-    * @param trainGroup The named data group to reweight
-    */
-  private def reweightTrainingData(trainGroup: String): Unit = {
-    val trainingRows      = db.senseTraining.getTrainingFields(trainGroup)
-    val positiveInstances = trainingRows.count(_.isCorrectSense).toDouble
-    val negativeInstances = trainingRows.count(!_.isCorrectSense).toDouble
-    val p                 = positiveInstances / (positiveInstances + negativeInstances)
-
-    val reweighted = trainingRows.map { r =>
-      if (r.isCorrectSense) {
-        r.copy(weight = Some(0.5 * (1.0 / p)))
-      } else {
-        r.copy(weight = Some(0.5 * (1.0 / (1 - p))))
-      }
-    }
-
-    db.senseTraining.updateTrainingFields(reweighted)
-  }
-
-  /**
-    * Write each named group of data to a separate CSV file. This is used
-    * for external model training and validation.
-    *
-    * @param groupName The name of the data group to write
-    */
-  private def writeCSV(groupName: String): Unit = {
-    val rows     = db.senseTraining.getTrainingFields(groupName)
-    val fileName = s"wiki_${props.language.code}_$groupName.csv"
-    val file     = new File(fileName)
-    val writer   = new PrintWriter(file)
-
-    try {
-      writer.println("commonness,relatedness,contextQuality,isCorrectSense,weight")
-      rows.foreach { row =>
-        val weightStr = row.weight.map(_.toString).getOrElse("")
-        writer.println(
-          s"${row.commonness},${row.relatedness},${row.contextQuality},${row.isCorrectSense},$weightStr"
-        )
-      }
-    } finally {
-      writer.close()
-    }
-  }
+class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   /**
     * Get features to train on from a Wikipedia article. We're trying
-    * to predict the correct sense of an ambiguous term from commonness,
+    * to predict the correct word sense of an ambiguous term from commonness,
     * relatedness, and context quality.
     *
     * This encapsulates logic similar to "train" in Disambiguator.java
@@ -127,7 +21,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     *                  extraction
     * @param groupName The name of the feature extraction group
     */
-  private def articleToFeatures(pageId: Int, groupName: String): SenseFeatures = {
+  def articleToFeatures(pageId: Int, groupName: String): SenseFeatures = {
+    tick()
     val context = contextualizer.getContext(pageId, minSenseProbability)
     val buffer  = ListBuffer[SenseModelEntry]()
 
@@ -190,17 +85,8 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     )
   }
 
-  // Get a Context for the page from its plain text rendition, with no
-  // knowledge of its original links.
-  private def getBlindedPageContext(pageId: Int): TextWithContext = {
-    val pageText   = db.page.readMarkupAuto(pageId).flatMap(_.parseResult).map(_.text).get
-    val linkLabels = contextualizer.getLinkLabels(pageText)
-    val context    = contextualizer.getContext(linkLabels, minSenseProbability)
-    TextWithContext(pageText, linkLabels.toSeq, enrichContext(context))
-  }
-
   private def tick(): Unit = this.synchronized {
-    Progress.tick(nProcessed, "+", 10)
+    Progress.tick(count = nProcessed, marker = "+", n = 10)
     nProcessed += 1
   }
 
@@ -234,7 +120,7 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
       .maximumSize(500_000)
       .build((pageId: Int) => db.getPage(pageId).get)
 
-  private val labelIdToSense: LoadingCache[Int, Option[Sense]] =
+  private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
     Scaffeine()
       .maximumSize(1_000_000)
       .build(
@@ -265,10 +151,4 @@ class Phase08(db: Storage) extends Phase(db: Storage) {
     .filter(_._1.length > 2)
 
   private lazy val comparer = new ArticleComparer(db)
-
-  private lazy val props: ConfiguredProperties =
-    db.configuration.readConfiguredPropertiesOptimistic()
-
-  override def number: Int               = 8
-  override val incompleteMessage: String = s"Phase $number incomplete -- redoing"
 }

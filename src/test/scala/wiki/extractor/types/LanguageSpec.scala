@@ -165,8 +165,7 @@ class LanguageSpec extends UnitSpec {
     val turkishLang = Language(
       code = "tr",
       name = "Turkish",
-      disambiguationPrefixes = Seq("anlam ayrımı"),
-      rootPage = "Kategori:Ana konu sınıflandırmaları"
+      disambiguationPrefixes = Seq("anlam ayrımı")
     )
 
     // In Turkish, lowercase 'i' capitalizes to 'İ' (with dot)
@@ -177,7 +176,6 @@ class LanguageSpec extends UnitSpec {
   private lazy val lang = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
-    rootPage = "Category:Main topic classifications"
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
   )
 }

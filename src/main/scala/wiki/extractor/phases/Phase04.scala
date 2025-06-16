@@ -1,47 +1,57 @@
 package wiki.extractor.phases
 
-import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
-import wiki.db.{DepthSink, Storage}
-import wiki.extractor.DepthProcessor
-import wiki.extractor.types.PageType
+import wiki.db.Storage
+import wiki.extractor.AnchorLogic
+import wiki.extractor.types.{Anchor, LabelCounter}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
 
-import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 class Phase04(db: Storage) extends Phase(db: Storage) {
 
-  // Assign a page depth to categories and articles
   override def run(): Unit = {
     db.phase.deletePhase(number)
+    db.phase.createPhase(number, s"Gathering link label statistics")
     db.createTableDefinitions(number)
-    val rootPage = props.language.rootPage
-    db.phase.createPhase(number, s"Mapping depth starting from '$rootPage'")
-    DBLogging.info(s"Getting candidates for depth mapping")
-    val pageGroups: mutable.Map[PageType, mutable.Set[Int]] = db.page.getPagesForDepth()
-    DBLogging.info(s"Got ${pageGroups.values.map(_.size).sum} candidates for depth mapping")
+    db.label.delete()
+    DBLogging.info("Collecting link label statistics from db")
+    val counter = prepareLabelCounter()
+    DBLogging.info("Storing link label statistics to db")
+    db.label.write(counter)
+    db.createIndexes(number)
+    db.phase.completePhase(number)
+  }
 
-    val destinationCache: LoadingCache[Int, Array[Int]] =
-      Scaffeine()
-        .maximumSize(10_000_000)
-        .build(loader = (id: Int) => {
-          db.link.getBySource(id).map(_.destination).toArray
-        })
+  private def prepareLabelCounter(): LabelCounter = {
+    val anchorLogic = new AnchorLogic(props.language)
+    val counter     = new LabelCounter
+    val anchorIterator = db
+      .getLinkAnchors()
+      .filter(a => anchorLogic.cleanAnchor(a.text).nonEmpty)
+    var label = anchorIterator
+      .nextOption()
+      .map(_.text)
+      .getOrElse(throw new IndexOutOfBoundsException("No starting label found!"))
 
-    val sink           = new DepthSink(db)
-    var completedCount = 0
+    val buffer = ListBuffer[Anchor]()
+    anchorIterator.foreach { anchor =>
+      // Keep appending destinations if still processing same label
+      if (anchor.text == label) {
+        buffer.append(anchor)
+      } else {
+        // Set link occurrence count, link document count for completed label
+        val linkOccurrenceCount = buffer.length
+        val linkDocCount        = buffer.map(_.source).toSet.size
+        counter.updateLinkCount(label, linkOccurrenceCount, linkDocCount)
 
-    // Keep this shallow until I understand where it's actually needed
-    val maxDepth = 9
-    1.until(maxDepth).foreach { depthLimit =>
-      val processor = new DepthProcessor(db, sink, pageGroups, destinationCache, depthLimit)
-      processor.markDepths(rootPage)
-      completedCount += db.depth.count(depthLimit)
-      DBLogging.info(s"Completed marking $completedCount pages to max depth $depthLimit")
+        // Clear buffer, update label, append latest
+        buffer.clear()
+        label = anchor.text
+        buffer.append(anchor)
+      }
     }
 
-    sink.stopWriting()
-    sink.writerThread.join()
-    db.phase.completePhase(number)
+    counter
   }
 
   private lazy val props: ConfiguredProperties =

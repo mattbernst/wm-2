@@ -1,92 +1,121 @@
 package wiki.extractor.phases
 
-import wiki.db.{SenseSink, Storage}
-import wiki.extractor.AnchorLogic
-import wiki.extractor.types.Sense
+import wiki.db.Storage
+import wiki.extractor.language.LanguageLogic
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.{ArticleFeatureProcessor, ArticleSelector}
 
-import java.util
-import scala.collection.mutable
+import java.io.{File, PrintWriter}
+import java.util.concurrent.ForkJoinPool
+import scala.collection.parallel.CollectionConverters.*
+import scala.collection.parallel.ForkJoinTaskSupport
 
 class Phase07(db: Storage) extends Phase(db: Storage) {
 
+  /**
+    * Generate 3 randomized exclusive sets of articles:
+    *  - Training set
+    *  - Disambiguation test set
+    *  - Topic detector test set
+    *
+    *  The article set only contains PageType.ARTICLE.
+    */
   override def run(): Unit = {
     db.phase.deletePhase(number)
-    db.phase.createPhase(number, s"Gathering label senses")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context;")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context_page;")
+    db.executeUnsafely("DROP TABLE IF EXISTS sense_training_example;")
+    db.phase.createPhase(number, s"Building training/test data")
     db.createTableDefinitions(number)
-    DBLogging.info("Loading known labels from db")
-    val targets = db.label.readKnownLabels()
-    DBLogging.info("Counting label senses")
-    countSenses(targets)
-    db.createIndexes(number)
-    DBLogging.info("Getting source counts by destination")
-    val sourceCounts = db.link.getSourceCountsByDestination()
-    DBLogging.info("Writing source counts by destination")
-    db.link.writeSourceCountsByDestination(sourceCounts)
-    DBLogging.info("Getting destination counts by source")
-    val destinationCounts = db.link.getDestinationCountsBySource()
-    DBLogging.info("Writing destination counts by source")
-    db.link.writeDestinationCountsBySource(destinationCounts)
+
+    val ll        = LanguageLogic.getLanguageLogic(props.language.code)
+    val selector  = new ArticleSelector(db, ll)
+    val processor = new ArticleFeatureProcessor(db, props)
+
+    val groups = Seq(
+      ("training", 2000),
+      ("disambiguation-test", 1000),
+      ("topic-test", 1000)
+    )
+
+    val res = selector
+      .extractSets(
+        sizes = groups.map(_._2),
+        minOutLinks = 15,
+        minInLinks = 20,
+        maxListProportion = 0.1,
+        minWordCount = 400,
+        maxWordCount = 4000
+      )
+
+    val pool        = new ForkJoinPool(props.nWorkers)
+    val taskSupport = new ForkJoinTaskSupport(pool)
+
+    // Generate features from the subsets of articles
+    res.zip(groups).foreach { set =>
+      val subset    = set._1
+      val groupName = set._2._1
+      DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
+      val paralllelGroup = subset.par
+      paralllelGroup.tasksupport = taskSupport
+      paralllelGroup.foreach { pageId =>
+        val senseFeatures = processor.articleToFeatures(pageId, groupName)
+        db.senseTraining.write(senseFeatures)
+      }
+    }
+
+    pool.shutdown()
+
+    reweightTrainingData("training")
+    groups.foreach(t => writeCSV(t._1))
     db.phase.completePhase(number)
   }
 
   /**
-    * Count the number of valid senses for labels.
+    * Reweight training data to balance classes once the training group
+    * is ready, as in Disambiguator.java's weightTrainingInstances method.
     *
-    * @param targets Valid labels mapped to their label IDs
+    * @param trainGroup The named data group to reweight
     */
-  private def countSenses(targets: mutable.Map[String, Int]): Unit = {
-    val anchorLogic = new AnchorLogic(props.language)
-    DBLogging.info("Loading relevant pages from db")
-    val anchorPages = db.page.getAnchorPages()
-    DBLogging.info("Loading grouped links from db")
-    val groupedLinks = db.link.getGroupedLinks()
-    DBLogging.info("Loaded grouped links from db")
-    val sink = new SenseSink(db)
+  private def reweightTrainingData(trainGroup: String): Unit = {
+    val trainingRows      = db.senseTraining.getTrainingFields(trainGroup)
+    val positiveInstances = trainingRows.count(_.isCorrectSense).toDouble
+    val negativeInstances = trainingRows.count(!_.isCorrectSense).toDouble
+    val p                 = positiveInstances / (positiveInstances + negativeInstances)
 
-    // Clean anchors in-place. Bad anchors become empty strings,
-    // and will not match anything in targets.
-    groupedLinks.labels.mapInPlace(l => anchorLogic.cleanAnchor(l))
-    val transitions = changes(groupedLinks.labels)
-
-    DBLogging.info("Storing sense counts for labels")
-    if (transitions.isEmpty) {
-      DBLogging.error(s"Did not find any link groups to process")
-    } else {
-      var left  = 0
-      var right = 0
-      var j     = 0
-      while (j < transitions.length) {
-        right = transitions(j)
-        val cleanSlice = groupedLinks
-          .slice(left, right)
-          .filter(e => targets.contains(e.label))
-          .filter(e => util.Arrays.binarySearch(anchorPages, e.destination) >= 0)
-
-        if (cleanSlice.nonEmpty) {
-          val labelId           = targets(cleanSlice.head.label)
-          val destinationCounts = mutable.Map[Int, Int]()
-          cleanSlice.foreach(e => destinationCounts.put(e.destination, e.count))
-          sink.addSense(Sense(labelId = labelId, senseCounts = destinationCounts))
-        }
-
-        j += 1
-        left = right
+    val reweighted = trainingRows.map { r =>
+      if (r.isCorrectSense) {
+        r.copy(weight = Some(0.5 * (1.0 / p)))
+      } else {
+        r.copy(weight = Some(0.5 * (1.0 / (1 - p))))
       }
     }
 
-    sink.stopWriting()
-    sink.writerThread.join()
+    db.senseTraining.updateTrainingFields(reweighted)
   }
 
-  private def changes(arr: Array[String]): Array[Int] = {
-    if (arr.isEmpty) {
-      Array.empty
-    } else {
-      arr.zipWithIndex
-        .sliding(2)
-        .collect { case Array((a, _), (b, idx)) if a != b => idx }
-        .toArray
+  /**
+    * Write each named group of data to a separate CSV file. This is used
+    * for external model training and validation.
+    *
+    * @param groupName The name of the data group to write
+    */
+  private def writeCSV(groupName: String): Unit = {
+    val rows     = db.senseTraining.getTrainingFields(groupName)
+    val fileName = s"wiki_${props.language.code}_$groupName.csv"
+    val file     = new File(fileName)
+    val writer   = new PrintWriter(file)
+
+    try {
+      writer.println("commonness,relatedness,contextQuality,isCorrectSense,weight")
+      rows.foreach { row =>
+        val weightStr = row.weight.map(_.toString).getOrElse("")
+        writer.println(
+          s"${row.commonness},${row.relatedness},${row.contextQuality},${row.isCorrectSense},$weightStr"
+        )
+      }
+    } finally {
+      writer.close()
     }
   }
 

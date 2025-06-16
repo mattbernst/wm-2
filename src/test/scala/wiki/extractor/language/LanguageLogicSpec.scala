@@ -145,7 +145,6 @@ class LanguageLogicSpec extends UnitSpec {
   private lazy val englishLanguage = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
-    rootPage = "Category:Main topic classifications"
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
   )
 }

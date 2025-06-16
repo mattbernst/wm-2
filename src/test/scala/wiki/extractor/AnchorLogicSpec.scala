@@ -31,7 +31,6 @@ class AnchorLogicSpec extends UnitSpec {
   private lazy val language = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
-    rootPage = "Category:Main topic classifications"
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
   )
 }
