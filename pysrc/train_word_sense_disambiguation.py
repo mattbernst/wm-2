@@ -3,7 +3,6 @@ import logging
 import sys
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
@@ -226,13 +225,6 @@ class CatBoostTrainer:
         for i, feature in enumerate(self.feature_cols):
             self.log(f"{feature}: {feature_importance[i]:.4f}")
 
-        # Plot feature importance
-        plt.figure(figsize=(10, 6))
-        plt.barh(self.feature_cols, feature_importance)
-        plt.xlabel('Feature Importance')
-        plt.title('CatBoost Feature Importance')
-        plt.tight_layout()
-        plt.show()
 
         # Validation set predictions distribution
         self.log(f"\nValidation predictions distribution:")
