@@ -20,7 +20,7 @@ object LinkVector {
     )
 }
 
-class ArticleComparer(db: Storage, cacheSize: Int = 1_000_000) {
+class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
 
   /**
     * Compare article A with article B.

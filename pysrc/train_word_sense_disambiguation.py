@@ -2,28 +2,27 @@ import argparse
 import logging
 import sys
 import time
-from collections import Counter
 
 import numpy as np
 import pandas as pd
-from catboost import CatBoostClassifier
+from catboost import CatBoostRanker
 from sklearn.metrics import *
-from sklearn.model_selection import StratifiedKFold
-from sklearn.utils.class_weight import compute_class_weight
+from sklearn.model_selection import GroupKFold
 
 
-class CatBoostTrainer:
+class CatBoostRankerTrainer:
     """
-    A class to handle CatBoost model training and validation for word sense disambiguation.
+    A class to handle CatBoost ranking model training and validation for word sense disambiguation.
     """
 
-    def __init__(self, train_file, val_file, log_file=None, cv_folds=10):
+    def __init__(self, train_file, val_file, log_file=None, cv_folds=5):
         self.train_file = train_file
         self.val_file = val_file
         self.cv_folds = cv_folds
         self.feature_cols = ['commonness', 'inLinkVectorMeasure', 'outLinkVectorMeasure',
                              'inLinkGoogleMeasure', 'outLinkGoogleMeasure', 'contextQuality']
         self.target_col = 'isCorrectSense'
+        self.group_col = 'linkDestination'
         self.model = None
         self.train_df = None
         self.val_df = None
@@ -32,7 +31,7 @@ class CatBoostTrainer:
         # Set up logging
         if log_file is None:
             timestamp = int(time.time())
-            log_file = f"model_training_run_{timestamp}.log"
+            log_file = f"model_ranking_run_{timestamp}.log"
 
         self.log_file = log_file
         self.setup_logging()
@@ -42,7 +41,7 @@ class CatBoostTrainer:
         Set up logging to capture all console output to a file.
         """
         # Create logger
-        self.logger = logging.getLogger('CatBoostTrainer')
+        self.logger = logging.getLogger('CatBoostRankerTrainer')
         self.logger.setLevel(logging.INFO)
 
         # Create file handler
@@ -71,27 +70,62 @@ class CatBoostTrainer:
         """
         self.logger.info(message)
 
-    def calculate_class_weights(self, y):
+    def create_group_ids(self, df):
         """
-        Calculate class weights automatically to handle imbalanced data.
-        Returns both class_weights dict and scale_pos_weight value.
+        Create group IDs based on assumption that consecutive rows with
+        same linkDestination belong to same ranking group.
         """
-        # Method 1: sklearn's compute_class_weight
-        classes = np.unique(y)
-        class_weights_array = compute_class_weight('balanced', classes=classes, y=y)
-        class_weights_dict = dict(zip(classes, class_weights_array))
+        group_ids = []
+        current_group_id = 0
+        prev_link_dest = None
 
-        # Method 2: Calculate scale_pos_weight for binary classification
-        counter = Counter(y)
-        neg_count = counter[False] if False in counter else counter[0]
-        pos_count = counter[True] if True in counter else counter[1]
-        scale_pos_weight = neg_count / pos_count
+        for _, row in df.iterrows():
+            link_dest = row[self.group_col]
 
-        self.log(f"Class distribution: {dict(counter)}")
-        self.log(f"Calculated class weights: {class_weights_dict}")
-        self.log(f"Scale pos weight: {scale_pos_weight:.4f}")
+            if link_dest != prev_link_dest:
+                if prev_link_dest is not None:
+                    current_group_id += 1
 
-        return class_weights_dict, scale_pos_weight
+            group_ids.append(current_group_id)
+            prev_link_dest = link_dest
+
+        return group_ids
+
+    def analyze_group_structure(self, df, group_ids):
+        """
+        Analyze the group structure to understand the ranking problem.
+        """
+        df_with_groups = df.copy()
+        df_with_groups['group_id'] = group_ids
+
+        self.log("Group structure analysis:")
+
+        # Count groups per linkDestination
+        link_dest_groups = df_with_groups.groupby(self.group_col)['group_id'].nunique()
+        self.log(f"Number of unique linkDestinations: {len(link_dest_groups)}")
+        self.log(
+            f"Groups per linkDestination: min={link_dest_groups.min()}, max={link_dest_groups.max()}, mean={link_dest_groups.mean():.2f}")
+
+        # Analyze group sizes
+        group_sizes = df_with_groups.groupby('group_id').size()
+        self.log(f"Group sizes: min={group_sizes.min()}, max={group_sizes.max()}, mean={group_sizes.mean():.2f}")
+
+        # Check for groups with correct answers
+        groups_with_correct = df_with_groups.groupby('group_id')[self.target_col].sum()
+        groups_without_correct = (groups_with_correct == 0).sum()
+        self.log(f"Groups without correct answer: {groups_without_correct} out of {len(groups_with_correct)}")
+
+        # Show some example groups
+        self.log("\nExample groups:")
+        for i, (group_id, group_data) in enumerate(df_with_groups.groupby('group_id')):
+            if i >= 3:  # Show first 3 groups
+                break
+            self.log(f"Group {group_id} (linkDestination: {group_data[self.group_col].iloc[0]}):")
+            self.log(f"  Size: {len(group_data)}")
+            self.log(f"  Correct answers: {group_data[self.target_col].sum()}")
+            self.log(f"  Target values: {group_data[self.target_col].tolist()}")
+
+        return df_with_groups
 
     def validate_data_files(self):
         """
@@ -117,13 +151,13 @@ class CatBoostTrainer:
             raise Exception(f"Error loading validation file: {e}")
 
         # Check required columns for training data
-        train_required_cols = self.feature_cols + [self.target_col]
+        train_required_cols = self.feature_cols + [self.target_col, self.group_col]
         missing_train_cols = [col for col in train_required_cols if col not in self.train_df.columns]
         if missing_train_cols:
             raise ValueError(f"Training file missing required columns: {missing_train_cols}")
 
         # Check required columns for validation data
-        val_required_cols = self.feature_cols + [self.target_col]
+        val_required_cols = self.feature_cols + [self.target_col, self.group_col]
         missing_val_cols = [col for col in val_required_cols if col not in self.val_df.columns]
         if missing_val_cols:
             raise ValueError(f"Validation file missing required columns: {missing_val_cols}")
@@ -151,114 +185,160 @@ class CatBoostTrainer:
         if val_missing.any():
             self.log(f"⚠ Warning: Missing values in validation data:\n{val_missing[val_missing > 0]}")
 
-        # Check target variable distribution
-        train_target_dist = self.train_df[self.target_col].value_counts()
-        val_target_dist = self.val_df[self.target_col].value_counts()
-
-        if len(train_target_dist) < 2:
-            raise ValueError("Training data must contain both positive and negative examples")
-
-        if len(val_target_dist) < 2:
-            raise ValueError("Validation data must contain both positive and negative examples")
-
-        self.log(f"✓ Target distribution - Training: {train_target_dist.to_dict()}")
-        self.log(f"✓ Target distribution - Validation: {val_target_dist.to_dict()}")
-
         self.log("Data validation completed successfully!\n")
 
     def prepare_data(self):
         """
-        Prepare training and validation data for modeling.
+        Prepare training and validation data for ranking.
         """
-        self.log("Preparing data for training...")
+        self.log("Preparing data for ranking...")
 
-        # Prepare training data
+        # Create group IDs
+        self.train_group_ids = self.create_group_ids(self.train_df)
+        self.val_group_ids = self.create_group_ids(self.val_df)
+
+        # Analyze group structure
+        self.log("\nTraining data group analysis:")
+        self.train_df_with_groups = self.analyze_group_structure(self.train_df, self.train_group_ids)
+
+        self.log("\nValidation data group analysis:")
+        self.val_df_with_groups = self.analyze_group_structure(self.val_df, self.val_group_ids)
+
+        # Prepare features and targets
         self.X_train = self.train_df[self.feature_cols]
-        self.y_train = self.train_df[self.target_col]
+        self.y_train = self.train_df[self.target_col].astype(int)  # Convert boolean to int for ranking
 
-        # Prepare validation data
         self.X_val = self.val_df[self.feature_cols]
-        self.y_val = self.val_df[self.target_col]
-
-        # Calculate automatic class weights
-        self.class_weights_dict, self.scale_pos_weight = self.calculate_class_weights(self.y_train)
+        self.y_val = self.val_df[self.target_col].astype(int)
 
         self.log(f"Training data shape: {self.train_df.shape}")
         self.log(f"Validation data shape: {self.val_df.shape}")
+        self.log(f"Number of training groups: {len(set(self.train_group_ids))}")
+        self.log(f"Number of validation groups: {len(set(self.val_group_ids))}")
         self.log(f"Features: {self.feature_cols}")
+
+    def calculate_ranking_metrics(self, y_true, y_pred, group_ids):
+        """
+        Calculate ranking-specific metrics.
+        """
+        # Group predictions and true labels
+        groups = {}
+        for i, group_id in enumerate(group_ids):
+            if group_id not in groups:
+                groups[group_id] = {'y_true': [], 'y_pred': []}
+            groups[group_id]['y_true'].append(y_true.iloc[i] if hasattr(y_true, 'iloc') else y_true[i])
+            groups[group_id]['y_pred'].append(y_pred[i])
+
+        # Calculate metrics
+        correct_predictions = 0
+        total_groups = 0
+        ndcg_scores = []
+
+        for group_id, group_data in groups.items():
+            y_true_group = np.array(group_data['y_true'])
+            y_pred_group = np.array(group_data['y_pred'])
+
+            # Check if this group has any correct answers
+            if np.sum(y_true_group) == 0:
+                continue
+
+            total_groups += 1
+
+            # Accuracy: check if highest predicted is actually correct
+            highest_pred_idx = np.argmax(y_pred_group)
+            if y_true_group[highest_pred_idx] == 1:
+                correct_predictions += 1
+
+            # Calculate NDCG for this group
+            if len(y_true_group) > 1:
+                try:
+                    ndcg = ndcg_score([y_true_group], [y_pred_group])
+                    ndcg_scores.append(ndcg)
+                except:
+                    pass  # Skip if NDCG calculation fails
+
+        accuracy = correct_predictions / total_groups if total_groups > 0 else 0
+        mean_ndcg = np.mean(ndcg_scores) if ndcg_scores else 0
+
+        return {
+            'accuracy': accuracy,
+            'ndcg': mean_ndcg,
+            'total_groups': total_groups,
+            'correct_predictions': correct_predictions
+        }
 
     def perform_cross_validation(self):
         """
-        Perform stratified k-fold cross-validation on the training data.
+        Perform group k-fold cross-validation on the training data.
         """
         self.log(f"\n{'=' * 60}")
-        self.log(f"PERFORMING {self.cv_folds}-FOLD CROSS-VALIDATION")
+        self.log(f"PERFORMING {self.cv_folds}-FOLD GROUP CROSS-VALIDATION")
         self.log(f"{'=' * 60}")
 
-        # Initialize stratified k-fold
-        skf = StratifiedKFold(n_splits=self.cv_folds, shuffle=True, random_state=42)
+        # Initialize group k-fold (ensures same linkDestination doesn't appear in both train and val)
+        gkf = GroupKFold(n_splits=self.cv_folds)
+
+        # Create groups for CV based on linkDestination
+        cv_groups = self.train_df[self.group_col].values
 
         cv_scores = {
             'accuracy': [],
-            'precision': [],
-            'recall': [],
-            'f1': [],
-            'auc': []
+            'ndcg': []
         }
 
         fold_num = 1
-        for train_idx, val_idx in skf.split(self.X_train, self.y_train):
+        for train_idx, val_idx in gkf.split(self.X_train, self.y_train, groups=cv_groups):
             self.log(f"\nFold {fold_num}/{self.cv_folds}:")
 
             # Split data for this fold
             X_fold_train, X_fold_val = self.X_train.iloc[train_idx], self.X_train.iloc[val_idx]
             y_fold_train, y_fold_val = self.y_train.iloc[train_idx], self.y_train.iloc[val_idx]
 
-            # Calculate class weights for this fold
-            fold_class_weights, fold_scale_pos_weight = self.calculate_class_weights(y_fold_train)
+            # Create group IDs for this fold
+            fold_train_groups = [self.train_group_ids[i] for i in train_idx]
+            fold_val_groups = [self.train_group_ids[i] for i in val_idx]
+
+            # Remap group IDs to be contiguous
+            unique_train_groups = sorted(set(fold_train_groups))
+            group_mapping = {old_id: new_id for new_id, old_id in enumerate(unique_train_groups)}
+            fold_train_groups = [group_mapping[gid] for gid in fold_train_groups]
+
+            unique_val_groups = sorted(set(fold_val_groups))
+            group_mapping_val = {old_id: new_id for new_id, old_id in enumerate(unique_val_groups)}
+            fold_val_groups = [group_mapping_val[gid] for gid in fold_val_groups]
 
             # Initialize model for this fold
-            fold_model = CatBoostClassifier(
-                iterations=1000,
+            fold_model = CatBoostRanker(
+                iterations=500,
                 learning_rate=0.1,
                 depth=6,
-                loss_function='Logloss',
-                eval_metric='AUC',
+                loss_function='YetiRank',
+                l2_leaf_reg=3.0,  # Add L2 regularization
                 random_seed=42,
-                verbose=False,  # Reduce verbosity for CV
-                early_stopping_rounds=50,
-                scale_pos_weight=fold_scale_pos_weight  # Automatic class imbalance handling
+                verbose=False,
+                early_stopping_rounds=50
             )
 
             # Train model
             fold_model.fit(
                 X_fold_train,
                 y_fold_train,
-                eval_set=(X_fold_val, y_fold_val),
+                group_id=fold_train_groups,
                 plot=False,
                 verbose=False
             )
 
             # Make predictions
             y_pred = fold_model.predict(X_fold_val)
-            y_pred_proba = fold_model.predict_proba(X_fold_val)[:, 1]
 
-            # Calculate metrics
-            fold_accuracy = accuracy_score(y_fold_val, y_pred)
-            fold_precision = precision_score(y_fold_val, y_pred)
-            fold_recall = recall_score(y_fold_val, y_pred)
-            fold_f1 = f1_score(y_fold_val, y_pred)
-            fold_auc = roc_auc_score(y_fold_val, y_pred_proba)
+            # Calculate ranking metrics
+            metrics = self.calculate_ranking_metrics(y_fold_val, y_pred, fold_val_groups)
 
-            # Store results
-            cv_scores['accuracy'].append(fold_accuracy)
-            cv_scores['precision'].append(fold_precision)
-            cv_scores['recall'].append(fold_recall)
-            cv_scores['f1'].append(fold_f1)
-            cv_scores['auc'].append(fold_auc)
+            cv_scores['accuracy'].append(metrics['accuracy'])
+            cv_scores['ndcg'].append(metrics['ndcg'])
 
-            self.log(f"  Accuracy: {fold_accuracy:.4f}, Precision: {fold_precision:.4f}, "
-                     f"Recall: {fold_recall:.4f}, F1: {fold_f1:.4f}, AUC: {fold_auc:.4f}")
+            self.log(f"  Accuracy: {metrics['accuracy']:.4f}, NDCG: {metrics['ndcg']:.4f}")
+            self.log(f"  Groups: {metrics['total_groups']}, Correct: {metrics['correct_predictions']}")
 
             fold_num += 1
 
@@ -277,33 +357,31 @@ class CatBoostTrainer:
 
     def train_model(self):
         """
-        Initialize and train the CatBoost model on full training data.
+        Initialize and train the CatBoost ranking model on full training data.
         """
         self.log(f"\n{'=' * 60}")
-        self.log("TRAINING FINAL MODEL ON FULL TRAINING DATA")
+        self.log("TRAINING FINAL RANKING MODEL ON FULL TRAINING DATA")
         self.log(f"{'=' * 60}")
 
-        # Initialize CatBoost classifier with automatic class imbalance handling
-        self.model = CatBoostClassifier(
+        # Initialize CatBoost ranker
+        self.model = CatBoostRanker(
             iterations=1000,
             learning_rate=0.1,
             depth=6,
-            loss_function='Logloss',
-            eval_metric='AUC',
+            loss_function='YetiRank',  # Good for ranking tasks
+            l2_leaf_reg=3.0,  # Increased L2 regularization to prevent overfitting
             random_seed=42,
             verbose=100,
-            early_stopping_rounds=50,
-            scale_pos_weight=self.scale_pos_weight  # Automatic class imbalance handling
+            early_stopping_rounds=50
         )
 
-        self.log("Training CatBoost model with automatic class imbalance handling...")
-        self.log(f"Using scale_pos_weight: {self.scale_pos_weight:.4f}")
+        self.log("Training CatBoost ranking model...")
 
         # Train the model
         self.model.fit(
             self.X_train,
             self.y_train,
-            eval_set=(self.X_val, self.y_val),
+            group_id=self.train_group_ids,
             plot=False
         )
 
@@ -311,57 +389,68 @@ class CatBoostTrainer:
 
     def evaluate_model(self):
         """
-        Evaluate the trained model on validation data and display results.
+        Evaluate the trained ranking model on validation data and display results.
         """
         if self.model is None:
             raise ValueError("Model must be trained before evaluation")
 
         self.log(f"\n{'=' * 60}")
-        self.log("FINAL MODEL VALIDATION RESULTS")
+        self.log("FINAL RANKING MODEL VALIDATION RESULTS")
         self.log(f"{'=' * 60}")
 
         y_pred = self.model.predict(self.X_val)
-        y_pred_proba = self.model.predict_proba(self.X_val)[:, 1]
 
-        # Calculate metrics
-        accuracy = accuracy_score(self.y_val, y_pred)
-        precision = precision_score(self.y_val, y_pred)
-        recall = recall_score(self.y_val, y_pred)
-        f1 = f1_score(self.y_val, y_pred)
-        auc = roc_auc_score(self.y_val, y_pred_proba)
+        # Calculate ranking metrics
+        metrics = self.calculate_ranking_metrics(self.y_val, y_pred, self.val_group_ids)
 
-        self.log(f"Accuracy:  {accuracy:.4f}")
-        self.log(f"Precision: {precision:.4f}")
-        self.log(f"Recall:    {recall:.4f}")
-        self.log(f"F1 Score:  {f1:.4f}")
-        self.log(f"AUC:       {auc:.4f}")
-
-        self.log("\nDetailed Classification Report:")
-        self.log(classification_report(self.y_val, y_pred))
+        self.log(f"Ranking Accuracy: {metrics['accuracy']:.4f}")
+        self.log(f"NDCG Score:      {metrics['ndcg']:.4f}")
+        self.log(f"Total Groups:    {metrics['total_groups']}")
+        self.log(f"Correct Predictions: {metrics['correct_predictions']}")
 
         # Feature importance
         self.log("\nFeature Importance:")
-        feature_importance = self.model.get_feature_importance()
-        for i, feature in enumerate(self.feature_cols):
-            self.log(f"{feature}: {feature_importance[i]:.4f}")
+        try:
+            # For ranking models, we need to create a Pool object
+            from catboost import Pool
+            train_pool = Pool(
+                data=self.X_train,
+                label=self.y_train,
+                group_id=self.train_group_ids
+            )
+            feature_importance = self.model.get_feature_importance(
+                data=train_pool,
+                type='LossFunctionChange'
+            )
+            for i, feature in enumerate(self.feature_cols):
+                self.log(f"{feature}: {feature_importance[i]:.4f}")
+        except Exception as e:
+            self.log(f"Could not calculate LossFunctionChange importance: {e}")
+            try:
+                # Fallback to PredictionValuesChange which doesn't require training data
+                feature_importance = self.model.get_feature_importance(type='PredictionValuesChange')
+                for i, feature in enumerate(self.feature_cols):
+                    self.log(f"{feature}: {feature_importance[i]:.4f}")
+            except Exception as e2:
+                self.log(f"Could not calculate feature importance: {e2}")
 
-        # Validation set predictions distribution
-        self.log(f"\nValidation predictions distribution:")
-        self.log(f"Predicted False: {np.sum(y_pred == False)}")
-        self.log(f"Predicted True:  {np.sum(y_pred == True)}")
-        self.log(f"Actual False:    {np.sum(self.y_val == False)}")
-        self.log(f"Actual True:     {np.sum(self.y_val == True)}")
+        # Show example predictions for first few groups
+        self.log("\nExample predictions for first 3 validation groups:")
+        val_df_with_pred = self.val_df.copy()
+        val_df_with_pred['group_id'] = self.val_group_ids
+        val_df_with_pred['prediction'] = y_pred
 
-        # Example predictions
-        self.log("\nExample: Making predictions on first 5 validation samples:")
-        sample_predictions = self.model.predict_proba(self.X_val.head())
-        for i in range(5):
-            prob_false = sample_predictions[i][0]
-            prob_true = sample_predictions[i][1]
-            predicted_class = y_pred[i]
-            actual_class = self.y_val.iloc[i]
-            self.log(f"Sample {i + 1}: P(False)={prob_false:.3f}, P(True)={prob_true:.3f}, "
-                     f"Predicted={predicted_class}, Actual={actual_class}")
+        for i, (group_id, group_data) in enumerate(val_df_with_pred.groupby('group_id')):
+            if i >= 3:
+                break
+
+            self.log(f"\nGroup {group_id} (linkDestination: {group_data[self.group_col].iloc[0]}):")
+            sorted_group = group_data.sort_values('prediction', ascending=False)
+
+            for j, (_, row) in enumerate(sorted_group.iterrows()):
+                correct_marker = "✓" if row[self.target_col] else "✗"
+                self.log(f"  Rank {j + 1}: Score={row['prediction']:.4f} {correct_marker} "
+                         f"(Actual: {row[self.target_col]})")
 
         # Compare CV results with final validation
         if self.cv_results:
@@ -369,7 +458,7 @@ class CatBoostTrainer:
             self.log("CROSS-VALIDATION VS FINAL VALIDATION COMPARISON")
             self.log(f"{'=' * 60}")
             cv_means = {metric: np.mean(scores) for metric, scores in self.cv_results.items()}
-            final_scores = {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1': f1, 'auc': auc}
+            final_scores = {'accuracy': metrics['accuracy'], 'ndcg': metrics['ndcg']}
 
             for metric in cv_means.keys():
                 cv_score = cv_means[metric]
@@ -377,7 +466,7 @@ class CatBoostTrainer:
                 diff = final_score - cv_score
                 self.log(f"{metric.upper()}: CV={cv_score:.4f}, Final={final_score:.4f}, Diff={diff:+.4f}")
 
-    def save_model(self, model_path='word_sense_catboost_model.cbm'):
+    def save_model(self, model_path='word_sense_catboost_ranker.cbm'):
         """
         Save the trained model to disk.
         """
@@ -392,7 +481,7 @@ class CatBoostTrainer:
         Execute the complete training and evaluation pipeline with cross-validation.
         """
         try:
-            self.log(f"Starting training pipeline with {self.cv_folds}-fold CV - Log file: {self.log_file}")
+            self.log(f"Starting ranking pipeline with {self.cv_folds}-fold CV - Log file: {self.log_file}")
             self.validate_data_files()
             self.prepare_data()
             self.perform_cross_validation()
@@ -410,7 +499,7 @@ def main():
     Main function with command line argument parsing.
     """
     parser = argparse.ArgumentParser(
-        description='Train and validate a CatBoost classifier for word sense disambiguation with cross-validation',
+        description='Train and validate a CatBoost ranking model for word sense disambiguation with cross-validation',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
@@ -428,21 +517,21 @@ def main():
 
     parser.add_argument(
         '--model-output',
-        default='word_sense_catboost_model.cbm',
+        default='word_sense_catboost_ranker.cbm',
         help='Output path for the trained model'
     )
 
     parser.add_argument(
         '--cv-folds',
         type=int,
-        default=10,
-        help='Number of cross-validation folds'
+        default=5,
+        help='Number of cross-validation folds (reduced from 10 due to group constraints)'
     )
 
     args = parser.parse_args()
 
     print("=" * 60)
-    print("CatBoost Word Sense Disambiguation Classifier")
+    print("CatBoost Word Sense Disambiguation Ranking Model")
     print("=" * 60)
     print(f"Training file: {args.train_file}")
     print(f"Validation file: {args.val_file}")
@@ -451,11 +540,11 @@ def main():
     print("=" * 60)
 
     # Initialize and run the trainer
-    trainer = CatBoostTrainer(args.train_file, args.val_file, cv_folds=args.cv_folds)
+    trainer = CatBoostRankerTrainer(args.train_file, args.val_file, cv_folds=args.cv_folds)
     trainer.run_full_pipeline()
 
     # Save with custom path if specified
-    if args.model_output != 'word_sense_catboost_model.cbm':
+    if args.model_output != 'word_sense_catboost_ranker.cbm':
         trainer.save_model(args.model_output)
 
 

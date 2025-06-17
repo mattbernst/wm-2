@@ -38,6 +38,8 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
       ("topic-test", 2000)
     )
 
+    DBLogging.info(s"Selecting eligible articles")
+
     val res = selector
       .extractSets(
         sizes = groups.map(_._2),
@@ -84,6 +86,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
 
     try {
       val headerFields = Seq(
+        "linkDestination",
         "commonness",
         "inLinkVectorMeasure",
         "outLinkVectorMeasure",
@@ -95,7 +98,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
       writer.println(headerFields.mkString(","))
       rows.foreach { row =>
         writer.println(
-          s"${row.commonness},${row.inLinkVectorMeasure},${row.outLinkVectorMeasure},${row.inLinkGoogleMeasure},${row.outLinkGoogleMeasure},${row.contextQuality},${row.isCorrectSense}"
+          s"${row.linkDestination},${row.commonness},${row.inLinkVectorMeasure},${row.outLinkVectorMeasure},${row.inLinkGoogleMeasure},${row.outLinkGoogleMeasure},${row.contextQuality},${row.isCorrectSense}"
         )
       }
     } finally {

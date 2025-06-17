@@ -16,6 +16,7 @@ case class SenseModelEntry(
 
 case class SenseTrainingFields(
   exampleId: Int,
+  linkDestination: Int,
   commonness: Double,
   inLinkVectorMeasure: Double,
   outLinkVectorMeasure: Double,

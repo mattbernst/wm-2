@@ -123,12 +123,12 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private val pageCache: LoadingCache[Int, Page] =
     Scaffeine()
-      .maximumSize(500_000)
+      .maximumSize(250_000)
       .build((pageId: Int) => db.getPage(pageId).get)
 
   private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
     Scaffeine()
-      .maximumSize(1_000_000)
+      .maximumSize(500_000)
       .build(
         loader = (labelId: Int) => {
           db.sense.getSenseByLabelId(labelId).map(_.pruned(minSenseProbability))

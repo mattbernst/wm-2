@@ -38,6 +38,7 @@ object SenseTrainingStorage {
           rs =>
             SenseTrainingFields(
               exampleId = rs.int("example_id"),
+              linkDestination = rs.int("link_destination"),
               commonness = rs.double("commonness"),
               inLinkVectorMeasure = rs.double("in_link_vector_measure"),
               outLinkVectorMeasure = rs.double("out_link_vector_measure"),
