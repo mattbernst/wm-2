@@ -53,42 +53,6 @@ object SenseTrainingStorage {
   }
 
   /**
-    * Update previously written training data following groupwise adjustment.
-    *
-    * @param input A non-empty sequence of SenseTrainingFields to update
-    */
-  def updateTrainingFields(input: Seq[SenseTrainingFields]): Unit = {
-    require(input.nonEmpty, s"Tried to update nothing -- check $exampleTable for data")
-
-    DB.autoCommit { implicit session =>
-      val batch = sql"""UPDATE $exampleTable
-                     SET commonness = ?,
-                         in_link_vector_measure = ?,
-                         out_link_vector_measure = ?,
-                         in_link_google_measure = ?,
-                         out_link_google_measure = ?,
-                         context_quality = ?,
-                         is_correct_sense = ?
-                     WHERE example_id = ?"""
-
-      input.foreach { fields =>
-        batch
-          .bind(
-            fields.commonness,
-            fields.inLinkVectorMeasure,
-            fields.outLinkVectorMeasure,
-            fields.inLinkGoogleMeasure,
-            fields.outLinkGoogleMeasure,
-            fields.contextQuality,
-            if (fields.isCorrectSense) 1 else 0,
-            fields.exampleId
-          )
-          .update()
-      }
-    }
-  }
-
-  /**
     * Write context data to the sense_training_context and
     * sense_training_context_page tables.
     *
