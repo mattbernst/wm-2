@@ -15,7 +15,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
   /**
     * Generate 3 randomized exclusive sets of articles:
     *  - Training set
-    *  - Disambiguation test set
+    *  - Word sense disambiguation test set
     *  - Topic detector test set
     *
     *  The article set only contains PageType.ARTICLE.
@@ -33,10 +33,12 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val processor = new ArticleFeatureProcessor(db, props)
 
     val groups = Seq(
-      ("training", 2000),
-      ("disambiguation-test", 1000),
-      ("topic-test", 1000)
+      ("training", 5000),
+      ("disambiguation-test", 2000),
+      ("topic-test", 2000)
     )
+
+    DBLogging.info(s"Selecting eligible articles")
 
     val res = selector
       .extractSets(
@@ -66,32 +68,8 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
 
     pool.shutdown()
 
-    reweightTrainingData("training")
     groups.foreach(t => writeCSV(t._1))
     db.phase.completePhase(number)
-  }
-
-  /**
-    * Reweight training data to balance classes once the training group
-    * is ready, as in Disambiguator.java's weightTrainingInstances method.
-    *
-    * @param trainGroup The named data group to reweight
-    */
-  private def reweightTrainingData(trainGroup: String): Unit = {
-    val trainingRows      = db.senseTraining.getTrainingFields(trainGroup)
-    val positiveInstances = trainingRows.count(_.isCorrectSense).toDouble
-    val negativeInstances = trainingRows.count(!_.isCorrectSense).toDouble
-    val p                 = positiveInstances / (positiveInstances + negativeInstances)
-
-    val reweighted = trainingRows.map { r =>
-      if (r.isCorrectSense) {
-        r.copy(weight = Some(0.5 * (1.0 / p)))
-      } else {
-        r.copy(weight = Some(0.5 * (1.0 / (1 - p))))
-      }
-    }
-
-    db.senseTraining.updateTrainingFields(reweighted)
   }
 
   /**
@@ -107,11 +85,20 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val writer   = new PrintWriter(file)
 
     try {
-      writer.println("commonness,relatedness,contextQuality,isCorrectSense,weight")
+      val headerFields = Seq(
+        "linkDestination",
+        "commonness",
+        "inLinkVectorMeasure",
+        "outLinkVectorMeasure",
+        "inLinkGoogleMeasure",
+        "outLinkGoogleMeasure",
+        "contextQuality",
+        "isCorrectSense"
+      )
+      writer.println(headerFields.mkString(","))
       rows.foreach { row =>
-        val weightStr = row.weight.map(_.toString).getOrElse("")
         writer.println(
-          s"${row.commonness},${row.relatedness},${row.contextQuality},${row.isCorrectSense},$weightStr"
+          s"${row.linkDestination},${row.commonness},${row.inLinkVectorMeasure},${row.outLinkVectorMeasure},${row.inLinkGoogleMeasure},${row.outLinkGoogleMeasure},${row.contextQuality},${row.isCorrectSense}"
         )
       }
     } finally {

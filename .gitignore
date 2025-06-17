@@ -1,7 +1,11 @@
 transclusion_counts.json
+*.csv
+*.db
 *.jar
 *.class
 *.log
+*.db-shm
+*.db-wal
 target/
 
 # Scala-IDE specific

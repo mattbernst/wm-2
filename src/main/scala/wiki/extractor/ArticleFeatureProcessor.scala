@@ -13,9 +13,12 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
   /**
     * Get features to train on from a Wikipedia article. We're trying
     * to predict the correct word sense of an ambiguous term from commonness,
-    * relatedness, and context quality.
+    * context quality, and sense-level features.
     *
     * This encapsulates logic similar to "train" in Disambiguator.java
+    * The original Milne model that lumped all measures together into
+    * "relatedness" did not perform as well as a CatBoost model given
+    * the underlying individual features like inLinkVectorMeasure.
     *
     * @param pageId   The numeric ID of a Wikipedia page used for feature
     *                  extraction
@@ -47,7 +50,8 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
             // destination, and several negative examples, namely the destinations that
             // have been chosen for this link text in other articles but not this one."
             sense.senseCounts.keys.toSeq.map { senseId =>
-              val sensePageTitle = pageCache.get(senseId).title
+              val sensePageTitle       = pageCache.get(senseId).title
+              val relatednessByFeature = comparer.getRelatednessByFeature(senseId, context)
               SenseModelEntry(
                 sourcePageId = pageId,
                 linkDestination = link.destination,
@@ -55,10 +59,12 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
                 sensePageTitle = sensePageTitle,
                 senseId = senseId,
                 commonness = sense.commonness(senseId),
-                relatedness = comparer.getRelatednessTo(senseId, context),
+                inLinkVectorMeasure = relatednessByFeature("inLinkVectorMeasure"),
+                outLinkVectorMeasure = relatednessByFeature("outLinkVectorMeasure"),
+                inLinkGoogleMeasure = relatednessByFeature("inLinkGoogleMeasure"),
+                outLinkGoogleMeasure = relatednessByFeature("outLinkGoogleMeasure"),
                 contextQuality = context.quality,
-                isCorrectSense = senseId == link.destination,
-                weight = None
+                isCorrectSense = senseId == link.destination
               )
             }
           } else {
@@ -117,12 +123,12 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private val pageCache: LoadingCache[Int, Page] =
     Scaffeine()
-      .maximumSize(500_000)
+      .maximumSize(250_000)
       .build((pageId: Int) => db.getPage(pageId).get)
 
   private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
     Scaffeine()
-      .maximumSize(1_000_000)
+      .maximumSize(500_000)
       .build(
         loader = (labelId: Int) => {
           db.sense.getSenseByLabelId(labelId).map(_.pruned(minSenseProbability))

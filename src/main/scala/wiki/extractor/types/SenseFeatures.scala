@@ -7,18 +7,23 @@ case class SenseModelEntry(
   sensePageTitle: String,
   senseId: Int,
   commonness: Double,
-  relatedness: Double,
+  inLinkVectorMeasure: Double,
+  outLinkVectorMeasure: Double,
+  inLinkGoogleMeasure: Double,
+  outLinkGoogleMeasure: Double,
   contextQuality: Double,
-  isCorrectSense: Boolean,
-  weight: Option[Double])
+  isCorrectSense: Boolean)
 
 case class SenseTrainingFields(
   exampleId: Int,
+  linkDestination: Int,
   commonness: Double,
-  relatedness: Double,
+  inLinkVectorMeasure: Double,
+  outLinkVectorMeasure: Double,
+  inLinkGoogleMeasure: Double,
+  outLinkGoogleMeasure: Double,
   contextQuality: Double,
-  isCorrectSense: Boolean,
-  weight: Option[Double])
+  isCorrectSense: Boolean)
 
 case class SenseFeatures(
   group: String,
