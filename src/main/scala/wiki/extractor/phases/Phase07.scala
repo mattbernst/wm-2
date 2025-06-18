@@ -2,8 +2,9 @@ package wiki.extractor.phases
 
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
+import wiki.extractor.types.{TrainingProfile, DataGroup}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
-import wiki.extractor.{ArticleFeatureProcessor, ArticleSelector}
+import wiki.extractor.{ArticleFeatureProcessor, ArticleSelectionProfile, ArticleSelector, DataGroup}
 
 import java.io.{File, PrintWriter}
 import java.util.concurrent.ForkJoinPool
@@ -33,30 +34,49 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val processor = new ArticleFeatureProcessor(db, props)
 
     val groups = Seq(
-      ("training", 5000),
-      ("disambiguation-test", 2000),
-      ("topic-test", 2000)
+      ("training", 500),
+      ("disambiguation-test", 200),
+      ("topic-test", 200)
     )
 
     DBLogging.info(s"Selecting eligible articles")
+    val englishProfile = TrainingProfile(
+      groups = Seq(
+        DataGroup("training", 5000),
+        DataGroup("disambiguation-test", 2000),
+        DataGroup("topic-test", 2000)
+      ),
+      minOutLinks = 15,
+      minInLinks = 20,
+      maxListProportion = 0.1,
+      minWordCount = 400,
+      maxWordCount = 4000
+    )
 
-    val res = selector
-      .extractSets(
-        sizes = groups.map(_._2),
-        minOutLinks = 15,
-        minInLinks = 20,
-        maxListProportion = 0.1,
-        minWordCount = 400,
-        maxWordCount = 4000
-      )
+    val simpleEnglishProfile = TrainingProfile(
+      groups = Seq(
+        DataGroup("training", 1000),
+        DataGroup("disambiguation-test", 500),
+        DataGroup("topic-test", 500)
+      ),
+      minOutLinks = 2,
+      minInLinks = 3,
+      maxListProportion = 0.1,
+      minWordCount = 150,
+      maxWordCount = 4000
+    )
+
+    val profile = simpleEnglishProfile
+
+    val res = selector.extractSets(profile)
 
     val pool        = new ForkJoinPool(props.nWorkers)
     val taskSupport = new ForkJoinTaskSupport(pool)
 
     // Generate features from the subsets of articles
-    res.zip(groups).foreach { set =>
+    res.zip(profile.groups).foreach { set =>
       val subset    = set._1
-      val groupName = set._2._1
+      val groupName = set._2.name
       DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
       val paralllelGroup = subset.par
       paralllelGroup.tasksupport = taskSupport

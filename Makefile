@@ -1,4 +1,4 @@
-.PHONY: build clean extract extract-graal extract-with-profiling format test train-disambiguation
+.PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
@@ -14,11 +14,14 @@ build:
 extract: build
 	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
-# This only works with Oracle Java 21 or later. On my machine it reduces the
-# 2 hour and 25 minute extraction time to 2 hours and 10 minutes.
-GRAAL_JAVA_OPTS := $(JAVA_OPTS) -XX:+UnlockExperimentalVMOptions -XX:+UseGraalJIT
-extract-graal: build
-	java $(GRAAL_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
+fetch-english-wikipedia:
+	curl -L -o enwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+
+fetch-french-wikipedia:
+	curl -L -o frwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/frwiki/latest/frwiki-latest-pages-articles.xml.bz2
+
+fetch-simple-english-wikipedia:
+	curl -L -o simplewiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/simplewiki/latest/simplewiki-latest-pages-articles.xml.bz2
 
 P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=10000MB,filename=extraction.jfr
 # Profile extraction with Flight Recorder for analysis with JDK

@@ -2,6 +2,7 @@ import argparse
 import logging
 import sys
 import time
+import os
 
 import numpy as np
 import pandas as pd
@@ -10,12 +11,45 @@ from sklearn.metrics import *
 from sklearn.model_selection import GroupKFold
 
 
+def find_common_prefix(train_file, val_file):
+    """
+    Find the common prefix between training and validation file names.
+    Returns the prefix that can be used for generating the model filename.
+    """
+    # Get just the filenames without the directory path
+    train_basename = os.path.basename(train_file)
+    val_basename = os.path.basename(val_file)
+
+    # Remove file extensions
+    train_name = os.path.splitext(train_basename)[0]
+    val_name = os.path.splitext(val_basename)[0]
+
+    # Find common prefix
+    common_prefix = ""
+    min_length = min(len(train_name), len(val_name))
+
+    for i in range(min_length):
+        if train_name[i] == val_name[i]:
+            common_prefix += train_name[i]
+        else:
+            break
+
+    # Clean up the prefix - remove trailing underscores or hyphens
+    common_prefix = common_prefix.rstrip('_-')
+
+    # If no meaningful prefix found, use a default
+    if len(common_prefix) < 3:
+        common_prefix = "model"
+
+    return common_prefix
+
+
 class CatBoostRankerTrainer:
     """
     A class to handle CatBoost ranking model training and validation for word sense disambiguation.
     """
 
-    def __init__(self, train_file, val_file, log_file=None, cv_folds=5):
+    def __init__(self, train_file, val_file, log_file=None, cv_folds=5, model_output=None):
         self.train_file = train_file
         self.val_file = val_file
         self.cv_folds = cv_folds
@@ -27,6 +61,13 @@ class CatBoostRankerTrainer:
         self.train_df = None
         self.val_df = None
         self.cv_results = []
+
+        # Generate model output filename if not provided
+        if model_output is None:
+            prefix = find_common_prefix(train_file, val_file)
+            self.model_output = f"{prefix}_word_sense_ranker.cbm"
+        else:
+            self.model_output = model_output
 
         # Set up logging
         if log_file is None:
@@ -466,12 +507,16 @@ class CatBoostRankerTrainer:
                 diff = final_score - cv_score
                 self.log(f"{metric.upper()}: CV={cv_score:.4f}, Final={final_score:.4f}, Diff={diff:+.4f}")
 
-    def save_model(self, model_path='word_sense_catboost_ranker.cbm'):
+    def save_model(self, model_path=None):
         """
         Save the trained model to disk.
         """
         if self.model is None:
             raise ValueError("Model must be trained before saving")
+
+        # Use the auto-generated filename if no path is provided
+        if model_path is None:
+            model_path = self.model_output
 
         self.model.save_model(model_path)
         self.log(f"\nModel saved as '{model_path}'")
@@ -482,6 +527,7 @@ class CatBoostRankerTrainer:
         """
         try:
             self.log(f"Starting ranking pipeline with {self.cv_folds}-fold CV - Log file: {self.log_file}")
+            self.log(f"Model will be saved as: {self.model_output}")
             self.validate_data_files()
             self.prepare_data()
             self.perform_cross_validation()
@@ -517,8 +563,8 @@ def main():
 
     parser.add_argument(
         '--model-output',
-        default='word_sense_catboost_ranker.cbm',
-        help='Output path for the trained model'
+        default=None,
+        help='Output path for the trained model (if not specified, auto-generated from input filenames)'
     )
 
     parser.add_argument(
@@ -530,6 +576,11 @@ def main():
 
     args = parser.parse_args()
 
+    # Generate default model output name if not provided
+    if args.model_output is None:
+        prefix = find_common_prefix(args.train_file, args.val_file)
+        args.model_output = f"{prefix}_word_sense_ranker.cbm"
+
     print("=" * 60)
     print("CatBoost Word Sense Disambiguation Ranking Model")
     print("=" * 60)
@@ -540,12 +591,8 @@ def main():
     print("=" * 60)
 
     # Initialize and run the trainer
-    trainer = CatBoostRankerTrainer(args.train_file, args.val_file, cv_folds=args.cv_folds)
+    trainer = CatBoostRankerTrainer(args.train_file, args.val_file, cv_folds=args.cv_folds, model_output=args.model_output)
     trainer.run_full_pipeline()
-
-    # Save with custom path if specified
-    if args.model_output != 'word_sense_catboost_ranker.cbm':
-        trainer.save_model(args.model_output)
 
 
 if __name__ == "__main__":

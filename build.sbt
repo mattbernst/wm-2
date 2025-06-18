@@ -9,23 +9,23 @@ lazy val scalaTestVersion = "3.2.19"
 
 libraryDependencies ++= Seq(
   "com.github.blemale" %% "scaffeine" % "5.3.0",
-  "com.lihaoyi" %% "cask" % "0.9.7",
-  "com.lihaoyi" %% "upickle" % "4.0.0",
+  "com.lihaoyi" %% "cask" % "0.10.2",
+  "com.lihaoyi" %% "upickle" % "4.2.1",
   "com.lihaoyi" %% "pprint" % "0.9.0",
   "io.airlift" % "aircompressor" % "0.27",
   "org.apache.opennlp" % "opennlp-tools" % "2.4.0",
-  "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
+  "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
   "org.scala-lang.modules" %% "scala-parallel-collections" % "1.2.0",
   "org.scalatest" %% "scalatest-flatspec" % scalaTestVersion % "test",
   "org.scalatest" %% "scalatest-shouldmatchers" % scalaTestVersion % "test",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-  "org.slf4j" % "slf4j-api" % "2.0.16",
-  "org.slf4j" % "slf4j-simple" % "2.0.16",
-  "org.scalikejdbc" %% "scalikejdbc" % "4.3.1",
+  "org.slf4j" % "slf4j-api" % "2.0.17",
+  "org.slf4j" % "slf4j-simple" % "2.0.17",
+  "org.scalikejdbc" %% "scalikejdbc" % "4.3.4",
   "org.sweble.wikitext" % "swc-parser-lazy" % "3.1.9",
   // This is required for Sweble on Java versions above 8
   "javax.xml.bind" % "jaxb-api" % "2.3.1",
-  "org.xerial" % "sqlite-jdbc" % "3.46.1.0"
+  "org.xerial" % "sqlite-jdbc" % "3.50.1.0"
 )
 
 assembly / assemblyMergeStrategy := {
@@ -36,3 +36,5 @@ assembly / assemblyMergeStrategy := {
   case x =>
     (assembly / assemblyMergeStrategy).value.apply(x)
 }
+
+run / fork := true

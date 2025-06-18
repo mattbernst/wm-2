@@ -9,6 +9,14 @@ import java.time.{MonthDay, YearMonth}
 import java.util.Locale
 import scala.collection.mutable
 
+case class DataGroup(name: String, size: Int)
+case class TrainingProfile(groups: Seq[DataGroup],
+                           minOutLinks: Int,
+                           minInLinks: Int,
+                           maxListProportion: Double,
+                           minWordCount: Int,
+                           maxWordCount: Int)
+
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
   name: String, // e.g. "English"

@@ -14,7 +14,14 @@ import java.util
   * @param fileName The name of the on-disk file containing the SQLite db
   */
 class Storage(fileName: String) extends Logging {
-  ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
+  ConnectionPool.singleton(
+    url = s"jdbc:sqlite:$fileName",
+    user = null,
+    password = null,
+    settings = ConnectionPoolSettings(
+      connectionTimeoutMillis = 30000L
+    )
+  )
 
   /**
     * Try to get one or more Page records from storage. This is implemented
