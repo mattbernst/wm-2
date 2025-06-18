@@ -355,7 +355,7 @@ class CatBoostRankerTrainer:
                 depth=6,
                 loss_function='YetiRank',
                 l2_leaf_reg=3.0,  # Add L2 regularization
-                random_seed=42,
+                random_seed=1,
                 verbose=False,
                 early_stopping_rounds=50
             )
@@ -411,7 +411,7 @@ class CatBoostRankerTrainer:
             depth=6,
             loss_function='YetiRank',  # Good for ranking tasks
             l2_leaf_reg=3.0,  # Increased L2 regularization to prevent overfitting
-            random_seed=42,
+            random_seed=1,
             verbose=100,
             early_stopping_rounds=50
         )

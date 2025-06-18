@@ -10,12 +10,19 @@ import java.util.Locale
 import scala.collection.mutable
 
 case class DataGroup(name: String, size: Int)
+object DataGroup {
+  implicit val rw: ReadWriter[DataGroup] = macroRW
+}
 case class TrainingProfile(groups: Seq[DataGroup],
                            minOutLinks: Int,
                            minInLinks: Int,
                            maxListProportion: Double,
                            minWordCount: Int,
-                           maxWordCount: Int)
+                           maxWordCount: Int
+                          )
+object TrainingProfile {
+  implicit val rw: ReadWriter[TrainingProfile] = macroRW
+}
 
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
@@ -25,7 +32,8 @@ case class Language(
    * and also transclusion_counts.json after running with
    * COUNT_LAST_TRANSCLUSIONS=true
    */
-  disambiguationPrefixes: Seq[String]) {
+  disambiguationPrefixes: Seq[String],
+  trainingProfile: TrainingProfile) {
 
   /**
     * Generate all possible "MMMM d" combinations (full month name + day) that are valid
@@ -147,6 +155,7 @@ object Language {
 
   def fromJSON(input: String): Seq[Language] =
     read[Seq[Language]](input)
+
 
   def fromJSONFile(fileName: String): Seq[Language] =
     fromJSON(FileHelpers.readTextFile(fileName))

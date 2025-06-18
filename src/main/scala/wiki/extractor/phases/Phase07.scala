@@ -2,9 +2,8 @@ package wiki.extractor.phases
 
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{TrainingProfile, DataGroup}
 import wiki.extractor.util.{ConfiguredProperties, DBLogging}
-import wiki.extractor.{ArticleFeatureProcessor, ArticleSelectionProfile, ArticleSelector, DataGroup}
+import wiki.extractor.{ArticleFeatureProcessor, ArticleSelector}
 
 import java.io.{File, PrintWriter}
 import java.util.concurrent.ForkJoinPool
@@ -33,40 +32,8 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val selector  = new ArticleSelector(db, ll)
     val processor = new ArticleFeatureProcessor(db, props)
 
-    val groups = Seq(
-      ("training", 500),
-      ("disambiguation-test", 200),
-      ("topic-test", 200)
-    )
-
     DBLogging.info(s"Selecting eligible articles")
-    val englishProfile = TrainingProfile(
-      groups = Seq(
-        DataGroup("training", 5000),
-        DataGroup("disambiguation-test", 2000),
-        DataGroup("topic-test", 2000)
-      ),
-      minOutLinks = 15,
-      minInLinks = 20,
-      maxListProportion = 0.1,
-      minWordCount = 400,
-      maxWordCount = 4000
-    )
-
-    val simpleEnglishProfile = TrainingProfile(
-      groups = Seq(
-        DataGroup("training", 1000),
-        DataGroup("disambiguation-test", 500),
-        DataGroup("topic-test", 500)
-      ),
-      minOutLinks = 2,
-      minInLinks = 3,
-      maxListProportion = 0.1,
-      minWordCount = 150,
-      maxWordCount = 4000
-    )
-
-    val profile = simpleEnglishProfile
+    val profile = props.language.trainingProfile
 
     val res = selector.extractSets(profile)
 
@@ -88,7 +55,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
 
     pool.shutdown()
 
-    groups.foreach(t => writeCSV(t._1))
+    profile.groups.foreach(t => writeCSV(t.name))
     db.phase.completePhase(number)
   }
 

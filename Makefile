@@ -43,10 +43,10 @@ train-disambiguation:
 	@if [ -n "$(WP_LANG)" ]; then \
 		LANG_CODE="$(WP_LANG)"; \
 	else \
-		AVAILABLE_LANGS=$$(ls wiki_*_training.csv 2>/dev/null | sed 's/wiki_\(.*\)_training\.csv/\1/' | sort -u); \
+		AVAILABLE_LANGS=$$(ls wiki_*_train.csv 2>/dev/null | sed 's/wiki_\(.*\)_train\.csv/\1/' | sort -u); \
 		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
 		if [ $$LANG_COUNT -eq 0 ]; then \
-			echo "Error: No training CSV files found (wiki_*_training.csv)"; \
+			echo "Error: No training CSV files found (wiki_*_train.csv)"; \
 			echo "Please run 'make extract' first to generate the required CSV files."; \
 			exit 1; \
 		elif [ $$LANG_COUNT -gt 1 ]; then \
@@ -61,8 +61,8 @@ train-disambiguation:
 	\
 	echo "Using language code: $$LANG_CODE"; \
 	\
-	if [ ! -f "wiki_$${LANG_CODE}_training.csv" ]; then \
-		echo "Error: Training file wiki_$${LANG_CODE}_training.csv not found"; \
+	if [ ! -f "wiki_$${LANG_CODE}_train.csv" ]; then \
+		echo "Error: Training file wiki_$${LANG_CODE}_train.csv not found"; \
 		echo "Please run 'make extract' to generate the required CSV files."; \
 		exit 1; \
 	fi; \
@@ -96,5 +96,5 @@ train-disambiguation:
 	echo "Running disambiguation training..."; \
 	cd pysrc && \
 	uv run python train_word_sense_disambiguation.py \
-		--train-file ../wiki_$${LANG_CODE}_training.csv \
+		--train-file ../wiki_$${LANG_CODE}_train.csv \
 		--val-file ../wiki_$${LANG_CODE}_disambiguation-test.csv
