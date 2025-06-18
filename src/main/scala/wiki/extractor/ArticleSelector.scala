@@ -17,7 +17,7 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     * Extract randomized subsets of articles, each of which matches the
     * selection criteria given. For each size in "groups", a subset of valid
     * matching articles is returned. For example, if groups were
-   * Seq(DataGroup("test", 2), DataGroup("train", 3)) then
+    * Seq(DataGroup("test", 2), DataGroup("train", 3)) then
     * the result might be something like
     * Seq(Seq(781169, 1134), Seq(12, 98543, 65826)).
     *
@@ -27,17 +27,19 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     * @return A size-N sequence of articles for each size N in group sizes
     */
   def extractSets(profile: TrainingProfile): Seq[Seq[Int]] = {
-    val rand = new scala.util.Random(1)
-    val seen = mutable.Set[Int]()
+    val rand  = new scala.util.Random(1)
+    val seen  = mutable.Set[Int]()
     val sizes = profile.groups.map(_.size)
 
     sizes.map(size => extract(random = rand, seen = seen, size = size, profile = profile))
   }
 
-  private def extract(random: Random,
-                      seen: mutable.Set[Int],
-                      size: Int,
-                      profile: TrainingProfile): Seq[Int] = {
+  private def extract(
+    random: Random,
+    seen: mutable.Set[Int],
+    size: Int,
+    profile: TrainingProfile
+  ): Seq[Int] = {
     val result = ListBuffer[Int]()
     while (result.length < size) {
       val candidate = articleIds(random.nextInt(articleIds.length))
@@ -92,7 +94,7 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
 
   private val parser = new WikitextParser(languageLogic)
 
-  private lazy val articleIds: Array[Int] = {
+  private val articleIds: Array[Int] = {
     DBLogging.info("Loading ARTICLE page identifiers")
     db.page.getPagesByTypes(Seq(ARTICLE))
   }

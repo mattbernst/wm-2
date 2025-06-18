@@ -10,18 +10,31 @@ import java.util.Locale
 import scala.collection.mutable
 
 case class DataGroup(name: String, size: Int)
+
 object DataGroup {
   implicit val rw: ReadWriter[DataGroup] = macroRW
 }
-case class TrainingProfile(groups: Seq[DataGroup],
-                           minOutLinks: Int,
-                           minInLinks: Int,
-                           maxListProportion: Double,
-                           minWordCount: Int,
-                           maxWordCount: Int
-                          )
+
+case class TrainingProfile(
+  groups: Seq[DataGroup],
+  minOutLinks: Int,
+  minInLinks: Int,
+  maxListProportion: Double,
+  minWordCount: Int,
+  maxWordCount: Int)
+
 object TrainingProfile {
   implicit val rw: ReadWriter[TrainingProfile] = macroRW
+
+  def empty: TrainingProfile =
+    TrainingProfile(
+      groups = Seq(),
+      minOutLinks = 0,
+      minInLinks = 0,
+      maxListProportion = 0.0,
+      minWordCount = 0,
+      maxWordCount = 0
+    )
 }
 
 case class Language(
@@ -155,7 +168,6 @@ object Language {
 
   def fromJSON(input: String): Seq[Language] =
     read[Seq[Language]](input)
-
 
   def fromJSONFile(fileName: String): Seq[Language] =
     fromJSON(FileHelpers.readTextFile(fileName))

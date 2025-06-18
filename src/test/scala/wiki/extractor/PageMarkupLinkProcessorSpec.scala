@@ -1,6 +1,6 @@
 package wiki.extractor
 
-import wiki.extractor.types.Language
+import wiki.extractor.types.{Language, TrainingProfile}
 import wiki.extractor.util.UnitSpec
 
 import scala.collection.mutable
@@ -49,6 +49,7 @@ class PageMarkupLinkProcessorSpec extends UnitSpec {
   private lazy val language = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    trainingProfile = TrainingProfile.empty
   )
 }

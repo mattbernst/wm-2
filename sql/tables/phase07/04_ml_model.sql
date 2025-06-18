@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS ml_model
+(
+    name TEXT NOT NULL PRIMARY KEY,
+    data BLOB NOT NULL
+);

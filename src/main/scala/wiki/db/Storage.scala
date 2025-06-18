@@ -227,6 +227,7 @@ class Storage(fileName: String) extends Logging {
   val label: LabelStorage.type                 = LabelStorage
   val link: LinkStorage.type                   = LinkStorage
   val log: LogStorage.type                     = LogStorage
+  val mlModel: MLModelStorage.type             = MLModelStorage
   val namespace: NamespaceStorage.type         = NamespaceStorage
   val page: PageStorage.type                   = PageStorage
   val phase: PhaseStorage.type                 = PhaseStorage

@@ -1,7 +1,7 @@
 package wiki.extractor.language
 
 import wiki.extractor.language.types.Snippet
-import wiki.extractor.types.Language
+import wiki.extractor.types.{Language, TrainingProfile}
 import wiki.extractor.util.UnitSpec
 
 class LanguageLogicSpec extends UnitSpec {
@@ -145,6 +145,7 @@ class LanguageLogicSpec extends UnitSpec {
   private lazy val englishLanguage = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    trainingProfile = TrainingProfile.empty
   )
 }

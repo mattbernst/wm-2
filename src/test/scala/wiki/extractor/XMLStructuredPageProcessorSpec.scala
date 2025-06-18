@@ -98,7 +98,8 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
   private lazy val language = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    trainingProfile = TrainingProfile.empty
   )
 
   private lazy val siteInfo = SiteInfo(

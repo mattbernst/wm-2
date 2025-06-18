@@ -45,9 +45,9 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
       val subset    = set._1
       val groupName = set._2.name
       DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
-      val paralllelGroup = subset.par
-      paralllelGroup.tasksupport = taskSupport
-      paralllelGroup.foreach { pageId =>
+      val parallelGroup = subset.par
+      parallelGroup.tasksupport = taskSupport
+      parallelGroup.foreach { pageId =>
         val senseFeatures = processor.articleToFeatures(pageId, groupName)
         db.senseTraining.write(senseFeatures)
       }

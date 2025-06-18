@@ -158,7 +158,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
       language = Language(
         code = "en_simple",
         name = "English (simple)",
-        disambiguationPrefixes = List("dab", "disambiguation", "disambig", "geodis")
+        disambiguationPrefixes = List("dab", "disambiguation", "disambig", "geodis"),
+        trainingProfile = TrainingProfile.empty
       ),
       nWorkers = 12,
       compressMarkup = true
@@ -167,6 +168,18 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.configuration.readConfiguredProperties() shouldBe None
     storage.configuration.write(props)
     storage.configuration.readConfiguredProperties() shouldBe Some(props)
+  }
+
+  behavior of "MLModelStorage"
+
+  it should "write and read back stored models" in {
+    val data = scala.util.Random.nextBytes(100)
+    val name = randomString()
+
+    storage.mlModel.read(name) shouldBe None
+    storage.mlModel.write(name, data)
+    val retrieved = storage.mlModel.read(name).get
+    data.sameElements(retrieved) shouldBe true
   }
 
   behavior of "SenseStorage"

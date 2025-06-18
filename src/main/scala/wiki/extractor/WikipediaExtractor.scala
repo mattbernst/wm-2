@@ -12,7 +12,7 @@ object WikipediaExtractor extends Logging {
     // Initialize database with name passed as first command line argument,
     // if first command line argument ends in ".db". Otherwise, the name will
     // be automatically generated from the environmental configuration.
-    val db = database(args.headOption)
+    val db = openOrCreateDatabase(args.headOption)
     DBLogging.initDb(db)
 
     val phases = Array(
@@ -65,7 +65,7 @@ object WikipediaExtractor extends Logging {
     db.closeAll()
   }
 
-  private def database(diskFileName: Option[String]): Storage = {
+  private def openOrCreateDatabase(diskFileName: Option[String]): Storage = {
     diskFileName match {
       case Some(fileName) if fileName.endsWith(".db") =>
         if (FileHelpers.isFileReadable(fileName)) {
