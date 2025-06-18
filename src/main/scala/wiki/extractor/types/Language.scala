@@ -1,7 +1,7 @@
 package wiki.extractor.types
 
 import upickle.default.*
-import wiki.extractor.util.FileHelpers
+import wiki.util.FileHelpers
 
 import java.text.BreakIterator
 import java.time.format.DateTimeFormatter

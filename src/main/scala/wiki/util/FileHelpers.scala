@@ -1,4 +1,4 @@
-package wiki.extractor.util
+package wiki.util
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
@@ -22,6 +22,9 @@ object FileHelpers extends Logging {
     }
     streams.filter(p => matcher.matches(p)).map(_.toString).iterator().asScala.toSeq
   }
+
+  def readBinaryFile(name: String): Array[Byte] =
+    Files.readAllBytes(Paths.get(name))
 
   def readTextFile(fileName: String): String = {
     val source = Source.fromFile(fileName)(StandardCharsets.UTF_8)

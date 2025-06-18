@@ -1,4 +1,4 @@
-package wiki.extractor.util
+package wiki.util
 
 import io.airlift.compress.zstd.{ZstdCompressor, ZstdDecompressor}
 

@@ -3,7 +3,8 @@ package wiki.extractor
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.*
-import wiki.extractor.util.{ConfiguredProperties, Progress}
+import wiki.extractor.util.Progress
+import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

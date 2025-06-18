@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "com.lihaoyi" %% "pprint" % "0.9.0",
   "io.airlift" % "aircompressor" % "0.27",
   "org.apache.opennlp" % "opennlp-tools" % "2.4.0",
+  "org.rogach" %% "scallop" % "5.2.0",
   "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
   "org.scala-lang.modules" %% "scala-parallel-collections" % "1.2.0",
   "org.scalatest" %% "scalatest-flatspec" % scalaTestVersion % "test",

@@ -1,4 +1,4 @@
-package wiki.extractor.util
+package wiki.util
 
 import org.scalatest.*
 import org.scalatest.flatspec.*

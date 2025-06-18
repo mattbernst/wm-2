@@ -4,8 +4,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.slf4j.event.Level
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.{ConfiguredProperties, FileHelpers, UnitSpec}
 import wiki.extractor.{TitleFinder, WikitextParser}
+import wiki.util.{ConfiguredProperties, FileHelpers, UnitSpec}
 
 import scala.collection.mutable
 

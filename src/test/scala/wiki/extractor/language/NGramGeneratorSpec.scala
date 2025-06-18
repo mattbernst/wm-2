@@ -3,7 +3,7 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
 import opennlp.tools.tokenize.{TokenizerME, TokenizerModel}
 import wiki.extractor.language.types.NGram
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 import java.io.FileInputStream
 import scala.collection.mutable

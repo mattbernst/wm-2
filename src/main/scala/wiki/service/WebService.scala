@@ -2,7 +2,7 @@ package wiki.service
 
 import cask.model.Response
 
-object WebService extends cask.MainRoutes {
+object WebService extends cask.MainRoutes with ServiceProperties {
   override def port: Int = 7777
 
   @cask.get("/ping")

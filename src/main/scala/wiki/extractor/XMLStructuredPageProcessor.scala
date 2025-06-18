@@ -3,7 +3,8 @@ package wiki.extractor
 import wiki.db.PageSink
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.{DBLogging, Logging, Progress}
+import wiki.extractor.util.{DBLogging, Progress}
+import wiki.util.Logging
 
 import java.nio.charset.StandardCharsets
 import java.time.OffsetDateTime

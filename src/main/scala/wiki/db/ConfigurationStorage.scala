@@ -1,7 +1,7 @@
 package wiki.db
 
 import scalikejdbc.*
-import wiki.extractor.util.ConfiguredProperties
+import wiki.util.ConfiguredProperties
 
 object ConfigurationStorage {
 

@@ -1,6 +1,6 @@
 package wiki.extractor.types
 
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 class LanguageSpec extends UnitSpec {
   "serialization/deserialization" should "serialize an entry and restore it" in {

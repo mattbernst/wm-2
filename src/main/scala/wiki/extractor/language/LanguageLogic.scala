@@ -4,7 +4,7 @@ import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
 import wiki.extractor.language.types.Snippet
 import wiki.extractor.types.Language
-import wiki.extractor.util.Logging
+import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

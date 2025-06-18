@@ -3,7 +3,8 @@ package wiki.db
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, Logging, Progress}
+import wiki.extractor.util.Progress
+import wiki.util.{FileHelpers, Logging}
 
 import java.util
 

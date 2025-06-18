@@ -1,7 +1,7 @@
 package wiki.extractor.types
 
 import upickle.default.*
-import wiki.extractor.util.Compressor
+import wiki.util.Compressor
 
 case class TypedPageMarkup(pmu: Option[PageMarkup_U], pmz: Option[PageMarkup_Z], pageType: PageType) {
 

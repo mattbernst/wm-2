@@ -1,5 +1,7 @@
 package wiki.extractor.util
 
+import wiki.util.{FileHelpers, UnitSpec}
+
 class TextSpec extends UnitSpec {
   behavior of "tagSlice"
 

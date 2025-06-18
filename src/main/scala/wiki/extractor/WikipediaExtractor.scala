@@ -2,7 +2,8 @@ package wiki.extractor
 
 import wiki.db.*
 import wiki.extractor.phases.*
-import wiki.extractor.util.{Config, DBLogging, FileHelpers, Logging}
+import wiki.extractor.util.DBLogging
+import wiki.util.{Config, FileHelpers, Logging}
 
 import java.nio.file.NoSuchFileException
 

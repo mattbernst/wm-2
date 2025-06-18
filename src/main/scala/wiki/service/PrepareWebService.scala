@@ -1,45 +1,55 @@
 package wiki.service
 
+import org.rogach.scallop.*
 import wiki.db.Storage
-import wiki.extractor.util.{ConfiguredProperties, FileHelpers, Logging}
+import wiki.util.FileHelpers
 
 import java.nio.file.NoSuchFileException
 
-object PrepareWebService extends Logging {
+private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
+  // These turn into kebab-case arguments, e.g.
+  // sbt "runMain wiki.service.PrepareWebService --database en_wiki.db --word-sense-model en_word_sense_ranker.cbm"
+  val database = opt[String]()
+  val wordSenseModel = opt[String]()
+  verify()
+}
+
+object PrepareWebService extends ServiceProperties {
 
   def main(args: Array[String]): Unit = {
-    val databaseFileName = args.headOption
+    val conf = new Conf(args.toIndexedSeq)
+
+    val databaseFileName = conf.database
       .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
-    logger.info(s"Preparing web service data with db $databaseFileName")
+    println(s"Preparing web service data with db $databaseFileName")
     val db = if (FileHelpers.isFileReadable(databaseFileName)) {
       new Storage(fileName = databaseFileName)
     } else {
       throw new NoSuchFileException(s"Database file $databaseFileName is not readable")
     }
 
-    val props = db.configuration.readConfiguredPropertiesOptimistic()
-
+    prepareModels(db, conf)
   }
 
-  /**
-    * Try to automatically infer the name of the DB file to use for running the
-    * service. This only works if there is a single DB file, located in the
-    * current working directory. Otherwise, the name must be given manually.
-    *
-    * @return The name of the file (if it can be inferred)
-    */
-  private def inferDbFile(): Option[String] = {
-    val candidates = FileHelpers.glob("./*.db")
-    if (candidates.isEmpty) {
-      logger.error("No db file found in current directory. Give db file name as first argument or generate one.")
-      None
-    } else if (candidates.length > 1) {
-      logger.error(s"Found multiple db files: ${candidates.mkString(", ")}. Give db file name as first argument.")
-      None
-    } else {
-      candidates.headOption
+  private def prepareModels(db: Storage, conf: Conf): Unit = {
+    val props = db.configuration.readConfiguredPropertiesOptimistic()
+    if (db.mlModel.read(wsdModelName).isEmpty) {
+      val defaultWsdFile = s"pysrc/wiki_${props.language.code}_word_sense_ranker.cbm"
+      val wsdFile = conf.wordSenseModel.getOrElse(defaultWsdFile)
+      if (!FileHelpers.isFileReadable(wsdFile)) {
+        println(s"Word sense disambiguation model $wsdFile could not be read")
+        println(s"You need to give the CatBoost model with --word-sense-model or run train-disambiguation")
+        throw new NoSuchFileException(wsdFile)
+      }
+      else {
+        val modelData = FileHelpers.readBinaryFile(wsdFile)
+        require(modelData.nonEmpty, s"File $wsdFile exists but contains no data")
+        db.mlModel.write(wsdModelName, modelData)
+        val retrieved = db.mlModel.read(wsdModelName).get
+        require(retrieved.sameElements(modelData), s"Model data from $wsdFile does not match db $wsdModelName")
+      }
     }
   }
 }

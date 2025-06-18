@@ -3,8 +3,9 @@ package wiki.extractor.phases
 import wiki.db.{PageMarkupSource, Storage}
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{PageType, TypedPageMarkup, Worker}
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.util.DBLogging
 import wiki.extractor.{LabelAccumulator, PageLabelProcessor}
+import wiki.util.ConfiguredProperties
 
 class Phase05(db: Storage) extends Phase(db: Storage) {
 

@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.extractor.types.{Language, TrainingProfile}
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 import scala.collection.mutable
 

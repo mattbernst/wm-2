@@ -4,8 +4,9 @@ import io.airlift.compress.bzip2.BZip2HadoopStreams
 import io.airlift.compress.zstd.ZstdInputStream
 import wiki.db.{PageSink, Storage}
 import wiki.extractor.types.{SiteInfo, Worker}
-import wiki.extractor.util.{Config, DBLogging, Logging}
+import wiki.extractor.util.DBLogging
 import wiki.extractor.{XMLSource, XMLStructuredPageProcessor}
+import wiki.util.{Config, Logging}
 
 import java.io.{BufferedInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets

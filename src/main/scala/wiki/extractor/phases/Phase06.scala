@@ -3,7 +3,8 @@ package wiki.extractor.phases
 import wiki.db.{SenseSink, Storage}
 import wiki.extractor.AnchorLogic
 import wiki.extractor.types.WordSense
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.util.DBLogging
+import wiki.util.ConfiguredProperties
 
 import java.util
 import scala.collection.mutable

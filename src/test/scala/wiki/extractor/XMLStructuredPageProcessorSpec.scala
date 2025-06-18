@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.util.{FileHelpers, UnitSpec}
 
 class XMLStructuredPageProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"

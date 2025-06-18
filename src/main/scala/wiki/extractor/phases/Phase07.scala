@@ -2,8 +2,9 @@ package wiki.extractor.phases
 
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.util.DBLogging
 import wiki.extractor.{ArticleFeatureProcessor, ArticleSelector}
+import wiki.util.ConfiguredProperties
 
 import java.io.{File, PrintWriter}
 import java.util.concurrent.ForkJoinPool

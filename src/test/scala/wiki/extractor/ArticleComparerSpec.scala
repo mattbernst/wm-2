@@ -1,6 +1,6 @@
 package wiki.extractor
 
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 class ArticleComparerSpec extends UnitSpec {
   behavior of "ArticleComparer.googleMeasure"

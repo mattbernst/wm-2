@@ -2,7 +2,7 @@ package wiki.extractor.language
 
 import wiki.extractor.language.types.Snippet
 import wiki.extractor.types.{Language, TrainingProfile}
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 class LanguageLogicSpec extends UnitSpec {
   behavior of "EnglishLanguageLogic.getSnippet"

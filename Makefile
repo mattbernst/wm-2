@@ -1,6 +1,8 @@
 .PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
+PREPARE_WEB_SERVICE_MAIN := wiki.service.PrepareWebService
+WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors
 JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
@@ -36,6 +38,9 @@ format:
 
 test:
 	sbt test
+
+prepare-web-service: build
+	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_WEB_SERVICE_MAIN) $(input)
 
 train-disambiguation:
 	@echo "Setting up disambiguation training..."
