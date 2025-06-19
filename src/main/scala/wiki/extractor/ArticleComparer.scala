@@ -48,7 +48,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
   }
 
   /**
-    * Get relatedness measure between a given Wikipedia page ID and a Context
+    * Get relatedness features between a given Wikipedia page ID and a Context
     * of representative pages for a document. For example, a page about the
     * planet Mercury should be more related to a Context derived from an
     * document about NASA than it is related to a Context derived from an
@@ -57,27 +57,9 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
     * @param pageId  The numeric ID of a Wikipedia page
     * @param context A Context containing top candidate Wikipedia pages for
     *                representing a document
-    * @return        A measure that is higher for pages that are more similar
-    *                to the given Context
+    * @return        A vector of features that are higher for pages that are
+    *                more similar to the given Context
     */
-  def getRelatednessTo(pageId: Int, context: Context): Double = {
-    if (context.quality == 0.0 || context.pages.isEmpty) {
-      0.0
-    } else {
-      var relatedness = 0.0
-      val pageIds     = (Array(pageId) ++ context.pages.map(_.pageId)).distinct
-      primeCaches(pageIds)
-      context.pages.foreach { page =>
-        compare(page.pageId, pageId).foreach { comparison =>
-          val r = comparison.mean * page.weight
-          relatedness += r
-        }
-      }
-
-      relatedness / context.quality
-    }
-  }
-
   def getRelatednessByFeature(pageId: Int, context: Context): mutable.Map[String, Double] = {
     val result: mutable.Map[String, Double] = mutable.Map(
       "inLinkVectorMeasure"  -> 0.0,

@@ -3,13 +3,11 @@ package wiki.extractor
 import org.sweble.wikitext.parser.nodes.WtListItem
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.TrainingProfile
 import wiki.extractor.types.PageType.ARTICLE
+import wiki.extractor.types.TrainingProfile
 import wiki.extractor.util.DBLogging
 
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
 
@@ -27,35 +25,26 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     * @return A size-N sequence of articles for each size N in group sizes
     */
   def extractSets(profile: TrainingProfile): Seq[Seq[Int]] = {
-    val rand  = new scala.util.Random(1)
-    val seen  = mutable.Set[Int]()
     val sizes = profile.groups.map(_.size)
 
-    sizes.map(size => extract(random = rand, seen = seen, size = size, profile = profile))
+    sizes.map(size => extract(size = size, profile = profile))
   }
 
-  private def extract(
-    random: Random,
-    seen: mutable.Set[Int],
-    size: Int,
-    profile: TrainingProfile
-  ): Seq[Int] = {
+  private def extract(size: Int, profile: TrainingProfile): Seq[Int] = {
     val result = ListBuffer[Int]()
-    while (result.length < size) {
-      val candidate = articleIds(random.nextInt(articleIds.length))
-      if (!seen.contains(candidate)) {
-        seen.add(candidate)
-        val outLinks = db.link.getBySource(candidate).length
-        val inLinks  = db.link.getByDestination(candidate).length
-        if (outLinks >= profile.minOutLinks && inLinks >= profile.minInLinks) {
-          val markup = db.page.readMarkupAuto(candidate)
-          markup.flatMap(_.parseResult).foreach { parseResult =>
-            val wordCount = parseResult.text.split("\\s+").length
-            if (wordCount >= profile.minWordCount && wordCount <= profile.maxWordCount) {
-              val wikiText = markup.flatMap(_.wikitext).getOrElse("")
-              if (lineListRatio(wikiText) <= profile.maxListProportion) {
-                result.append(candidate)
-              }
+
+    while (result.length < size && articleIds.nonEmpty) {
+      val candidate = articleIds.next
+      val outLinks  = db.link.getBySource(candidate).length
+      val inLinks   = db.link.getByDestination(candidate).length
+      if (outLinks >= profile.minOutLinks && inLinks >= profile.minInLinks) {
+        val markup = db.page.readMarkupAuto(candidate)
+        markup.flatMap(_.parseResult).foreach { parseResult =>
+          val wordCount = parseResult.text.split("\\s+").length
+          if (wordCount >= profile.minWordCount && wordCount <= profile.maxWordCount) {
+            val wikiText = markup.flatMap(_.wikitext).getOrElse("")
+            if (lineListRatio(wikiText) <= profile.maxListProportion) {
+              result.append(candidate)
             }
           }
         }
@@ -92,10 +81,14 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     }
   }
 
+  val rand = new scala.util.Random(1)
+
   private val parser = new WikitextParser(languageLogic)
 
-  private val articleIds: Array[Int] = {
+  private val articleIds: Iterator[Int] = {
     DBLogging.info("Loading ARTICLE page identifiers")
-    db.page.getPagesByTypes(Seq(ARTICLE))
+    rand
+      .shuffle(db.page.getPagesByTypes(Seq(ARTICLE)))
+      .iterator
   }
 }

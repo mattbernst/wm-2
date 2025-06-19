@@ -31,7 +31,7 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
       )
     )
 
-    wsd.getTopRankedSense(input) shouldBe 2
+    wsd.getBestSense(input) shouldBe 2
   }
 
   lazy val wsd = {

@@ -9,7 +9,7 @@ import java.nio.file.NoSuchFileException
 private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
   // These turn into kebab-case arguments, e.g.
   // sbt "runMain wiki.service.PrepareWebService --database en_wiki.db --word-sense-model en_word_sense_ranker.cbm"
-  val database = opt[String]()
+  val database       = opt[String]()
   val wordSenseModel = opt[String]()
   verify()
 }
@@ -37,13 +37,12 @@ object PrepareWebService extends ServiceProperties {
     val props = db.configuration.readConfiguredPropertiesOptimistic()
     if (db.mlModel.read(wsdModelName).isEmpty) {
       val defaultWsdFile = s"pysrc/wiki_${props.language.code}_word_sense_ranker.cbm"
-      val wsdFile = conf.wordSenseModel.getOrElse(defaultWsdFile)
+      val wsdFile        = conf.wordSenseModel.getOrElse(defaultWsdFile)
       if (!FileHelpers.isFileReadable(wsdFile)) {
         println(s"Word sense disambiguation model $wsdFile could not be read")
         println(s"You need to give the CatBoost model with --word-sense-model or run train-disambiguation")
         throw new NoSuchFileException(wsdFile)
-      }
-      else {
+      } else {
         val modelData = FileHelpers.readBinaryFile(wsdFile)
         require(modelData.nonEmpty, s"File $wsdFile exists but contains no data")
         db.mlModel.write(wsdModelName, modelData)
