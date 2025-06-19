@@ -1,6 +1,7 @@
 package wiki.service
 
 import org.rogach.scallop.*
+import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.util.FileHelpers
 
@@ -30,6 +31,10 @@ object PrepareWebService extends ServiceProperties {
       throw new NoSuchFileException(s"Database file $databaseFileName is not readable")
     }
 
+    require(
+      db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
+      "Extraction has not completed. Finish extraction and training first."
+    )
     prepareModels(db, conf)
   }
 
