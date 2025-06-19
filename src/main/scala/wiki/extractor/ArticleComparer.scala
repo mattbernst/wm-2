@@ -98,24 +98,8 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
     * @param pageIds All the numeric IDs of Wikipedia pages to look up
     */
   def primeCaches(pageIds: Array[Int]): Unit = {
-    val missingIn = pageIds
-      .filter(p => inLinkCache.getIfPresent(p).isEmpty)
-      .distinct
-      .toSeq
-    if (missingIn.nonEmpty) {
-      db.link
-        .getSourcesByDestination(missingIn)
-        .foreach(t => inLinkCache.put(t._1, LinkVector(t._2)))
-    }
-    val missingOut = pageIds
-      .filter(p => outLinkCache.getIfPresent(p).isEmpty)
-      .distinct
-      .toSeq
-    if (missingOut.nonEmpty) {
-      db.link
-        .getDestinationsBySource(missingOut)
-        .foreach(t => outLinkCache.put(t._1, LinkVector(t._2)))
-    }
+    inLinkCache.getAll(pageIds): Unit
+    outLinkCache.getAll(pageIds): Unit
   }
 
   /**
@@ -273,18 +257,32 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
   private val inLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
       .maximumSize(cacheSize)
-      .build(loader = (id: Int) => {
-        val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
-        LinkVector(ids)
-      })
+      .build(
+        loader = (id: Int) => {
+          val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
+          LinkVector(ids)
+        },
+        allLoader = Some((pageIds: Iterable[Int]) => {
+          db.link
+            .getSourcesByDestination(pageIds.toSeq)
+            .map(e => (e._1, LinkVector(e._2)))
+        })
+      )
 
   private val outLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
       .maximumSize(cacheSize)
-      .build(loader = (id: Int) => {
-        val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
-        LinkVector(ids)
-      })
+      .build(
+        loader = (id: Int) => {
+          val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
+          LinkVector(ids)
+        },
+        allLoader = Some((pageIds: Iterable[Int]) => {
+          db.link
+            .getDestinationsBySource(pageIds.toSeq)
+            .map(e => (e._1, LinkVector(e._2)))
+        })
+      )
 
   // We need counts of how many distinct articles link to each page to
   // calculate the inverse article frequency.

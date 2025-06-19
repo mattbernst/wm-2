@@ -34,7 +34,7 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     val result = ListBuffer[Int]()
 
     while (result.length < size && articleIds.nonEmpty) {
-      val candidate = articleIds.next
+      val candidate = articleIds.next()
       val outLinks  = db.link.getBySource(candidate).length
       val inLinks   = db.link.getByDestination(candidate).length
       if (outLinks >= profile.minOutLinks && inLinks >= profile.minInLinks) {
