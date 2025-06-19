@@ -7,15 +7,15 @@ import wiki.util.FileHelpers
 
 import java.nio.file.NoSuchFileException
 
-private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
-  // These turn into kebab-case arguments, e.g.
-  // sbt "runMain wiki.service.PrepareWebService --database en_wiki.db --word-sense-model en_word_sense_ranker.cbm"
-  val database       = opt[String]()
-  val wordSenseModel = opt[String]()
-  verify()
-}
-
 object PrepareWebService extends ServiceProperties {
+
+  private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
+    // These turn into kebab-case arguments, e.g.
+    // sbt "runMain wiki.service.PrepareWebService --database en_wiki.db --word-sense-model en_word_sense_ranker.cbm"
+    val database: ScallopOption[String]       = opt[String]()
+    val wordSenseModel: ScallopOption[String] = opt[String]()
+    verify()
+  }
 
   def main(args: Array[String]): Unit = {
     val conf = new Conf(args.toIndexedSeq)

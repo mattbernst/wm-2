@@ -42,6 +42,9 @@ test:
 prepare-web-service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_WEB_SERVICE_MAIN) $(input)
 
+run-web-service: build
+	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
+
 train-disambiguation:
 	@echo "Setting up disambiguation training..."
 	@# Check for CSV files and determine language
