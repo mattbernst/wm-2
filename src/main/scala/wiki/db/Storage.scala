@@ -30,7 +30,7 @@ class Storage(fileName: String) extends Logging {
     * and from NamespaceStorage.
     *
     * @param pageIds Numeric IDs for pages to retrieve
-    * @return       The full page records for the IDs, where retrievable
+    * @return        The full page records for the IDs, where retrievable
     */
   def getPages(pageIds: Seq[Int]): Seq[Page] = {
     val batches = pageIds.grouped(Storage.batchSqlSize).toSeq

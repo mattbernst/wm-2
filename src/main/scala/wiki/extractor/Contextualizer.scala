@@ -36,7 +36,7 @@ class Contextualizer(
     val linkAnchorTexts = links
       .map(_.anchorText)
       .filter(n => goodLabels.contains(n))
-      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
       .distinct
       .toArray
@@ -69,7 +69,7 @@ class Contextualizer(
 
   /**
     * Get distinct valid labels from a document, only for labels with
-    * label.link_doc_count >= minLinksIn and
+    * label.link_doc_count >= minInLinks and
     * (label.link_count / label.occurrence_count) >= minLinkProbability.
     *
     * A label is an NGram that has been used as anchor text anywhere in
@@ -82,7 +82,7 @@ class Contextualizer(
     languageLogic
       .wordNGrams(language = language, documentText = text)
       .filter(n => goodLabels.contains(n))
-      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
       .distinct
   }
@@ -197,7 +197,7 @@ class Contextualizer(
   }
 
   private val minLinkProbability = 0.0025
-  private val minLinksIn         = 4
+  private val minInLinks         = language.trainingProfile.minInLinks
 
   private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code)
 
@@ -205,6 +205,7 @@ class Contextualizer(
     DBLogging.info(s"Loading LabelCounter")
     db.label.read()
   }
+
   private val goodLabels  = labelToId.keySet
   private val dateStrings = language.generateValidDateStrings()
   private val datePageIds = dateStrings.flatMap(d => db.getPage(d)).map(_.id)

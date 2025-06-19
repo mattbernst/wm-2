@@ -1,5 +1,8 @@
 package wiki.extractor.types
 
+import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
+import wiki.db.Storage
+
 import scala.collection.mutable
 
 /**
@@ -40,9 +43,16 @@ case class WordSense(labelId: Int, senseCounts: mutable.Map[Int, Int]) {
     * @param minSenseProbability The minimum sense-fraction of senses to retain
     * @return                    A pruned Sense
     */
-  def pruned(minSenseProbability: Double): WordSense = {
+  private def pruned(minSenseProbability: Double): Option[WordSense] = {
     val filtered = senseCounts.filter(t => t._2 / total > minSenseProbability)
-    WordSense(labelId, filtered)
+    // Some noise-labels will have a very large number of senses, none of them
+    // significant. All of them may be filtered out by a reasonable
+    // minSenseProbability. In that case we can ignore the sense entirely.
+    if (filtered.nonEmpty) {
+      Some(WordSense(labelId, filtered))
+    } else {
+      None
+    }
   }
 
   private lazy val total: Double =
@@ -53,4 +63,22 @@ case class WordSense(labelId: Int, senseCounts: mutable.Map[Int, Int]) {
       .maxByOption(_._2)
       .map(_._2)
       .getOrElse(-1)
+}
+
+object WordSense {
+
+  def getSenseCache(db: Storage, maximumSize: Int, minSenseProbability: Double): LoadingCache[Int, Option[WordSense]] =
+    Scaffeine()
+      .maximumSize(maximumSize)
+      .build(
+        loader = (labelId: Int) => {
+          db.sense.getSenseByLabelId(labelId).flatMap(_.pruned(minSenseProbability))
+        },
+        allLoader = Some((labelIds: Iterable[Int]) => {
+          val bulkResults = db.sense.getSensesByLabelIds(labelIds.toSeq)
+          labelIds.map { labelId =>
+            labelId -> bulkResults.get(labelId).flatMap(_.pruned(minSenseProbability))
+          }.toMap
+        })
+      )
 }

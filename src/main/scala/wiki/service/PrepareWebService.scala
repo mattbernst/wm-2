@@ -53,7 +53,10 @@ object PrepareWebService extends ServiceProperties {
         db.mlModel.write(wsdModelName, modelData)
         val retrieved = db.mlModel.read(wsdModelName).get
         require(retrieved.sameElements(modelData), s"Model data from $wsdFile does not match db $wsdModelName")
+        println(s"Model from $wsdFile saved to ml_model as $wsdModelName")
       }
+    } else {
+      println(s"Model already stored in ml_model as $wsdModelName")
     }
   }
 }
