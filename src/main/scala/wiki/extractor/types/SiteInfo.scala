@@ -1,5 +1,6 @@
 package wiki.extractor.types
 
+import upickle.default.*
 import wiki.extractor.util.Text
 
 import scala.xml.*
@@ -9,9 +10,23 @@ sealed trait Casing
 object Casing {
   case object FIRST_LETTER   extends Casing
   case object CASE_SENSITIVE extends Casing
+
+  implicit val rw: ReadWriter[Casing] = readwriter[String].bimap[Casing](
+    {
+      case FIRST_LETTER   => "FIRST_LETTER"
+      case CASE_SENSITIVE => "CASE_SENSITIVE"
+    }, {
+      case "FIRST_LETTER"   => FIRST_LETTER
+      case "CASE_SENSITIVE" => CASE_SENSITIVE
+    }
+  )
 }
 
 case class Namespace(id: Int, casing: Casing, name: String)
+
+object Namespace {
+  implicit val rw: ReadWriter[Namespace] = macroRW
+}
 
 case class SiteInfo(
   siteName: String,
@@ -79,4 +94,6 @@ object SiteInfo {
 
   val commonKeys: Seq[Int] =
     Seq(MAIN_KEY, SPECIAL_KEY, FILE_KEY, TEMPLATE_KEY, CATEGORY_KEY)
+
+  implicit val rw: ReadWriter[SiteInfo] = macroRW
 }

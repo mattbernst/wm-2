@@ -1,5 +1,7 @@
 package wiki.extractor.types
 
+import upickle.default.*
+
 // Recognized types of Wikipedia pages
 sealed trait PageType
 
@@ -21,6 +23,28 @@ object PageType {
   case object UNPARSEABLE extends PageType
   // A type of page that we don't currently deal with
   case object UNHANDLED extends PageType
+
+  implicit val rw: ReadWriter[PageType] = readwriter[String].bimap[PageType](
+    {
+      case ARTICLE           => "ARTICLE"
+      case CATEGORY          => "CATEGORY"
+      case REDIRECT          => "REDIRECT"
+      case DISAMBIGUATION    => "DISAMBIGUATION"
+      case TEMPLATE          => "TEMPLATE"
+      case DANGLING_REDIRECT => "DANGLING_REDIRECT"
+      case UNPARSEABLE       => "UNPARSEABLE"
+      case UNHANDLED         => "UNHANDLED"
+    }, {
+      case "ARTICLE"           => ARTICLE
+      case "CATEGORY"          => CATEGORY
+      case "REDIRECT"          => REDIRECT
+      case "DISAMBIGUATION"    => DISAMBIGUATION
+      case "TEMPLATE"          => TEMPLATE
+      case "DANGLING_REDIRECT" => DANGLING_REDIRECT
+      case "UNPARSEABLE"       => UNPARSEABLE
+      case "UNHANDLED"         => UNHANDLED
+    }
+  )
 }
 
 object PageTypes {
