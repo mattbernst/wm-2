@@ -8,6 +8,7 @@ scalaVersion := "2.13.16"
 lazy val scalaTestVersion = "3.2.19"
 
 libraryDependencies ++= Seq(
+  "ai.catboost" % "catboost-prediction" % "1.2.8",
   "com.github.blemale" %% "scaffeine" % "5.3.0",
   "com.lihaoyi" %% "cask" % "0.10.2",
   "com.lihaoyi" %% "upickle" % "4.2.1",
