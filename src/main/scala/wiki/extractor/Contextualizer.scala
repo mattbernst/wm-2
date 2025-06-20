@@ -1,10 +1,11 @@
 package wiki.extractor
 
 import com.github.blemale.scaffeine.LoadingCache
+import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.DBLogging
+import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -15,7 +16,8 @@ class Contextualizer(
   labelToId: mutable.Map[String, Int],
   comparer: ArticleComparer,
   db: Storage,
-  language: Language) {
+  language: Language)
+    extends Logging {
 
   /**
     * Construct a context containing top candidate Wikipedia pages from an
@@ -79,6 +81,9 @@ class Contextualizer(
     * @return     All eligible NGram strings derivable from input document
     */
   def getLinkLabels(text: String): Array[String] = {
+    val shingles = languageLogic.wordNGrams(language = language, documentText = text)
+    BlackWhite.pprintln(shingles, height = 10000)
+
     languageLogic
       .wordNGrams(language = language, documentText = text)
       .filter(n => goodLabels.contains(n))
@@ -202,7 +207,7 @@ class Contextualizer(
   private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code)
 
   private val labelCounter: LabelCounter = {
-    DBLogging.info(s"Loading LabelCounter")
+    logger.info(s"Loading LabelCounter")
     db.label.read()
   }
 

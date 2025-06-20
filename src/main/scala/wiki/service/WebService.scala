@@ -23,7 +23,7 @@ object WebService extends cask.MainRoutes with ServiceProperties with Logging {
 
   @cask.post("/doc/labels")
   def getDocumentLabels(req: cask.Request): Response[String] = {
-    val docReq = read[DocumentProcessingRequest](req.text())
+    val docReq                    = read[DocumentProcessingRequest](req.text())
     val result: ContextWithLabels = ops.getContextWithLabels(docReq)
     jsonResponse(write(result))
   }

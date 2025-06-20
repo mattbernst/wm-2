@@ -3,7 +3,7 @@ package wiki.extractor
 import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
 import wiki.db.{PageCount, Storage}
 import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
-import wiki.extractor.util.DBLogging
+import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
@@ -20,7 +20,7 @@ object LinkVector {
     )
 }
 
-class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
+class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
 
   /**
     * Compare article A with article B.
@@ -287,14 +287,14 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
   // We need counts of how many distinct articles link to each page to
   // calculate the inverse article frequency.
   private val distinctLinksIn: PageCount = {
-    DBLogging.info("Reading source counts by destination")
+    logger.info("Reading source counts by destination")
     db.link.readSourceCountsByDestination()
   }
 
   // We also need counts of how many distinct articles are linked from each
   // page to calculate the inverse article frequency.
   private val distinctLinksOut: PageCount = {
-    DBLogging.info("Reading destination counts by source")
+    logger.info("Reading destination counts by source")
     db.link.readDestinationCountsBySource()
   }
 
