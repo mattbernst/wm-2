@@ -1,10 +1,10 @@
 package wiki.extractor
 
 import com.github.blemale.scaffeine.LoadingCache
-import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
+import wiki.extractor.util.Text
 import wiki.util.Logging
 
 import scala.collection.mutable
@@ -80,12 +80,13 @@ class Contextualizer(
     * @param text A document or passage of text for extraction of labels
     * @return     All eligible NGram strings derivable from input document
     */
-  def getLinkLabels(text: String): Array[String] = {
-    val shingles = languageLogic.wordNGrams(language = language, documentText = text)
-    BlackWhite.pprintln(shingles, height = 10000)
+  def getLabels(text: String): Array[String] = {
+    val simpleText = Text.filterToLettersAndDigits(text)
+    val ng1        = languageLogic.wordNGrams(language, text)
+    // Also capture NGrams that may have been obscured by punctuation
+    val ng2 = languageLogic.wordNGrams(language, simpleText)
 
-    languageLogic
-      .wordNGrams(language = language, documentText = text)
+    (ng1 ++ ng2)
       .filter(n => goodLabels.contains(n))
       .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))

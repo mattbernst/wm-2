@@ -23,7 +23,7 @@ class ServiceOps(db: Storage, params: ServiceParams) {
   def getPageByTitle(title: String): Option[Page] = db.getPage(title)
 
   /**
-    * Get all known labels derivable from a document, along with an enriched
+    * Get all valid labels derivable from a document, along with an enriched
     * Context for the document. The pages included in the Context indicate
     * the topical tendency of the document contents. Very short documents
     * and very long documents will produce low-quality Contexts.
@@ -32,9 +32,9 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     * @return    All derivable labels and a representative Context
     */
   def getContextWithLabels(req: DocumentProcessingRequest): ContextWithLabels = {
-    val linkLabels = contextualizer.getLinkLabels(req.doc)
-    val context    = contextualizer.getContext(linkLabels, params.minSenseProbability)
-    ContextWithLabels(linkLabels.toSeq, enrichContext(context))
+    val labels  = contextualizer.getLabels(req.doc)
+    val context = contextualizer.getContext(labels, params.minSenseProbability)
+    ContextWithLabels(labels.toSeq, enrichContext(context))
   }
 
   /**
@@ -49,6 +49,7 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     pageCache.getAll(context.pages.map(_.pageId)): Unit
     val enriched = context.pages
       .map(rep => rep.copy(page = Some(pageCache.get(rep.pageId))))
+
     context.copy(pages = enriched)
   }
 
