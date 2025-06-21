@@ -36,4 +36,39 @@ object Text {
 
     accumulator.toString
   }
+
+  /**
+    * Replace every codepoint that is not a letter or digit with a single
+    * space. For example, "'Doctor Who', starring Jodie Whittaker" becomes
+    * " Doctor Who   starring Jodie Whittaker".
+    *
+    * This is useful for supplementary NGram generation because it can
+    * match phrases that would otherwise mismatch due to punctuation
+    * variations.
+    *
+    * Properly handles Unicode supplementary characters.
+    *
+    * @param input A string to strip of extraneous characters
+    * @return
+    */
+  def filterToLettersAndDigits(input: String): String = {
+    val result = new StringBuilder
+    var i      = 0
+
+    while (i < input.length) {
+      val codePoint = input.codePointAt(i)
+
+      if (Character.isLetterOrDigit(codePoint)) {
+        val chars = Character.toChars(codePoint)
+        result.appendAll(chars)
+      } else {
+        result.append(' ')
+      }
+
+      // Move to next character (handles supplementary characters)
+      i += Character.charCount(codePoint)
+    }
+
+    result.toString
+  }
 }

@@ -87,7 +87,7 @@ trait LanguageLogic {
 
   private[language] def fastNGrams(input: String, valid: mutable.Set[String]): Array[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
-    ngg.generateFast(input)
+    ngg.generateFiltered(input)
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]
