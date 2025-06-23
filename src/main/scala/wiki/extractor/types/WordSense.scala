@@ -61,7 +61,7 @@ case class WordSense(labelId: Int, senseCounts: mutable.Map[Int, Int]) {
   lazy val commonestSense: Int =
     senseCounts
       .maxByOption(_._2)
-      .map(_._2)
+      .map(_._1)
       .getOrElse(-1)
 }
 

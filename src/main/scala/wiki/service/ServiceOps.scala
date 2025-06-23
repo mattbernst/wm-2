@@ -23,18 +23,40 @@ class ServiceOps(db: Storage, params: ServiceParams) {
   def getPageByTitle(title: String): Option[Page] = db.getPage(title)
 
   /**
-    * Get all valid labels derivable from a document, along with an enriched
-    * Context for the document. The pages included in the Context indicate
-    * the topical tendency of the document contents. Very short documents
-    * and very long documents will produce low-quality Contexts.
+    * Get all valid labels derivable from a document, their resolved senses,
+    * and an enriched Context for the document. The pages included in the
+    * Context indicate the topical tendency of the document contents. Very
+    * short documents and very long documents will produce low-quality
+    * Contexts.
     *
     * @param req DocumentProcessingRequest containing a plain text document
     * @return    All derivable labels and a representative Context
     */
   def getContextWithLabels(req: DocumentProcessingRequest): ContextWithLabels = {
-    val labels  = contextualizer.getLabels(req.doc)
-    val context = contextualizer.getContext(labels, params.minSenseProbability)
-    ContextWithLabels(labels.toSeq, enrichContext(context))
+    val labels        = contextualizer.getLabels(req.doc)
+    val context       = contextualizer.getContext(labels, params.minSenseProbability)
+    val cleanedLabels = removeNoisyLabels(labels, params.minSenseProbability)
+    ContextWithLabels(cleanedLabels.toSeq, enrichContext(context))
+  }
+
+  /**
+    * Remove labels that have no associated sense resolution or a
+    * below-threshold sense probability. It does not make sense to resolve
+    * these labels to senses or to return them as part of the API response.
+    *
+    * @param labels              NGram strings derived from original document
+    * @param minSenseProbability The minimum prior probability for any label
+    * @return                    Labels minus low-information labels
+    */
+  private def removeNoisyLabels(labels: Array[String], minSenseProbability: Double): Array[String] = {
+    labels.filter { label =>
+      labelIdToSense.get(labelToId(label)) match {
+        case Some(sense) =>
+          sense.commonness(sense.commonestSense) > minSenseProbability
+        case None =>
+          false
+      }
+    }
   }
 
   /**

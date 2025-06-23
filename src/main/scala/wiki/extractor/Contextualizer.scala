@@ -81,10 +81,10 @@ class Contextualizer(
     * @return     All eligible NGram strings derivable from input document
     */
   def getLabels(text: String): Array[String] = {
-    val simpleText = Text.filterToLettersAndDigits(text)
-    val ng1        = languageLogic.wordNGrams(language, text)
+    val ng1 = languageLogic.wordNGrams(language, text)
     // Also capture NGrams that may have been obscured by punctuation
-    val ng2 = languageLogic.wordNGrams(language, simpleText)
+    val simpleText = Text.filterToLettersAndDigits(text)
+    val ng2        = languageLogic.wordNGrams(language, simpleText)
 
     (ng1 ++ ng2)
       .filter(n => goodLabels.contains(n))
