@@ -34,7 +34,7 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
       )
     )
 
-    val input = WordSenseGroup(contextQuality = 17.0, candidates = candidates)
+    val input = WordSenseGroup(label = "Mercury", contextQuality = 17.0, candidates = candidates)
     wsd.getBestSense(input) shouldBe 2
   }
 
@@ -82,13 +82,14 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
       )
     )
 
-    val input = WordSenseGroup(contextQuality = 31.0, candidates = candidates)
+    val input = WordSenseGroup(label = "Mercury", contextQuality = 31.0, candidates = candidates)
     wsd.getBestSense(input) shouldBe 5
   }
 
   it should "always return the first sense if there is only one sense" in {
     def randomGroup(pageId: Int): WordSenseGroup =
       WordSenseGroup(
+        label = "Horizon Zero Dawn",
         contextQuality = Random.nextDouble(),
         candidates = Array(
           WordSenseCandidate(
@@ -119,7 +120,7 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
     )
 
     val candidates = Array(wsc, wsc)
-    val input      = WordSenseGroup(contextQuality = 1.0, candidates = candidates)
+    val input      = WordSenseGroup(label = "", contextQuality = 1.0, candidates = candidates)
     assertThrows[IllegalArgumentException] {
       wsd.getBestSense(input)
     }
@@ -127,7 +128,7 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
 
   it should "throw an error on empty senses" in {
     assertThrows[IllegalArgumentException] {
-      wsd.getBestSense(WordSenseGroup(contextQuality = 1.0, candidates = Array()))
+      wsd.getBestSense(WordSenseGroup(label = "", contextQuality = 1.0, candidates = Array()))
     }
   }
 

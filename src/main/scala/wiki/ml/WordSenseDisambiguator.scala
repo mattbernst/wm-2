@@ -3,7 +3,7 @@ package wiki.ml
 import ai.catboost.CatBoostModel
 import ai.catboost.CatBoostPredictions
 
-case class WordSenseGroup(contextQuality: Double, candidates: Array[WordSenseCandidate])
+case class WordSenseGroup(label: String, contextQuality: Double, candidates: Array[WordSenseCandidate])
 
 case class WordSenseCandidate(
   commonness: Double,

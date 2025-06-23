@@ -5,17 +5,24 @@ import wiki.db.Storage
 import wiki.extractor.types.{Context, Page, WordSense}
 import upickle.default.*
 import wiki.extractor.{ArticleComparer, Contextualizer}
+import wiki.ml.{WordSenseCandidate, WordSenseDisambiguator, WordSenseGroup}
 import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 
-case class ContextWithLabels(labels: Seq[String], context: Context)
+case class ResolvedLabel(label: String, page: Page)
+
+object ResolvedLabel {
+  implicit val rw: ReadWriter[ResolvedLabel] = macroRW
+}
+
+case class ContextWithLabels(context: Context, labels: Seq[String], resolvedLabels: Seq[ResolvedLabel])
 
 object ContextWithLabels {
   implicit val rw: ReadWriter[ContextWithLabels] = macroRW
 }
 
-case class ServiceParams(minSenseProbability: Double, cacheSize: Int)
+case class ServiceParams(minSenseProbability: Double, cacheSize: Int, wordSenseModelName: String)
 
 class ServiceOps(db: Storage, params: ServiceParams) {
   def getPageById(pageId: Int): Option[Page] = db.getPage(pageId)
@@ -33,10 +40,15 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     * @return    All derivable labels and a representative Context
     */
   def getContextWithLabels(req: DocumentProcessingRequest): ContextWithLabels = {
-    val labels        = contextualizer.getLabels(req.doc)
-    val context       = contextualizer.getContext(labels, params.minSenseProbability)
-    val cleanedLabels = removeNoisyLabels(labels, params.minSenseProbability)
-    ContextWithLabels(cleanedLabels.toSeq, enrichContext(context))
+    val labels          = contextualizer.getLabels(req.doc)
+    val context         = contextualizer.getContext(labels, params.minSenseProbability)
+    val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
+    val enrichedContext = enrichContext(context)
+    ContextWithLabels(
+      context = enrichedContext,
+      labels = cleanedLabels.toSeq,
+      resolvedLabels = resolveSenses(cleanedLabels, context).toSeq
+    )
   }
 
   /**
@@ -56,6 +68,54 @@ class ServiceOps(db: Storage, params: ServiceParams) {
         case None =>
           false
       }
+    }
+  }
+
+  /**
+    * Resolve senses of cleaned labels according to the source document's
+    * Context. Each label will be resolved to the single word sense that
+    * best matches the document Context via a previously trained word sense
+    * disambiguation model.
+    *
+    * For example, in a document about pollution from coal, the sentence
+    * "Mercury emissions know no national or continental boundaries." will
+    * resolve "Mercury" to the Wikipedia page referring to the chemical
+    * element mercury.
+    *
+    * In a document about the Mariner 10 spacecraft, the sentence
+    * "Mariner 10 flew by Mercury again on 21 September 1974." will resolve
+    * "Mercury" to the Wikipedia page referring to the planet Mercury.
+    *
+    * @param labels  Valid labels from a document, to be resolved into
+    *                unambiguous word senses
+    * @param context The source document's Context
+    */
+  private def resolveSenses(labels: Array[String], context: Context): Array[ResolvedLabel] = {
+    val groups: Array[WordSenseGroup] = labels.flatMap { label =>
+      labelIdToSense.get(labelToId(label)).map { sense =>
+        val candidates = sense.senseCounts.keys.map { senseId =>
+          val features = comparer.getRelatednessByFeature(senseId, context)
+          WordSenseCandidate(
+            commonness = sense.commonness(senseId),
+            inLinkVectorMeasure = features("inLinkVectorMeasure"),
+            outLinkVectorMeasure = features("outLinkVectorMeasure"),
+            inLinkGoogleMeasure = features("inLinkGoogleMeasure"),
+            outLinkGoogleMeasure = features("outLinkGoogleMeasure"),
+            pageId = senseId
+          )
+        }
+
+        WordSenseGroup(
+          label = label,
+          contextQuality = context.quality,
+          candidates = candidates.toArray
+        )
+      }
+    }
+
+    groups.map { group =>
+      val bestSenseId = wsd.getBestSense(group)
+      ResolvedLabel(label = group.label, page = pageCache.get(bestSenseId))
     }
   }
 
@@ -107,6 +167,11 @@ class ServiceOps(db: Storage, params: ServiceParams) {
       db = db,
       language = props.language
     )
+
+  private val wsd: WordSenseDisambiguator = {
+    val modelData = db.mlModel.read(params.wordSenseModelName).get
+    new WordSenseDisambiguator(modelData)
+  }
 
   private lazy val props: ConfiguredProperties =
     db.configuration.readConfiguredPropertiesOptimistic()
