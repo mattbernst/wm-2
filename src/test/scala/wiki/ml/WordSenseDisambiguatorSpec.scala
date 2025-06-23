@@ -6,7 +6,9 @@ import scala.collection.parallel.CollectionConverters.ImmutableIterableIsParalle
 import scala.util.Random
 
 class WordSenseDisambiguatorSpec extends UnitSpec {
-  it should "predict the correct sense from features (1)" in {
+  behavior of "getScoredSenses"
+
+  it should "predict the best sense from features (1)" in {
     val candidates = Array(
       WordSenseCandidate(
         commonness = 0.08666215301286391,
@@ -35,10 +37,10 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
     )
 
     val input = WordSenseGroup(label = "Mercury", contextQuality = 17.0, candidates = candidates)
-    wsd.getBestSense(input) shouldBe 2
+    wsd.getScoredSenses(input).bestPageId shouldBe 2
   }
 
-  it should "predict the correct sense from features (2)" in {
+  it should "predict the best sense from features (2)" in {
     val candidates = Array(
       WordSenseCandidate(
         commonness = 0.16326530612244897,
@@ -83,7 +85,7 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
     )
 
     val input = WordSenseGroup(label = "Mercury", contextQuality = 31.0, candidates = candidates)
-    wsd.getBestSense(input) shouldBe 5
+    wsd.getScoredSenses(input).bestPageId shouldBe 5
   }
 
   it should "always return the first sense if there is only one sense" in {
@@ -105,7 +107,7 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
 
     0.until(100).par.foreach { _ =>
       val pageId = randomInt()
-      wsd.getBestSense(randomGroup(pageId)) shouldBe pageId
+      wsd.getScoredSenses(randomGroup(pageId)).bestPageId shouldBe pageId
     }
   }
 
@@ -122,13 +124,13 @@ class WordSenseDisambiguatorSpec extends UnitSpec {
     val candidates = Array(wsc, wsc)
     val input      = WordSenseGroup(label = "", contextQuality = 1.0, candidates = candidates)
     assertThrows[IllegalArgumentException] {
-      wsd.getBestSense(input)
+      wsd.getScoredSenses(input)
     }
   }
 
   it should "throw an error on empty senses" in {
     assertThrows[IllegalArgumentException] {
-      wsd.getBestSense(WordSenseGroup(label = "", contextQuality = 1.0, candidates = Array()))
+      wsd.getScoredSenses(WordSenseGroup(label = "", contextQuality = 1.0, candidates = Array()))
     }
   }
 

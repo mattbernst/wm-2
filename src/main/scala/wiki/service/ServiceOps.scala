@@ -10,7 +10,7 @@ import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 
-case class ResolvedLabel(label: String, page: Page)
+case class ResolvedLabel(label: String, page: Page, allSenses: mutable.Map[Int, Double])
 
 object ResolvedLabel {
   implicit val rw: ReadWriter[ResolvedLabel] = macroRW
@@ -113,9 +113,20 @@ class ServiceOps(db: Storage, params: ServiceParams) {
       }
     }
 
-    groups.map { group =>
-      val bestSenseId = wsd.getBestSense(group)
-      ResolvedLabel(label = group.label, page = pageCache.get(bestSenseId))
+    // Drop irrelevant senses (those having negative-scored best sense)
+    groups.flatMap { group =>
+      val senses = wsd.getScoredSenses(group)
+      if (senses.bestScore > 0.0) {
+        Some(
+          ResolvedLabel(
+            label = group.label,
+            page = pageCache.get(senses.bestPageId),
+            allSenses = senses.scores
+          )
+        )
+      } else {
+        None
+      }
     }
   }
 

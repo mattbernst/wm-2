@@ -1,7 +1,9 @@
 package wiki.ml
 
-import ai.catboost.CatBoostModel
-import ai.catboost.CatBoostPredictions
+import ai.catboost.{CatBoostModel, CatBoostPredictions}
+import upickle.default.*
+
+import scala.collection.mutable
 
 case class WordSenseGroup(label: String, contextQuality: Double, candidates: Array[WordSenseCandidate])
 
@@ -12,6 +14,19 @@ case class WordSenseCandidate(
   inLinkGoogleMeasure: Double,
   outLinkGoogleMeasure: Double,
   pageId: Int)
+
+case class ScoredSenses(scores: mutable.Map[Int, Double]) {
+
+  val bestPageId: Int =
+    scores.maxBy(_._2)._1
+
+  val bestScore: Double =
+    scores(bestPageId)
+}
+
+object ScoredSenses {
+  implicit val rw: ReadWriter[ScoredSenses] = macroRW
+}
 
 class WordSenseDisambiguator(catBoostRankerModel: Array[Byte]) {
 
@@ -26,21 +41,21 @@ class WordSenseDisambiguator(catBoostRankerModel: Array[Byte]) {
     *
     * The group candidates will have page IDs A, B, and C. If the top ranked
     * sense is B, that means this instance of Mercury is likely mentioned in
-    * a context where it refers to the planet Mercury. The returned page ID
+    * a context where it refers to the planet Mercury. The best page ID
     * will then correspond to the Wikipedia page titled "Mercury (planet)".
     *
     * @param group A collection of candidates with features, plus context
     *              quality for the whole group, used for sense prediction
-    * @return      The top-ranked sense found from the given candidates
+    * @return      The scored senses found from the given candidates
     */
-  def getBestSense(group: WordSenseGroup): Int = {
+  def getScoredSenses(group: WordSenseGroup): ScoredSenses = {
     val possibleSenses = group.candidates.map(_.pageId)
     require(possibleSenses.nonEmpty, s"Must have at least one candidate in $group")
     require(possibleSenses.length == possibleSenses.distinct.length, s"Duplicate senses found in $group")
     val numSenses = possibleSenses.length
 
     if (numSenses == 1) {
-      group.candidates.head.pageId
+      ScoredSenses(mutable.Map(group.candidates.head.pageId -> 1.0))
     } else {
       // Prepare numerical features.
       // The feature order must exactly match the order used during training.
@@ -62,16 +77,16 @@ class WordSenseDisambiguator(catBoostRankerModel: Array[Byte]) {
       // For each row of numerical features, we provide an empty array of string features.
       val categoricalFeatures: Array[Array[String]] = Array.fill(numSenses)(Array.empty[String])
       val predictions: CatBoostPredictions          = model.predict(numericalFeatures, categoricalFeatures)
+      val senseScores                               = mutable.Map[Int, Double]()
 
       // Extract scores from the predictions object.
       // For ranking, each item gets one score, located at column index 0.
-      val scores = (0 until numSenses).map { i =>
-        predictions.get(i, 0) // Get score for i-th sense
+      (0 until numSenses).foreach { i =>
+        val score = predictions.get(i, 0)
+        senseScores(possibleSenses(i)) = score
       }
 
-      // Find the index of the highest score and return its sense
-      val bestSenseIndex = scores.zipWithIndex.maxBy(_._1)._2
-      group.candidates(bestSenseIndex).pageId
+      ScoredSenses(senseScores)
     }
   }
 
