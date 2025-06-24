@@ -12,12 +12,14 @@ case class LinkVector(links: Array[Int], key: Long, distinctLinks: Array[Int])
 
 object LinkVector {
 
-  def apply(links: Array[Int]): LinkVector =
+  def apply(links: Array[Int]): LinkVector = {
+    links.sortInPlace()
     LinkVector(
       links = links,
       key = ArticleComparer.hashLinks(links),
-      distinctLinks = links.distinct.sorted
+      distinctLinks = links.distinct
     )
+  }
 }
 
 class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
@@ -172,6 +174,9 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     * linked pages, and it uses the "augmented frequency" approach to term
     * (link) frequency.
     *
+    * TODO: this is performance-critical for document processing. Could still
+    * run faster by having getCounts return arrays instead of mutable.Map.
+    *
     * @param a          A sequence of links from article A or to article A
     * @param b          A sequence of links from article B or to article B
     * @param pageCount  A counter for distinct article occurrences, used for
@@ -183,7 +188,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       val linkACounts = getCounts(a)
       val linkBCounts = getCounts(b)
 
-      var k = 0
       // Set up outer/inner maps to minimize the number of keys that need
       // to be iterated over
       val outer = if (linkACounts.m.size < linkBCounts.m.size) {
@@ -198,19 +202,24 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       }
 
       val commonLinks = Array.ofDim[Int](outer.size)
+      var j           = 0
+      var k           = 0
       // Find common links
-      outer.keys.foreach { link =>
+      val keys = outer.keys.toArray
+      while (j < keys.length) {
+        val link = outer(j)
         if (inner.contains(link) && pageCount.count(link) > 0) {
           commonLinks(k) = link
           k += 1
         }
+        j += 1
       }
 
       if (k > 0) {
         val vectorA = Array.ofDim[Double](k)
         val vectorB = Array.ofDim[Double](k)
 
-        var j = 0
+        j = 0
         while (j < k) {
           val link                    = commonLinks(j)
           val countDistinct           = pageCount.count(link)
@@ -237,13 +246,17 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       (_: Long) => {
         val linkCounts = mutable.Map[Int, Int]().withDefaultValue(0)
         var maxCount   = 0
-        v.links.foreach { link =>
+        var j          = 0
+        while (j < v.links.length) {
+          val link     = v.links(j)
           val newCount = linkCounts(link) + 1
           linkCounts(link) = newCount
           if (newCount > maxCount) {
             maxCount = newCount
           }
+          j += 1
         }
+
         CountsWithMax(linkCounts, maxCount.toDouble)
       }
     )
@@ -259,7 +272,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       .maximumSize(cacheSize)
       .build(
         loader = (id: Int) => {
-          val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
+          val ids = db.link.getByDestination(id).map(_.source).toArray
           LinkVector(ids)
         },
         allLoader = Some((pageIds: Iterable[Int]) => {
@@ -274,7 +287,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       .maximumSize(cacheSize)
       .build(
         loader = (id: Int) => {
-          val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
+          val ids = db.link.getBySource(id).map(_.destination).toArray
           LinkVector(ids)
         },
         allLoader = Some((pageIds: Iterable[Int]) => {

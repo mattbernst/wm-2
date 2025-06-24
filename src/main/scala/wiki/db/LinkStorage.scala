@@ -161,7 +161,7 @@ object LinkStorage {
     rows
       .groupBy(_._1)
       .view
-      .mapValues(_.map(_._2).toArray.sorted)
+      .mapValues(_.map(_._2).toArray)
       .toMap
   }
 
@@ -329,7 +329,7 @@ object LinkStorage {
     rows
       .groupBy(_._1)
       .view
-      .mapValues(_.map(_._2).toArray.sorted)
+      .mapValues(_.map(_._2).toArray)
       .toMap
   }
 
