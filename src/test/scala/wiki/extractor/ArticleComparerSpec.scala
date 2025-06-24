@@ -1,6 +1,6 @@
 package wiki.extractor
 
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 class ArticleComparerSpec extends UnitSpec {
   behavior of "ArticleComparer.googleMeasure"
@@ -141,7 +141,7 @@ class ArticleComparerSpec extends UnitSpec {
     ArticleComparer.countIntersection(b, a) shouldBe expected
   }
 
-  it should "work efficiently random arrays" in {
+  it should "work with random arrays" in {
     val a        = randomInts(150).toArray
     val b        = randomInts(200).toArray
     val expected = a.toSet.intersect(b.toSet).size

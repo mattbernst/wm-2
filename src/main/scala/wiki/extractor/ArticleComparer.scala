@@ -3,7 +3,7 @@ package wiki.extractor
 import com.github.blemale.scaffeine.{Cache, LoadingCache, Scaffeine}
 import wiki.db.{PageCount, Storage}
 import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
-import wiki.extractor.util.DBLogging
+import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
@@ -20,7 +20,7 @@ object LinkVector {
     )
 }
 
-class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
+class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
 
   /**
     * Compare article A with article B.
@@ -48,7 +48,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
   }
 
   /**
-    * Get relatedness measure between a given Wikipedia page ID and a Context
+    * Get relatedness features between a given Wikipedia page ID and a Context
     * of representative pages for a document. For example, a page about the
     * planet Mercury should be more related to a Context derived from an
     * document about NASA than it is related to a Context derived from an
@@ -57,27 +57,9 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
     * @param pageId  The numeric ID of a Wikipedia page
     * @param context A Context containing top candidate Wikipedia pages for
     *                representing a document
-    * @return        A measure that is higher for pages that are more similar
-    *                to the given Context
+    * @return        A vector of features that are higher for pages that are
+    *                more similar to the given Context
     */
-  def getRelatednessTo(pageId: Int, context: Context): Double = {
-    if (context.quality == 0.0 || context.pages.isEmpty) {
-      0.0
-    } else {
-      var relatedness = 0.0
-      val pageIds     = (Array(pageId) ++ context.pages.map(_.pageId)).distinct
-      primeCaches(pageIds)
-      context.pages.foreach { page =>
-        compare(page.pageId, pageId).foreach { comparison =>
-          val r = comparison.mean * page.weight
-          relatedness += r
-        }
-      }
-
-      relatedness / context.quality
-    }
-  }
-
   def getRelatednessByFeature(pageId: Int, context: Context): mutable.Map[String, Double] = {
     val result: mutable.Map[String, Double] = mutable.Map(
       "inLinkVectorMeasure"  -> 0.0,
@@ -116,24 +98,8 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
     * @param pageIds All the numeric IDs of Wikipedia pages to look up
     */
   def primeCaches(pageIds: Array[Int]): Unit = {
-    val missingIn = pageIds
-      .filter(p => inLinkCache.getIfPresent(p).isEmpty)
-      .distinct
-      .toSeq
-    if (missingIn.nonEmpty) {
-      db.link
-        .getSourcesByDestination(missingIn)
-        .foreach(t => inLinkCache.put(t._1, LinkVector(t._2)))
-    }
-    val missingOut = pageIds
-      .filter(p => outLinkCache.getIfPresent(p).isEmpty)
-      .distinct
-      .toSeq
-    if (missingOut.nonEmpty) {
-      db.link
-        .getDestinationsBySource(missingOut)
-        .foreach(t => outLinkCache.put(t._1, LinkVector(t._2)))
-    }
+    inLinkCache.getAll(pageIds): Unit
+    outLinkCache.getAll(pageIds): Unit
   }
 
   /**
@@ -291,30 +257,44 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) {
   private val inLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
       .maximumSize(cacheSize)
-      .build(loader = (id: Int) => {
-        val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
-        LinkVector(ids)
-      })
+      .build(
+        loader = (id: Int) => {
+          val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
+          LinkVector(ids)
+        },
+        allLoader = Some((pageIds: Iterable[Int]) => {
+          db.link
+            .getSourcesByDestination(pageIds.toSeq)
+            .map(e => (e._1, LinkVector(e._2)))
+        })
+      )
 
   private val outLinkCache: LoadingCache[Int, LinkVector] =
     Scaffeine()
       .maximumSize(cacheSize)
-      .build(loader = (id: Int) => {
-        val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
-        LinkVector(ids)
-      })
+      .build(
+        loader = (id: Int) => {
+          val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
+          LinkVector(ids)
+        },
+        allLoader = Some((pageIds: Iterable[Int]) => {
+          db.link
+            .getDestinationsBySource(pageIds.toSeq)
+            .map(e => (e._1, LinkVector(e._2)))
+        })
+      )
 
   // We need counts of how many distinct articles link to each page to
   // calculate the inverse article frequency.
   private val distinctLinksIn: PageCount = {
-    DBLogging.info("Reading source counts by destination")
+    logger.info("Reading source counts by destination")
     db.link.readSourceCountsByDestination()
   }
 
   // We also need counts of how many distinct articles are linked from each
   // page to calculate the inverse article frequency.
   private val distinctLinksOut: PageCount = {
-    DBLogging.info("Reading destination counts by source")
+    logger.info("Reading destination counts by source")
     db.link.readDestinationCountsBySource()
   }
 
@@ -425,19 +405,19 @@ object ArticleComparer {
   }
 
   def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int = {
-    var i     = 0
     var j     = 0
+    var k     = 0
     var count = 0
 
-    while (i < linksA.length && j < linksB.length) {
-      if (linksA(i) == linksB(j)) {
+    while (j < linksA.length && k < linksB.length) {
+      if (linksA(j) == linksB(k)) {
         count += 1
-        i += 1
         j += 1
-      } else if (linksA(i) < linksB(j)) {
-        i += 1
+        k += 1
+      } else if (linksA(j) < linksB(k)) {
+        j += 1
       } else {
-        j += 1
+        k += 1
       }
     }
 

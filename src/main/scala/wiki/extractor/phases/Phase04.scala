@@ -3,7 +3,8 @@ package wiki.extractor.phases
 import wiki.db.Storage
 import wiki.extractor.AnchorLogic
 import wiki.extractor.types.{Anchor, LabelCounter}
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.util.DBLogging
+import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable.ListBuffer
 

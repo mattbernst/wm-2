@@ -1,3 +1,3 @@
-package wiki.extractor.util
+package wiki.util
 
 trait Logging extends com.typesafe.scalalogging.StrictLogging

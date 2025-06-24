@@ -14,13 +14,13 @@ class NGramGenerator(
   allowedStrings: mutable.Set[String] = mutable.Set()) {
 
   /**
-    * Generate token-based ngrams of up to maxTokens tokens per ngram. The
-    * ngrams do not cross sentence boundaries. Errors from the OpenNLP
-    * sentence detection model can prevent some valid ngrams from being
+    * Generate token-based ngrams of up to maxTokens tokens per NGram. The
+    * NGrams do not cross sentence boundaries. Errors from the OpenNLP
+    * sentence detection model can prevent some valid NGrams from being
     * generated (see docstring on generateFast).
     *
     * @param text Text of a document to convert to ngrams
-    * @return     All ngrams generated from the input text
+    * @return     All NGrams generated from the input text
     */
   def generate(text: String): Array[NGram] = {
     // Calculate the starting position of each line in the original text
@@ -39,12 +39,8 @@ class NGramGenerator(
       sentence                = line.substring(sentenceSpan.getStart, sentenceSpan.getEnd)
       tokenSpans: Array[Span] = tokenizer.tokenizePos(sentence)
       caseContext             = identifyCaseContext(sentence, tokenSpans)
-      left <- tokenSpans.indices
-      //  NGram cannot start with a punctuation token
-      if isAlphanumericToken(sentence, tokenSpans(left))
+      left  <- tokenSpans.indices
       right <- left.to(math.min(left + n, tokenSpans.length - 1))
-      //  NGram cannot end with a punctuation token
-      if isAlphanumericToken(sentence, tokenSpans(right))
     } yield {
       val globalStart = lineStart + sentenceSpan.getStart + tokenSpans(left).getStart
       val globalEnd   = lineStart + sentenceSpan.getStart + tokenSpans(right).getEnd
@@ -71,36 +67,12 @@ class NGramGenerator(
   }
 
   /**
-    * Helper method to check if a token span represents a single
-    * alphanumeric character. Properly handles Unicode supplementary
-    * characters.
-    *
-    * @param sentence  The originating sentence for the tokenSpan
-    * @param tokenSpan An OpenNLP Span representing part of the sentence
-    * @return          True if the span under inspection is alphanumeric,
-    *                  false otherwise
-    */
-  private def isAlphanumericToken(sentence: String, tokenSpan: Span): Boolean = {
-    // Check if it's a single character token (accounting for surrogate pairs)
-    val start          = tokenSpan.getStart
-    val end            = tokenSpan.getEnd
-    val codePointCount = sentence.codePointCount(start, end)
-    if (codePointCount != 1) {
-      true
-    } else {
-      // Get the single code point and check if it's a letter or digit
-      val codePoint = sentence.codePointAt(start)
-      Character.isLetterOrDigit(codePoint)
-    }
-  }
-
-  /**
     * Generate strings composed of token-based ngrams of up to maxTokens tokens
-    * per ngram. The ngrams do not cross line boundaries. This fast alternative
+    * per ngram. The ngrams do not cross line boundaries. This alternative
     * to "generate" is only used for bulk processing the pages of a Wikipedia
     * dump.
     *
-    * The original ngram generation logic in Milne's code split the code into
+    * The original NGram generation logic in Milne's code split the code into
     * sentences before splitting them into tokens. This probably reduced the
     * computational load and also reduced the false positives by not allowing
     * a sentence-ending punctuation mark to be confused with punctuation
@@ -116,10 +88,10 @@ class NGramGenerator(
     * containing punctuation and have therefore been removed from this
     * implementation.
     *
-    * @param text Text of a document to convert to ngrams
-    * @return All valid ngram-strings generated from the input text
+    * @param text Text of a document to convert to NGrams
+    * @return All valid NGram-strings generated from the input text
     */
-  def generateFast(text: String): Array[String] = {
+  def generateFiltered(text: String): Array[String] = {
     var j      = 0
     val result = mutable.ListBuffer[String]()
     val lines  = text.split('\n')
@@ -135,14 +107,7 @@ class NGramGenerator(
 
           if (slice.nonEmpty) {
             val combined = line.substring(slice.head.getStart, slice.last.getEnd)
-
-            // Check if combined string starts and ends with letter or digit
-            // Handle potential Unicode surrogate pairs properly
-            val isValidString = combined.nonEmpty &&
-              Character.isLetterOrDigit(combined.codePointAt(0)) &&
-              Character.isLetterOrDigit(combined.codePointBefore(combined.length))
-
-            if (isValidString && (allowedStrings.isEmpty || allowedStrings.contains(combined))) {
+            if (allowedStrings.isEmpty || allowedStrings.contains(combined)) {
               result.append(combined)
             }
           }

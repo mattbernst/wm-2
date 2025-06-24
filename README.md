@@ -7,54 +7,66 @@
 This software has only been tested under Linux and macOS, though there is no conscious inclusion of platform-specific
 code.
 
-You will need a Java runtime environment and [sbt](https://www.scala-sbt.org/1.x/docs/Setup.html), the Scala build tool.
-The code has been tested on JREs 11 through 23.
+You will need [a Java runtime environment](https://sdkman.io/), [curl](https://curl.se/), and [sbt](https://www.scala-sbt.org/1.x/docs/Setup.html),
+the Scala build tool. The code has been tested on JREs 17 through 23.
 
 The Makefile is written for GNU Make.
+
+The CatBoost model training relies on Python 3.8+ and several libraries, which will be automatically installed via
+[uv](https://github.com/astral-sh/uv) when invoking `make train-disambiguation`.
 
 ### Input data
 
 Download [the latest pages and articles](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
-for English Wikipedia. As of 2024-09-03 the file is about 21 GB originally compressed as .bz2, 25 GB compressed as .zst,
-and 97 GB decompressed.
+for English Wikipedia by running `make fetch-english-wikipedia`. As of 2024-09-03 the file is about 21 GB originally
+compressed as .bz2 and 97 GB decompressed. To run a faster end-to-end test you may first want to use the Simple English
+Wikipedia, obtained with `make fetch-simple-english-wikipedia`.
 
 It is possible to run the extraction process directly from the downloaded .bz2 file but this will be slow. The
 code will spend much of its time decompressing the data and the worker threads may be starved. If you are going to run
 the extraction process more than once, decompress the file with the command line utility `bunzip2` or a similar tool.
 
-Running extraction from a .zst compressed input is somewhat slower than from uncompressed input but saves a great deal
-of disk space on storage-constrained systems like entry level laptops. It is much faster than reading the input
-from .bz2.
+Running extraction from a .zst compressed input saves a great deal of disk space on storage-constrained systems like
+entry level laptops. It is much faster than reading the input from .bz2.
 
 ### Running extraction
 Run the Makefile `extract` target with `input` (pointing to your input data) set appropriately, like so:
 
 ```
-make extract input=/Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml
+make extract input=enwiki-latest-pages-articles.xml.bz2
 ```
 
 The equivalent sbt command is
 ```
-sbt "runMain wiki.extractor.WikipediaExtractor /Users/mernst/git/wm-data/enwiki-latest-pages-articles.xml"
+sbt "runMain wiki.extractor.WikipediaExtractor enwiki-latest-pages-articles.xml.bz2"
 ```
 
 With default settings on a 2024 Macbook Pro (M4 Pro, 64 GB RAM) and the dump file from September
-2024 this takes about 2.5 hours to complete. The output SQLite database is about 72 GB on disk (much larger if running
+2024 this takes about 2.5 hours to complete. The output SQLite database is about 73 GB on disk (much larger if running
 without page markup compression), with most of the space consumed by `markup_z` or `markup` (table used
 depends on "COMPRESS_MARKUP" environment variable).
 
 Faster test with Simple English Wikipedia:
 
 ```
-WP_LANG=en_simple make extract input=../wm-data/simplewiki-20240901-pages-articles.xml
+WP_LANG=en_simple make extract input=simplewiki-latest-pages-articles.xml.bz2
 ```
 
 Running with French Wikipedia:
 
 ```
-WP_LANG=fr make extract input=../wm-data/frwiki-20240901-pages-articles.xml.bz2
+WP_LANG=fr make extract input=frwiki-20240901-pages-articles.xml.bz2
 ```
 
+### Model training
+The last extraction phase will write CSV files for training word sense disambiguation and topic models to the current
+working directory. After that, you can run
+
+```
+make train-disambiguation
+```
+
+to train CatBoost models. Both extraction and model training must be run before starting the service for the first time.
 
 ### Caveats
 
@@ -116,7 +128,7 @@ processors and 4 GB of RAM, it processes the latest versions of the full English
 uncompressed markup—in a little over 2.5 hours. The process scales roughly linearly with the size of Wikipedia and the
 number of machines available.*
 
-Now that this much computing power is easily purchased or rented as a single node, Hadoop isn't necessary.
+Now that this much computing power is commonly available as a single node, Hadoop isn't necessary.
 
 Reinterpreting wikipediaminer as Scala probably limits outside contributions, but I am far more comfortable in Scala
 than in Java.

@@ -4,7 +4,7 @@ import de.fau.cs.osr.utils.visitor.VisitingException
 import org.sweble.wikitext.parser.nodes.WtListItem
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.Link
-import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.util.{FileHelpers, UnitSpec}
 
 class WikitextParserSpec extends UnitSpec {
   behavior of "parseMarkup"

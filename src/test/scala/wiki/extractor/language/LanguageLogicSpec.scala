@@ -1,8 +1,8 @@
 package wiki.extractor.language
 
 import wiki.extractor.language.types.Snippet
-import wiki.extractor.types.Language
-import wiki.extractor.util.UnitSpec
+import wiki.extractor.types.{Language, TrainingProfile}
+import wiki.util.UnitSpec
 
 class LanguageLogicSpec extends UnitSpec {
   behavior of "EnglishLanguageLogic.getSnippet"
@@ -94,6 +94,8 @@ class LanguageLogicSpec extends UnitSpec {
       "mercury has been smelted from cinnabar since",
       "Mercury has been smelted from cinnabar since antiquity",
       "mercury has been smelted from cinnabar since antiquity",
+      "Mercury has been smelted from cinnabar since antiquity.",
+      "mercury has been smelted from cinnabar since antiquity.",
       "has",
       "has been",
       "has been smelted",
@@ -101,27 +103,35 @@ class LanguageLogicSpec extends UnitSpec {
       "has been smelted from cinnabar",
       "has been smelted from cinnabar since",
       "has been smelted from cinnabar since antiquity",
+      "has been smelted from cinnabar since antiquity.",
       "been",
       "been smelted",
       "been smelted from",
       "been smelted from cinnabar",
       "been smelted from cinnabar since",
       "been smelted from cinnabar since antiquity",
+      "been smelted from cinnabar since antiquity.",
       "smelted",
       "smelted from",
       "smelted from cinnabar",
       "smelted from cinnabar since",
       "smelted from cinnabar since antiquity",
+      "smelted from cinnabar since antiquity.",
       "from",
       "from cinnabar",
       "from cinnabar since",
       "from cinnabar since antiquity",
+      "from cinnabar since antiquity.",
       "cinnabar",
       "cinnabar since",
       "cinnabar since antiquity",
+      "cinnabar since antiquity.",
       "since",
       "since antiquity",
+      "since antiquity.",
       "antiquity",
+      "antiquity.",
+      ".",
       "It",
       "it",
       "It dissolves",
@@ -130,12 +140,18 @@ class LanguageLogicSpec extends UnitSpec {
       "it dissolves many",
       "It dissolves many metals",
       "it dissolves many metals",
+      "It dissolves many metals.",
+      "it dissolves many metals.",
       "dissolves",
       "dissolves many",
       "dissolves many metals",
+      "dissolves many metals.",
       "many",
       "many metals",
-      "metals"
+      "many metals.",
+      "metals",
+      "metals.",
+      "."
     )
 
     val nGrams = EnglishLanguageLogic.wordNGrams(language = englishLanguage, documentText = input)
@@ -145,6 +161,7 @@ class LanguageLogicSpec extends UnitSpec {
   private lazy val englishLanguage = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    trainingProfile = TrainingProfile.empty
   )
 }

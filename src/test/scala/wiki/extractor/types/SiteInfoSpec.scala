@@ -1,6 +1,6 @@
 package wiki.extractor.types
 
-import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.util.{FileHelpers, UnitSpec}
 
 class SiteInfoSpec extends UnitSpec {
   behavior of "apply"

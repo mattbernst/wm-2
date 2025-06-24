@@ -1,35 +1,97 @@
 [
-   {
-      "code" : "en",
-      "name" : "English",
-      "disambiguationPrefixes" : [
-         "dab",
-         "disambiguation",
-         "disambig",
-         "geodis",
-         "schooldis",
-         "call sign disambiguation",
-         "airport disambiguation",
-         "genus disambiguation",
-         "school disambiguation"
-      ]
-   },
-   {
-      "code" : "en_simple",
-      "name" : "English (simple)",
-      "disambiguationPrefixes" : [
-         "dab",
-         "disambiguation",
-         "disambig",
-         "geodis"
-      ]
-   },
-   {
-      "code" : "fr",
-      "name" : "Français",
-      "disambiguationPrefixes" : [
-         "homonymie"
-      ]
-   }
+  {
+    "code": "en",
+    "name": "English",
+    "disambiguationPrefixes": [
+      "dab",
+      "disambiguation",
+      "disambig",
+      "geodis",
+      "schooldis",
+      "call sign disambiguation",
+      "airport disambiguation",
+      "genus disambiguation",
+      "school disambiguation"
+    ],
+    "trainingProfile": {
+      "groups": [
+        {
+          "name": "train",
+          "size": 5000
+        },
+        {
+          "name": "disambiguation-test",
+          "size": 2000
+        },
+        {
+          "name": "topic-test",
+          "size": 2000
+        }
+      ],
+      "minOutLinks": 15,
+      "minInLinks": 20,
+      "maxListProportion": 0.1,
+      "minWordCount": 400,
+      "maxWordCount": 4000
+    }
+  },
+  {
+    "code": "en_simple",
+    "name": "English (simple)",
+    "disambiguationPrefixes": [
+      "dab",
+      "disambiguation",
+      "disambig",
+      "geodis"
+    ],
+    "trainingProfile": {
+      "groups": [
+        {
+          "name": "train",
+          "size": 1000
+        },
+        {
+          "name": "disambiguation-test",
+          "size": 500
+        },
+        {
+          "name": "topic-test",
+          "size": 500
+        }
+      ],
+      "minOutLinks": 2,
+      "minInLinks": 3,
+      "maxListProportion": 0.1,
+      "minWordCount": 150,
+      "maxWordCount": 4000
+    }
+  },
+  {
+    "code": "fr",
+    "name": "Français",
+    "disambiguationPrefixes": [
+      "homonymie"
+    ],
+    "trainingProfile": {
+      "groups": [
+        {
+          "name": "train",
+          "size": 5000
+        },
+        {
+          "name": "disambiguation-test",
+          "size": 2000
+        },
+        {
+          "name": "topic-test",
+          "size": 2000
+        }
+      ],
+      "minOutLinks": 15,
+      "minInLinks": 20,
+      "maxListProportion": 0.1,
+      "minWordCount": 400,
+      "maxWordCount": 4000
+    }
+  }
 ]
-

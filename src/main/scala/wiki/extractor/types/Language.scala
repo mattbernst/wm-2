@@ -1,13 +1,41 @@
 package wiki.extractor.types
 
 import upickle.default.*
-import wiki.extractor.util.FileHelpers
+import wiki.util.FileHelpers
 
 import java.text.BreakIterator
 import java.time.format.DateTimeFormatter
 import java.time.{MonthDay, YearMonth}
 import java.util.Locale
 import scala.collection.mutable
+
+case class DataGroup(name: String, size: Int)
+
+object DataGroup {
+  implicit val rw: ReadWriter[DataGroup] = macroRW
+}
+
+case class TrainingProfile(
+  groups: Seq[DataGroup],
+  minOutLinks: Int,
+  minInLinks: Int,
+  maxListProportion: Double,
+  minWordCount: Int,
+  maxWordCount: Int)
+
+object TrainingProfile {
+  implicit val rw: ReadWriter[TrainingProfile] = macroRW
+
+  def empty: TrainingProfile =
+    TrainingProfile(
+      groups = Seq(),
+      minOutLinks = 0,
+      minInLinks = 0,
+      maxListProportion = 0.0,
+      minWordCount = 0,
+      maxWordCount = 0
+    )
+}
 
 case class Language(
   code: String, // an ISO 639-1 language code e.g. "en"
@@ -17,7 +45,8 @@ case class Language(
    * and also transclusion_counts.json after running with
    * COUNT_LAST_TRANSCLUSIONS=true
    */
-  disambiguationPrefixes: Seq[String]) {
+  disambiguationPrefixes: Seq[String],
+  trainingProfile: TrainingProfile) {
 
   /**
     * Generate all possible "MMMM d" combinations (full month name + day) that are valid

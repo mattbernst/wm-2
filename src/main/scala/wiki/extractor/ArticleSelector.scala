@@ -4,71 +4,47 @@ import org.sweble.wikitext.parser.nodes.WtListItem
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.PageType.ARTICLE
+import wiki.extractor.types.TrainingProfile
 import wiki.extractor.util.DBLogging
 
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
 
   /**
     * Extract randomized subsets of articles, each of which matches the
-    * selection criteria given. For each size in "sizes", a subset of valid
-    * matching articles is returned. For example, if sizes were Seq(2,3) then
+    * selection criteria given. For each size in "groups", a subset of valid
+    * matching articles is returned. For example, if groups were
+    * Seq(DataGroup("test", 2), DataGroup("train", 3)) then
     * the result might be something like
     * Seq(Seq(781169, 1134), Seq(12, 98543, 65826)).
     *
     * The subsets are all completely non-overlapping.
     *
-    * @param sizes The sizes of each of the subsets desired in the result
-    * @param minOutLinks Minimum number of outbound links per article
-    * @param minInLinks Minimum number of inbound links per article
-    * @param maxListProportion Maximum proportion of article taken by lists
-    * @param minWordCount Minimum word count per article
-    * @param maxWordCount Maximum word count per article
-    * @return A size-N sequence of articles for each size N in sizes
+    * @param profile A language-specific article selection profile
+    * @return A size-N sequence of articles for each size N in group sizes
     */
-  def extractSets(
-    sizes: Seq[Int],
-    minOutLinks: Int,
-    minInLinks: Int,
-    maxListProportion: Double,
-    minWordCount: Int,
-    maxWordCount: Int
-  ): Seq[Seq[Int]] = {
-    val rand = new scala.util.Random(1)
-    val seen = mutable.Set[Int]()
+  def extractSets(profile: TrainingProfile): Seq[Seq[Int]] = {
+    val sizes = profile.groups.map(_.size)
 
-    sizes.map(s => extract(rand, seen, s, minOutLinks, minInLinks, maxListProportion, minWordCount, maxWordCount))
+    sizes.map(size => extract(size = size, profile = profile))
   }
 
-  private def extract(
-    random: Random,
-    seen: mutable.Set[Int],
-    size: Int,
-    minOutLinks: Int,
-    minInLinks: Int,
-    maxListProportion: Double,
-    minWordCount: Int,
-    maxWordCount: Int
-  ): Seq[Int] = {
+  private def extract(size: Int, profile: TrainingProfile): Seq[Int] = {
     val result = ListBuffer[Int]()
-    while (result.length < size) {
-      val candidate = articleIds(random.nextInt(articleIds.length))
-      if (!seen.contains(candidate)) {
-        seen.add(candidate)
-        val outLinks = db.link.getBySource(candidate).length
-        val inLinks  = db.link.getByDestination(candidate).length
-        if (outLinks >= minOutLinks && inLinks >= minInLinks) {
-          val markup = db.page.readMarkupAuto(candidate)
-          markup.flatMap(_.parseResult).foreach { parseResult =>
-            val wordCount = parseResult.text.split("\\s+").length
-            if (wordCount >= minWordCount && wordCount <= maxWordCount) {
-              val wikiText = markup.flatMap(_.wikitext).getOrElse("")
-              if (lineListRatio(wikiText) <= maxListProportion) {
-                result.append(candidate)
-              }
+
+    while (result.length < size && articleIds.nonEmpty) {
+      val candidate = articleIds.next()
+      val outLinks  = db.link.getBySource(candidate).length
+      val inLinks   = db.link.getByDestination(candidate).length
+      if (outLinks >= profile.minOutLinks && inLinks >= profile.minInLinks) {
+        val markup = db.page.readMarkupAuto(candidate)
+        markup.flatMap(_.parseResult).foreach { parseResult =>
+          val wordCount = parseResult.text.split("\\s+").length
+          if (wordCount >= profile.minWordCount && wordCount <= profile.maxWordCount) {
+            val wikiText = markup.flatMap(_.wikitext).getOrElse("")
+            if (lineListRatio(wikiText) <= profile.maxListProportion) {
+              result.append(candidate)
             }
           }
         }
@@ -105,10 +81,14 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     }
   }
 
+  val rand = new scala.util.Random(1)
+
   private val parser = new WikitextParser(languageLogic)
 
-  private lazy val articleIds: Array[Int] = {
+  private val articleIds: Iterator[Int] = {
     DBLogging.info("Loading ARTICLE page identifiers")
-    db.page.getPagesByTypes(Seq(ARTICLE))
+    rand
+      .shuffle(db.page.getPagesByTypes(Seq(ARTICLE)))
+      .iterator
   }
 }

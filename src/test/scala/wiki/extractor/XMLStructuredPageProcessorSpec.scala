@@ -1,7 +1,7 @@
 package wiki.extractor
 
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, UnitSpec}
+import wiki.util.{FileHelpers, UnitSpec}
 
 class XMLStructuredPageProcessorSpec extends UnitSpec {
   behavior of "fragmentToPage"
@@ -98,7 +98,8 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
   private lazy val language = Language(
     code = "en",
     name = "English",
-    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis")
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    trainingProfile = TrainingProfile.empty
   )
 
   private lazy val siteInfo = SiteInfo(

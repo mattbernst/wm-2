@@ -4,7 +4,8 @@ import com.github.blemale.scaffeine.LoadingCache
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
-import wiki.extractor.util.DBLogging
+import wiki.extractor.util.Text
+import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -15,7 +16,8 @@ class Contextualizer(
   labelToId: mutable.Map[String, Int],
   comparer: ArticleComparer,
   db: Storage,
-  language: Language) {
+  language: Language)
+    extends Logging {
 
   /**
     * Construct a context containing top candidate Wikipedia pages from an
@@ -36,7 +38,7 @@ class Contextualizer(
     val linkAnchorTexts = links
       .map(_.anchorText)
       .filter(n => goodLabels.contains(n))
-      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
       .distinct
       .toArray
@@ -69,7 +71,7 @@ class Contextualizer(
 
   /**
     * Get distinct valid labels from a document, only for labels with
-    * label.link_doc_count >= minLinksIn and
+    * label.link_doc_count >= minInLinks and
     * (label.link_count / label.occurrence_count) >= minLinkProbability.
     *
     * A label is an NGram that has been used as anchor text anywhere in
@@ -78,11 +80,15 @@ class Contextualizer(
     * @param text A document or passage of text for extraction of labels
     * @return     All eligible NGram strings derivable from input document
     */
-  def getLinkLabels(text: String): Array[String] = {
-    languageLogic
-      .wordNGrams(language = language, documentText = text)
+  def getLabels(text: String): Array[String] = {
+    val ng1 = languageLogic.wordNGrams(language, text)
+    // Also capture NGrams that may have been obscured by punctuation
+    val simpleText = Text.filterToLettersAndDigits(text)
+    val ng2        = languageLogic.wordNGrams(language, simpleText)
+
+    (ng1 ++ ng2)
       .filter(n => goodLabels.contains(n))
-      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minLinksIn))
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
       .distinct
   }
@@ -197,14 +203,15 @@ class Contextualizer(
   }
 
   private val minLinkProbability = 0.0025
-  private val minLinksIn         = 4
+  private val minInLinks         = language.trainingProfile.minInLinks
 
   private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code)
 
   private val labelCounter: LabelCounter = {
-    DBLogging.info(s"Loading LabelCounter")
+    logger.info(s"Loading LabelCounter")
     db.label.read()
   }
+
   private val goodLabels  = labelToId.keySet
   private val dateStrings = language.generateValidDateStrings()
   private val datePageIds = dateStrings.flatMap(d => db.getPage(d)).map(_.id)

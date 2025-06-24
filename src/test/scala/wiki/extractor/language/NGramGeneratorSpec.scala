@@ -3,7 +3,7 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
 import opennlp.tools.tokenize.{TokenizerME, TokenizerModel}
 import wiki.extractor.language.types.NGram
-import wiki.extractor.util.UnitSpec
+import wiki.util.UnitSpec
 
 import java.io.FileInputStream
 import scala.collection.mutable
@@ -11,7 +11,7 @@ import scala.collection.mutable
 class NGramGeneratorSpec extends UnitSpec {
   behavior of "generate"
 
-  it should "generate word based ngrams from a sentence" in {
+  it should "generate word based NGrams from a sentence" in {
     val ngg   = generator(2)
     val input = "The order of the memory bytes storing the bits varies; see endianness."
     val expected = List(
@@ -34,9 +34,14 @@ class NGramGeneratorSpec extends UnitSpec {
       "bits",
       "bits varies",
       "varies",
+      "varies;",
+      ";",
+      "; see",
       "see",
       "see endianness",
-      "endianness"
+      "endianness",
+      "endianness.",
+      "."
     )
 
     val result  = ngg.generate(input).toList
@@ -45,7 +50,7 @@ class NGramGeneratorSpec extends UnitSpec {
     strings shouldBe expected
   }
 
-  it should "generate more ngrams with higher maxTokens" in {
+  it should "generate more NGrams with higher maxTokens" in {
     val ngg   = generator(3) // Each NGram can contain up to 3 tokens
     val input = "The order of the memory bytes storing the bits varies; see endianness."
     val expected = List(
@@ -75,11 +80,19 @@ class NGramGeneratorSpec extends UnitSpec {
       "the bits varies",
       "bits",
       "bits varies",
+      "bits varies;",
       "varies",
+      "varies;",
       "varies; see",
+      ";",
+      "; see",
+      "; see endianness",
       "see",
       "see endianness",
-      "endianness"
+      "see endianness.",
+      "endianness",
+      "endianness.",
+      "."
     )
 
     val result  = ngg.generate(input).toList
@@ -88,12 +101,15 @@ class NGramGeneratorSpec extends UnitSpec {
     strings shouldBe expected
   }
 
-  it should "generate word based ngrams from multiple sentences" in {
+  it should "generate word based NGrams from multiple sentences" in {
     val ngg = generator(2)
     val input =
       "Palladium-103 is a radioisotope of the element palladium. It may be created from rhodium-102 using a cyclotron."
     val expected = List(
       "Palladium",
+      "Palladium-",
+      "-",
+      "-103",
       "103",
       "103 is",
       "is",
@@ -108,7 +124,9 @@ class NGramGeneratorSpec extends UnitSpec {
       "the element",
       "element",
       "element palladium",
-      "palladium", // First sentence ends here; NGrams do not cross sentences
+      "palladium",
+      "palladium.",
+      ".",
       "It",
       "It may",
       "may",
@@ -120,13 +138,18 @@ class NGramGeneratorSpec extends UnitSpec {
       "from",
       "from rhodium",
       "rhodium",
+      "rhodium-",
+      "-",
+      "-102",
       "102",
       "102 using",
       "using",
       "using a",
       "a",
       "a cyclotron",
-      "cyclotron"
+      "cyclotron",
+      "cyclotron.",
+      "."
     )
 
     val result  = ngg.generate(input).toList
@@ -135,7 +158,7 @@ class NGramGeneratorSpec extends UnitSpec {
     strings shouldBe expected
   }
 
-  it should "generate word based ngrams from a block of text" in {
+  it should "generate word based NGrams from a block of text" in {
     val ngg   = generator(3)
     val input = """Indigenous languages of Canada:
                   |
@@ -152,27 +175,55 @@ class NGramGeneratorSpec extends UnitSpec {
       "languages of Canada",
       "of",
       "of Canada",
+      "of Canada:",
       "Canada",
+      "Canada:",
+      ":",
       "Abenaki",
+      "Abenaki,",
       "Abenaki, 10",
+      ",",
+      ", 10",
+      ", 10 speakers",
       "10",
       "10 speakers",
       "speakers",
       "Dane",
       "Dane-zaa",
+      "Dane-zaa,",
       "-zaa",
+      "-zaa,",
       "-zaa, 300",
+      ",",
+      ", 300",
+      ", 300 speakers",
       "300",
       "300 speakers",
       "speakers",
       "Cayuga",
+      "Cayuga,",
       "Cayuga, 360",
+      ",",
+      ", 360",
+      ", 360 speakers",
       "360",
       "360 speakers",
       "speakers",
       "Delaware",
+      "Delaware (",
       "Delaware (Munsee",
+      "(",
+      "(Munsee",
+      "(Munsee)",
       "Munsee",
+      "Munsee)",
+      "Munsee),",
+      ")",
+      "),",
+      "), fewer",
+      ",",
+      ", fewer",
+      ", fewer than",
       "fewer",
       "fewer than",
       "fewer than 10",
@@ -202,6 +253,9 @@ class NGramGeneratorSpec extends UnitSpec {
       (false, "their"),
       (false, "their purpose"),
       (false, "purpose"),
+      (false, "purpose,"),
+      (false, ","),
+      (false, ", yet"),
       (false, "yet"),
       (false, "yet you"),
       (false, "you"),
@@ -209,6 +263,8 @@ class NGramGeneratorSpec extends UnitSpec {
       (false, "made"),
       (false, "made them"),
       (false, "them"),
+      (false, "them."),
+      (false, "."),
       (true, "If"),
       (true, "If you"),
       (false, "you"),
@@ -216,11 +272,16 @@ class NGramGeneratorSpec extends UnitSpec {
       (false, "had"),
       (false, "had scruples"),
       (false, "scruples"),
+      (false, "scruples,"),
+      (false, ","),
+      (false, ", you"),
       (false, "you"),
       (false, "you betrayed"),
       (false, "betrayed"),
       (false, "betrayed them"),
-      (false, "them")
+      (false, "them"),
+      (false, "them."),
+      (false, ".")
     )
 
     val result   = ngg.generate(input).toList
@@ -230,20 +291,9 @@ class NGramGeneratorSpec extends UnitSpec {
     combined shouldBe expected
   }
 
-  it should "remove special characters from beginning/end of NGrams" in {
-    val input       = """The start of "A Day in the Life" is cross-faded with the applause."""
-    val ngg         = generator(6)
-    val result      = ngg.generate(input).toList
-    val strings     = NGram.generateStrings(input, result)
-    val quoteEnds   = strings.count(_.endsWith("\""))
-    val quoteBegins = strings.count(_.startsWith("\""))
-    quoteEnds shouldBe 0
-    quoteBegins shouldBe 0
-  }
+  behavior of "generateFiltered"
 
-  behavior of "generateFast"
-
-  it should "directly generate string-ngrams" in {
+  it should "directly generate string-NGrams" in {
     val ngg   = generator(3)
     val input = "The order of the memory bytes storing the bits varies; see endianness."
     val expected = List(
@@ -271,40 +321,47 @@ class NGramGeneratorSpec extends UnitSpec {
       "the bits varies",
       "the bits",
       "the",
+      "bits varies;",
       "bits varies",
       "bits",
       "varies; see",
+      "varies;",
       "varies",
+      "; see endianness",
+      "; see",
+      ";",
+      "see endianness.",
       "see endianness",
       "see",
-      "endianness"
+      "endianness.",
+      "endianness",
+      "."
     )
-    val result = ngg.generateFast(input).toList
 
+    val result = ngg.generateFiltered(input).toList
     result shouldBe expected
   }
 
-  it should "generate all the strings generated by generate" in {
-    // generateFast also generates more strings than generate does, because
-    // it does not guard against ngrams that start/end with punctuation.
+  it should "generate all the strings generated by generate (1)" in {
     val ngg   = generator(3)
     val input = "The order of the memory bytes storing the bits varies; see endianness."
 
-    val result     = ngg.generate(input).toList
-    val strings    = NGram.generateStrings(input, result)
-    val resultFast = ngg.generateFast(input).toList
+    val result  = ngg.generate(input).toList
+    val strings = NGram.generateStrings(input, result)
+    val result2 = ngg.generateFiltered(input).toList
 
-    strings.foreach(s => resultFast.contains(s) shouldBe true)
+    strings.foreach(s => result2.contains(s) shouldBe true)
   }
 
-  it should "remove special characters from beginning/end of NGrams" in {
-    val input       = """The start of "A Day in the Life" is cross-faded with the applause."""
-    val ngg         = generator(6)
-    val strings     = ngg.generateFast(input).toList
-    val quoteEnds   = strings.count(_.endsWith("\""))
-    val quoteBegins = strings.count(_.startsWith("\""))
-    quoteEnds shouldBe 0
-    quoteBegins shouldBe 0
+  it should "generate all the strings generated by generate (2)" in {
+    val ngg   = generator(3)
+    val input = "'Doctor Who' Star Jodie Whittaker"
+
+    val result  = ngg.generate(input).toList
+    val strings = NGram.generateStrings(input, result)
+    val result2 = ngg.generateFiltered(input).toList
+
+    strings.foreach(s => result2.contains(s) shouldBe true)
   }
 
   it should "filter results by allowed strings" in {
@@ -327,8 +384,8 @@ class NGramGeneratorSpec extends UnitSpec {
                   |
                   |Category:Japanese-language surnames""".stripMargin
 
-    val resultRaw      = ngg.generateFast(input).toList
-    val resultFiltered = nggFiltered.generateFast(input).toList
+    val resultRaw      = ngg.generateFiltered(input).toList
+    val resultFiltered = nggFiltered.generateFiltered(input).toList
 
     val expected = List(
       "Ando",

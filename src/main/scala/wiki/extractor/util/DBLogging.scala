@@ -2,6 +2,7 @@ package wiki.extractor.util
 
 import org.slf4j.event.Level
 import wiki.db.Storage
+import wiki.util.Logging
 
 object DBLogging extends Logging {
 

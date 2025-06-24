@@ -3,7 +3,8 @@ package wiki.extractor
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.*
-import wiki.extractor.util.{ConfiguredProperties, Progress}
+import wiki.extractor.util.Progress
+import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -127,19 +128,11 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
       .build((pageId: Int) => db.getPage(pageId).get)
 
   private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
-    Scaffeine()
-      .maximumSize(500_000)
-      .build(
-        loader = (labelId: Int) => {
-          db.sense.getSenseByLabelId(labelId).map(_.pruned(minSenseProbability))
-        },
-        allLoader = Some((labelIds: Iterable[Int]) => {
-          val bulkResults = db.sense.getSensesByLabelIds(labelIds.toSeq)
-          labelIds.map { labelId =>
-            labelId -> bulkResults.get(labelId).map(_.pruned(minSenseProbability))
-          }.toMap
-        })
-      )
+    WordSense.getSenseCache(
+      db = db,
+      maximumSize = 500_000,
+      minSenseProbability = minSenseProbability
+    )
 
   private lazy val contextualizer =
     new Contextualizer(

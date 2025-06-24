@@ -3,7 +3,8 @@ package wiki.db
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import scalikejdbc.*
 import wiki.extractor.types.*
-import wiki.extractor.util.{FileHelpers, Logging, Progress}
+import wiki.extractor.util.Progress
+import wiki.util.{FileHelpers, Logging}
 
 import java.util
 
@@ -14,7 +15,14 @@ import java.util
   * @param fileName The name of the on-disk file containing the SQLite db
   */
 class Storage(fileName: String) extends Logging {
-  ConnectionPool.singleton(url = s"jdbc:sqlite:$fileName", user = null, password = null)
+  ConnectionPool.singleton(
+    url = s"jdbc:sqlite:$fileName",
+    user = null,
+    password = null,
+    settings = ConnectionPoolSettings(
+      connectionTimeoutMillis = 30000L
+    )
+  )
 
   /**
     * Try to get one or more Page records from storage. This is implemented
@@ -22,7 +30,7 @@ class Storage(fileName: String) extends Logging {
     * and from NamespaceStorage.
     *
     * @param pageIds Numeric IDs for pages to retrieve
-    * @return       The full page records for the IDs, where retrievable
+    * @return        The full page records for the IDs, where retrievable
     */
   def getPages(pageIds: Seq[Int]): Seq[Page] = {
     val batches = pageIds.grouped(Storage.batchSqlSize).toSeq
@@ -220,6 +228,7 @@ class Storage(fileName: String) extends Logging {
   val label: LabelStorage.type                 = LabelStorage
   val link: LinkStorage.type                   = LinkStorage
   val log: LogStorage.type                     = LogStorage
+  val mlModel: MLModelStorage.type             = MLModelStorage
   val namespace: NamespaceStorage.type         = NamespaceStorage
   val page: PageStorage.type                   = PageStorage
   val phase: PhaseStorage.type                 = PhaseStorage

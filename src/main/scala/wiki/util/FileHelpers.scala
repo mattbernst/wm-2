@@ -1,4 +1,4 @@
-package wiki.extractor.util
+package wiki.util
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
@@ -8,19 +8,6 @@ import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
 
 object FileHelpers extends Logging {
-
-  def readTextFile(fileName: String): String = {
-    val source = Source.fromFile(fileName)(StandardCharsets.UTF_8)
-    val lines  = source.getLines().toList
-    source.close()
-    lines.mkString("\n")
-  }
-
-  def writeTextFile(fileName: String, input: String): Unit = {
-    val writer = Files.newBufferedWriter(Paths.get(fileName))
-    writer.write(input)
-    writer.close()
-  }
 
   def glob(pattern: String): Seq[String] = {
     val path      = Paths.get(pattern)
@@ -34,6 +21,22 @@ object FileHelpers extends Logging {
         stream.Stream.empty()
     }
     streams.filter(p => matcher.matches(p)).map(_.toString).iterator().asScala.toSeq
+  }
+
+  def readBinaryFile(name: String): Array[Byte] =
+    Files.readAllBytes(Paths.get(name))
+
+  def readTextFile(fileName: String): String = {
+    val source = Source.fromFile(fileName)(StandardCharsets.UTF_8)
+    val lines  = source.getLines().toList
+    source.close()
+    lines.mkString("\n")
+  }
+
+  def writeTextFile(fileName: String, input: String): Unit = {
+    val writer = Files.newBufferedWriter(Paths.get(fileName))
+    writer.write(input)
+    writer.close()
   }
 
   def deleteFileIfExists(fileName: String): Unit = {

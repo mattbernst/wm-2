@@ -4,7 +4,7 @@ import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
 import wiki.extractor.language.types.Snippet
 import wiki.extractor.types.Language
-import wiki.extractor.util.Logging
+import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -87,7 +87,7 @@ trait LanguageLogic {
 
   private[language] def fastNGrams(input: String, valid: mutable.Set[String]): Array[String] = {
     val ngg = new NGramGenerator(sentenceDetector.get(), tokenizer.get(), allowedStrings = valid)
-    ngg.generateFast(input)
+    ngg.generateFiltered(input)
   }
 
   protected def tokenizer: ThreadLocal[TokenizerME]

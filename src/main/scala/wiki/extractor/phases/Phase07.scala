@@ -2,8 +2,9 @@ package wiki.extractor.phases
 
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.util.{ConfiguredProperties, DBLogging}
+import wiki.extractor.util.DBLogging
 import wiki.extractor.{ArticleFeatureProcessor, ArticleSelector}
+import wiki.util.ConfiguredProperties
 
 import java.io.{File, PrintWriter}
 import java.util.concurrent.ForkJoinPool
@@ -32,35 +33,22 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     val selector  = new ArticleSelector(db, ll)
     val processor = new ArticleFeatureProcessor(db, props)
 
-    val groups = Seq(
-      ("training", 5000),
-      ("disambiguation-test", 2000),
-      ("topic-test", 2000)
-    )
-
     DBLogging.info(s"Selecting eligible articles")
+    val profile = props.language.trainingProfile
 
-    val res = selector
-      .extractSets(
-        sizes = groups.map(_._2),
-        minOutLinks = 15,
-        minInLinks = 20,
-        maxListProportion = 0.1,
-        minWordCount = 400,
-        maxWordCount = 4000
-      )
+    val res = selector.extractSets(profile)
 
     val pool        = new ForkJoinPool(props.nWorkers)
     val taskSupport = new ForkJoinTaskSupport(pool)
 
     // Generate features from the subsets of articles
-    res.zip(groups).foreach { set =>
+    res.zip(profile.groups).foreach { set =>
       val subset    = set._1
-      val groupName = set._2._1
+      val groupName = set._2.name
       DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
-      val paralllelGroup = subset.par
-      paralllelGroup.tasksupport = taskSupport
-      paralllelGroup.foreach { pageId =>
+      val parallelGroup = subset.par
+      parallelGroup.tasksupport = taskSupport
+      parallelGroup.foreach { pageId =>
         val senseFeatures = processor.articleToFeatures(pageId, groupName)
         db.senseTraining.write(senseFeatures)
       }
@@ -68,7 +56,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
 
     pool.shutdown()
 
-    groups.foreach(t => writeCSV(t._1))
+    profile.groups.foreach(t => writeCSV(t.name))
     db.phase.completePhase(number)
   }
 

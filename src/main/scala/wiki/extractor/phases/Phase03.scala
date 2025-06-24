@@ -3,7 +3,7 @@ package wiki.extractor.phases
 import wiki.db.{LinkSink, PageMarkupSource, Storage}
 import wiki.extractor.PageMarkupLinkProcessor
 import wiki.extractor.types.{PageType, SiteInfo, TypedPageMarkup, Worker}
-import wiki.extractor.util.ConfiguredProperties
+import wiki.util.ConfiguredProperties
 
 class Phase03(db: Storage) extends Phase(db: Storage) {
 

@@ -1,4 +1,4 @@
-package wiki.extractor.util
+package wiki.util
 
 import upickle.default.*
 import wiki.extractor.types.Language

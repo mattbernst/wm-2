@@ -1,6 +1,8 @@
-.PHONY: build clean extract extract-graal extract-with-profiling format test train-disambiguation
+.PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
+PREPARE_WEB_SERVICE_MAIN := wiki.service.PrepareWebService
+WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors
 JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
@@ -14,11 +16,14 @@ build:
 extract: build
 	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
-# This only works with Oracle Java 21 or later. On my machine it reduces the
-# 2 hour and 25 minute extraction time to 2 hours and 10 minutes.
-GRAAL_JAVA_OPTS := $(JAVA_OPTS) -XX:+UnlockExperimentalVMOptions -XX:+UseGraalJIT
-extract-graal: build
-	java $(GRAAL_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
+fetch-english-wikipedia:
+	curl -L -o enwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+
+fetch-french-wikipedia:
+	curl -L -o frwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/frwiki/latest/frwiki-latest-pages-articles.xml.bz2
+
+fetch-simple-english-wikipedia:
+	curl -L -o simplewiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/simplewiki/latest/simplewiki-latest-pages-articles.xml.bz2
 
 P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=10000MB,filename=extraction.jfr
 # Profile extraction with Flight Recorder for analysis with JDK
@@ -34,16 +39,22 @@ format:
 test:
 	sbt test
 
+prepare-web-service: build
+	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_WEB_SERVICE_MAIN) $(input)
+
+run-web-service: build
+	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
+
 train-disambiguation:
 	@echo "Setting up disambiguation training..."
 	@# Check for CSV files and determine language
 	@if [ -n "$(WP_LANG)" ]; then \
 		LANG_CODE="$(WP_LANG)"; \
 	else \
-		AVAILABLE_LANGS=$$(ls wiki_*_training.csv 2>/dev/null | sed 's/wiki_\(.*\)_training\.csv/\1/' | sort -u); \
+		AVAILABLE_LANGS=$$(ls wiki_*_train.csv 2>/dev/null | sed 's/wiki_\(.*\)_train\.csv/\1/' | sort -u); \
 		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
 		if [ $$LANG_COUNT -eq 0 ]; then \
-			echo "Error: No training CSV files found (wiki_*_training.csv)"; \
+			echo "Error: No training CSV files found (wiki_*_train.csv)"; \
 			echo "Please run 'make extract' first to generate the required CSV files."; \
 			exit 1; \
 		elif [ $$LANG_COUNT -gt 1 ]; then \
@@ -58,8 +69,8 @@ train-disambiguation:
 	\
 	echo "Using language code: $$LANG_CODE"; \
 	\
-	if [ ! -f "wiki_$${LANG_CODE}_training.csv" ]; then \
-		echo "Error: Training file wiki_$${LANG_CODE}_training.csv not found"; \
+	if [ ! -f "wiki_$${LANG_CODE}_train.csv" ]; then \
+		echo "Error: Training file wiki_$${LANG_CODE}_train.csv not found"; \
 		echo "Please run 'make extract' to generate the required CSV files."; \
 		exit 1; \
 	fi; \
@@ -93,5 +104,5 @@ train-disambiguation:
 	echo "Running disambiguation training..."; \
 	cd pysrc && \
 	uv run python train_word_sense_disambiguation.py \
-		--train-file ../wiki_$${LANG_CODE}_training.csv \
+		--train-file ../wiki_$${LANG_CODE}_train.csv \
 		--val-file ../wiki_$${LANG_CODE}_disambiguation-test.csv
