@@ -405,19 +405,19 @@ object ArticleComparer {
   }
 
   def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int = {
-    var i     = 0
     var j     = 0
+    var k     = 0
     var count = 0
 
-    while (i < linksA.length && j < linksB.length) {
-      if (linksA(i) == linksB(j)) {
+    while (j < linksA.length && k < linksB.length) {
+      if (linksA(j) == linksB(k)) {
         count += 1
-        i += 1
         j += 1
-      } else if (linksA(i) < linksB(j)) {
-        i += 1
+        k += 1
+      } else if (linksA(j) < linksB(k)) {
+        j += 1
       } else {
-        j += 1
+        k += 1
       }
     }
 

@@ -185,6 +185,27 @@ class WikiServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(title_status, 200, "Page title request should succeed")
         self.assertEqual(json.loads(title_data), page)
 
+    def test_doc_labels(self):
+        """Test processing a small document for labels/context."""
+        text = "So what did the people I asked know about the war? Nobody could tell me the first thing about it. Once they got past who won they almost drew a blank. All they knew were those big totemic names -- Pearl Harbor, D-Day, Auschwitz, Hiroshima -- whose unfathomable reaches of experience had been boiled down to an abstract atrocity. The rest was gone. Kasserine, Leyte Gulf, Corregidor, Falaise, the Ardennes didn't provoke a glimmer of recognition; they might as well have been off-ramps on some exotic interstate. I started getting the creepy feeling that the war had actually happened a thousand years ago, and so it was forgivable if people were a little vague on the difference between the Normandy invasion and the Norman Conquest and couldn't say offhand whether the boats sailed from France to England or the other way around."
+        req = {"doc": text}
+
+        data, status_code, headers = self.http_post("/doc/labels", req)
+        deserialized = json.loads(data)
+
+        # A sampling of expected context pages
+        expected_context_titles = ["Normandy landings",
+                                   "Norman Conquest",
+                                   "France",
+                                   "Attack on Pearl Harbor",
+                                   "D-Day (military term)",
+                                   "World War II",
+                                   "Corregidor",
+                                   "Operation Overlord"]
+        context_page_titles = [p["page"]["title"] for p in deserialized["context"]["pages"]]
+        for title in expected_context_titles:
+            self.assertTrue(title in context_page_titles)
+
 
 if __name__ == '__main__':
     # Run the tests
