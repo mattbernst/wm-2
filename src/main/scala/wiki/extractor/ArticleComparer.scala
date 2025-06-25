@@ -134,12 +134,14 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     // otherwise, all results are crammed into the upper portion of the 0-1
     // range.
     val inGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAIn.distinctLinks, linksBIn.distinctLinks, articleCount)
+      val original = ArticleComparer
+        .googleMeasure(linksAIn.distinctLinks, linksBIn.distinctLinks, ilvm.vectorA.length, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
     val outGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAOut.distinctLinks, linksBOut.distinctLinks, articleCount)
+      val original = ArticleComparer
+        .googleMeasure(linksAOut.distinctLinks, linksBOut.distinctLinks, olvm.vectorB.length, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
@@ -329,7 +331,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
   private lazy val googleMeasureLowerLimit = {
     val nTerms = math.min(articleCount - 1, 100_000)
     val links  = 0.until(nTerms).toArray
-    ArticleComparer.googleMeasure(links, links.take(1), articleCount)
+    ArticleComparer.googleMeasure(links, links.take(1), 1, articleCount)
   }
 }
 
@@ -359,13 +361,18 @@ object ArticleComparer {
     *
     * @param linksA       Distinct links into or out of article A
     * @param linksB       Distinct links into or out of article B
+    * @param intersections Count of intersecting links across A and B
     * @param articleCount A count of the total number of Wikipedia articles
     * @return             A number between 0 and 1, with a high number
     *                     representing "more similar"
     */
-  def googleMeasure(linksA: Array[Int], linksB: Array[Int], articleCount: Int): Double = {
+  def googleMeasure(
+    linksA: Array[Int],
+    linksB: Array[Int],
+    intersections: Int,
+    articleCount: Int
+  ): Double = {
     require(articleCount > math.max(linksA.length, linksB.length), "Article count must be > link count")
-    val intersections = countIntersection(linksA, linksB)
 
     val normalizedGoogleDistance = if (intersections == 0) {
       1.0
@@ -419,26 +426,6 @@ object ArticleComparer {
     } else {
       dotProduct / math.sqrt(magnitudeASquared * magnitudeBSquared)
     }
-  }
-
-  def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int = {
-    var j     = 0
-    var k     = 0
-    var count = 0
-
-    while (j < linksA.length && k < linksB.length) {
-      if (linksA(j) == linksB(k)) {
-        count += 1
-        j += 1
-        k += 1
-      } else if (linksA(j) < linksB(k)) {
-        j += 1
-      } else {
-        k += 1
-      }
-    }
-
-    count
   }
 
   private[extractor] def hashLinks(input: Array[Int]): Long = {
