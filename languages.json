@@ -14,17 +14,23 @@
       "school disambiguation"
     ],
     "trainingProfile": {
-      "groups": [
+      "disambiguatorGroup": [
         {
-          "name": "train",
+          "name": "disambiguation-train",
           "size": 5000
         },
         {
           "name": "disambiguation-test",
           "size": 2000
+        }
+      ],
+      "linkingGroup": [
+        {
+          "name": "linking-train",
+          "size": 5000
         },
         {
-          "name": "topic-test",
+          "name": "linking-test",
           "size": 2000
         }
       ],
@@ -45,17 +51,23 @@
       "geodis"
     ],
     "trainingProfile": {
-      "groups": [
+      "disambiguatorGroup": [
         {
-          "name": "train",
+          "name": "disambiguation-train",
           "size": 1000
         },
         {
           "name": "disambiguation-test",
           "size": 500
+        }
+      ],
+      "linkingGroup": [
+        {
+          "name": "linking-train",
+          "size": 1000
         },
         {
-          "name": "topic-test",
+          "name": "linking-test",
           "size": 500
         }
       ],
@@ -73,17 +85,23 @@
       "homonymie"
     ],
     "trainingProfile": {
-      "groups": [
+      "disambiguatorGroup": [
         {
-          "name": "train",
+          "name": "disambiguation-train",
           "size": 5000
         },
         {
           "name": "disambiguation-test",
           "size": 2000
+        }
+      ],
+      "linkingGroup": [
+        {
+          "name": "linking-train",
+          "size": 5000
         },
         {
-          "name": "topic-test",
+          "name": "linking-test",
           "size": 2000
         }
       ],

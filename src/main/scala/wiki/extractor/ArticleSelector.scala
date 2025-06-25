@@ -4,7 +4,7 @@ import org.sweble.wikitext.parser.nodes.WtListItem
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.PageType.ARTICLE
-import wiki.extractor.types.TrainingProfile
+import wiki.extractor.types.{DataGroup, TrainingProfile}
 import wiki.extractor.util.DBLogging
 
 import scala.collection.mutable.ListBuffer
@@ -21,23 +21,25 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
     *
     * The subsets are all completely non-overlapping.
     *
-    * @param profile A language-specific article selection profile
-    * @return A size-N sequence of articles for each size N in group sizes
+    * @param profile    A language-specific article selection profile
+    * @param groups     The groups to use for extraction
+    * @param exclusions A set of IDs to exclude
+    * @return           A size-N sequence of articles for each size N in groups
     */
-  def extractSets(profile: TrainingProfile): Seq[Seq[Int]] = {
-    val sizes = profile.groups.map(_.size)
-
-    sizes.map(size => extract(size = size, profile = profile))
+  def extractSets(profile: TrainingProfile, groups: Seq[DataGroup], exclusions: Set[Int] = Set()): Seq[Seq[Int]] = {
+    val sizes = groups.map(_.size)
+    sizes.map(size => extract(size = size, profile = profile, exclusions = exclusions))
   }
 
-  private def extract(size: Int, profile: TrainingProfile): Seq[Int] = {
+  private def extract(size: Int, profile: TrainingProfile, exclusions: Set[Int]): Seq[Int] = {
     val result = ListBuffer[Int]()
 
     while (result.length < size && articleIds.nonEmpty) {
-      val candidate = articleIds.next()
-      val outLinks  = db.link.getBySource(candidate).length
-      val inLinks   = db.link.getByDestination(candidate).length
-      if (outLinks >= profile.minOutLinks && inLinks >= profile.minInLinks) {
+      val candidate     = articleIds.next()
+      val unseen        = exclusions.isEmpty || !exclusions.contains(candidate)
+      lazy val outLinks = db.link.getBySource(candidate).length
+      lazy val inLinks  = db.link.getByDestination(candidate).length
+      if (unseen && outLinks >= profile.minOutLinks && inLinks >= profile.minInLinks) {
         val markup = db.page.readMarkupAuto(candidate)
         markup.flatMap(_.parseResult).foreach { parseResult =>
           val wordCount = parseResult.text.split("\\s+").length

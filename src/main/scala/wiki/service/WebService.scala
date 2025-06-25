@@ -61,7 +61,7 @@ object WebService extends cask.MainRoutes with ServiceProperties with Logging {
     )
     require(
       db.mlModel.read(wsdModelName).nonEmpty,
-      s"Could not find model $wsdModelName in db. Run make prepare-web-service."
+      s"Could not find model $wsdModelName in db. Run make prepare-disambiguation."
     )
   }
 

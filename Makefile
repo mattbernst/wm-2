@@ -1,7 +1,7 @@
 .PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
-PREPARE_WEB_SERVICE_MAIN := wiki.service.PrepareWebService
+PREPARE_DISAMBIGUATION_MAIN := wiki.service.PrepareDisambiguation
 WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors
@@ -39,8 +39,8 @@ format:
 test:
 	sbt test
 
-prepare-web-service: build
-	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_WEB_SERVICE_MAIN) $(input)
+prepare-disambiguation: build
+	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_DISAMBIGUATION_MAIN) $(input)
 
 run-web-service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
@@ -51,10 +51,10 @@ train-disambiguation:
 	@if [ -n "$(WP_LANG)" ]; then \
 		LANG_CODE="$(WP_LANG)"; \
 	else \
-		AVAILABLE_LANGS=$$(ls wiki_*_train.csv 2>/dev/null | sed 's/wiki_\(.*\)_train\.csv/\1/' | sort -u); \
+		AVAILABLE_LANGS=$$(ls wiki_*_disambiguation-train.csv 2>/dev/null | sed 's/wiki_\(.*\)_disambiguation-train\.csv/\1/' | sort -u); \
 		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
 		if [ $$LANG_COUNT -eq 0 ]; then \
-			echo "Error: No training CSV files found (wiki_*_train.csv)"; \
+			echo "Error: No training CSV files found (wiki_*_disambiguation-train.csv)"; \
 			echo "Please run 'make extract' first to generate the required CSV files."; \
 			exit 1; \
 		elif [ $$LANG_COUNT -gt 1 ]; then \
@@ -69,8 +69,8 @@ train-disambiguation:
 	\
 	echo "Using language code: $$LANG_CODE"; \
 	\
-	if [ ! -f "wiki_$${LANG_CODE}_train.csv" ]; then \
-		echo "Error: Training file wiki_$${LANG_CODE}_train.csv not found"; \
+	if [ ! -f "wiki_$${LANG_CODE}_disambiguation-train.csv" ]; then \
+		echo "Error: Training file wiki_$${LANG_CODE}_disambiguation-train.csv not found"; \
 		echo "Please run 'make extract' to generate the required CSV files."; \
 		exit 1; \
 	fi; \
@@ -104,5 +104,5 @@ train-disambiguation:
 	echo "Running disambiguation training..."; \
 	cd pysrc && \
 	uv run python train_word_sense_disambiguation.py \
-		--train-file ../wiki_$${LANG_CODE}_train.csv \
+		--train-file ../wiki_$${LANG_CODE}_disambiguation-train.csv \
 		--val-file ../wiki_$${LANG_CODE}_disambiguation-test.csv

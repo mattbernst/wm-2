@@ -7,7 +7,7 @@ import wiki.util.FileHelpers
 
 import java.nio.file.NoSuchFileException
 
-object PrepareWebService extends ServiceProperties {
+object PrepareDisambiguation extends ServiceProperties {
 
   private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
     // These turn into kebab-case arguments, e.g.
@@ -24,7 +24,7 @@ object PrepareWebService extends ServiceProperties {
       .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
-    println(s"Preparing web service data with db $databaseFileName")
+    println(s"Preparing word sense disambiguation data with db $databaseFileName")
     val db = if (FileHelpers.isFileReadable(databaseFileName)) {
       new Storage(fileName = databaseFileName)
     } else {
@@ -35,10 +35,10 @@ object PrepareWebService extends ServiceProperties {
       db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
       "Extraction has not completed. Finish extraction and training first."
     )
-    prepareModels(db, conf)
+    prepareDisambiguationModels(db, conf)
   }
 
-  private def prepareModels(db: Storage, conf: Conf): Unit = {
+  private def prepareDisambiguationModels(db: Storage, conf: Conf): Unit = {
     val props = db.configuration.readConfiguredPropertiesOptimistic()
     if (db.mlModel.read(wsdModelName).isEmpty) {
       val defaultWsdFile = s"pysrc/wiki_${props.language.code}_word_sense_ranker.cbm"
