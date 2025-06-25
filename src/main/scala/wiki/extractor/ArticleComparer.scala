@@ -174,9 +174,6 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     * linked pages, and it uses the "augmented frequency" approach to term
     * (link) frequency.
     *
-    * TODO: this is performance-critical for document processing. Could still
-    * run faster by having getCounts return arrays instead of mutable.Map.
-    *
     * @param a          A sequence of links from article A or to article A
     * @param b          A sequence of links from article B or to article B
     * @param pageCount  A counter for distinct article occurrences, used for
@@ -185,42 +182,16 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     */
   private def makeVectors(a: LinkVector, b: LinkVector, pageCount: PageCount): VectorPair = {
     if (a.links.nonEmpty && b.links.nonEmpty) {
-      val linkACounts = getCounts(a)
-      val linkBCounts = getCounts(b)
+      val commonLinks = getCommonLinks(pageCount, a.distinctLinks, b.distinctLinks)
 
-      // Set up outer/inner maps to minimize the number of keys that need
-      // to be iterated over
-      val outer = if (linkACounts.m.size < linkBCounts.m.size) {
-        linkACounts.m
-      } else {
-        linkBCounts.m
-      }
-      val inner = if (linkACounts.m.size < linkBCounts.m.size) {
-        linkBCounts.m
-      } else {
-        linkACounts.m
-      }
+      if (commonLinks.nonEmpty) {
+        val vectorA     = Array.ofDim[Double](commonLinks.length)
+        val vectorB     = Array.ofDim[Double](commonLinks.length)
+        val linkACounts = getCounts(a)
+        val linkBCounts = getCounts(b)
 
-      val commonLinks = Array.ofDim[Int](outer.size)
-      var j           = 0
-      var k           = 0
-      // Find common links
-      val keys = outer.keys.toArray
-      while (j < keys.length) {
-        val link = outer(j)
-        if (inner.contains(link) && pageCount.count(link) > 0) {
-          commonLinks(k) = link
-          k += 1
-        }
-        j += 1
-      }
-
-      if (k > 0) {
-        val vectorA = Array.ofDim[Double](k)
-        val vectorB = Array.ofDim[Double](k)
-
-        j = 0
-        while (j < k) {
+        var j = 0
+        while (j < commonLinks.length) {
           val link                    = commonLinks(j)
           val countDistinct           = pageCount.count(link)
           val inverseArticleFrequency = math.log(articleCount / countDistinct.toDouble)
@@ -238,6 +209,39 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     } else {
       VectorPair(Array(), Array())
     }
+  }
+
+  private def getCommonLinks(
+    pageCount: PageCount,
+    distinctLinksA: Array[Int],
+    distinctLinksB: Array[Int]
+  ): Array[Int] = {
+    val maxDistinctOverlap      = math.min(distinctLinksA.length, distinctLinksB.length)
+    val commonLinks: Array[Int] = Array.ofDim[Int](maxDistinctOverlap)
+
+    var i = 0
+    var j = 0
+    var k = 0
+
+    // Two-pointer approach since both arrays are sorted
+    while (i < distinctLinksA.length && j < distinctLinksB.length) {
+      if (distinctLinksA(i) == distinctLinksB(j) && pageCount.count(distinctLinksA(i)) > 0) {
+        // Found a common element
+        commonLinks(k) = distinctLinksA(i)
+        k += 1
+        i += 1
+        j += 1
+      } else if (distinctLinksA(i) < distinctLinksB(j)) {
+        // Element in A is smaller, advance A's pointer
+        i += 1
+      } else {
+        // Element in B is smaller, advance B's pointer
+        j += 1
+      }
+    }
+
+    // Return only the filled portion of the array
+    commonLinks.take(k)
   }
 
   private def getCounts(v: LinkVector): CountsWithMax = {
