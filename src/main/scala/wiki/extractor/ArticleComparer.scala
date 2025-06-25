@@ -246,26 +246,42 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     commonLinks.take(k)
   }
 
-  private def getCounts(v: LinkVector): CountsWithMax = {
-    linkCountsCache.get(
-      v.key,
-      (_: Long) => {
-        val linkCounts = mutable.Map[Int, Int]().withDefaultValue(0)
-        var maxCount   = 0
-        var j          = 0
-        while (j < v.links.length) {
-          val link     = v.links(j)
-          val newCount = linkCounts(link) + 1
-          linkCounts(link) = newCount
-          if (newCount > maxCount) {
-            maxCount = newCount
-          }
-          j += 1
-        }
+  private def getCounts(v: LinkVector): CountsWithMax =
+    linkCountsCache.get(v.key, (_: Long) => getCountsWithMax(v.links))
 
-        CountsWithMax(linkCounts, maxCount.toDouble)
+  /**
+    * Take a pre-sorted array of links, generate counts for each distinct
+    * link, and track the maximum count for any distinct link. This is
+    * complicated by micro-optimizations because it stands out during profiling
+    * as one of the most intensively used functions.
+    *
+    * @param links A pre-sorted array of page IDs representing links
+    * @return      Per-link counts along with maximum count
+    */
+  private def getCountsWithMax(links: Array[Int]): CountsWithMax = {
+    val linkCounts = mutable.Map[Int, Int]()
+    var maxCount   = 0
+    var j          = 0
+    var current    = 0
+    while (j < links.length) {
+      val link = links(j)
+      val newCount = if (link > current) {
+        current = link
+        linkCounts.put(link, 1)
+        1
+      } else {
+        val res = linkCounts(link) + 1
+        linkCounts(link) = res
+        res
       }
-    )
+
+      if (newCount > maxCount) {
+        maxCount = newCount
+      }
+      j += 1
+    }
+
+    CountsWithMax(linkCounts, maxCount.toDouble)
   }
 
   private val linkCountsCache: Cache[Long, CountsWithMax] =
