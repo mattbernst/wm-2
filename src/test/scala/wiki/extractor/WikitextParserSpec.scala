@@ -2,6 +2,7 @@ package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
 import org.sweble.wikitext.parser.nodes.WtListItem
+import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.LocatedLink
 import wiki.util.{FileHelpers, UnitSpec}
@@ -18,17 +19,17 @@ class WikitextParserSpec extends UnitSpec {
     val expectedLinks = List(
       LocatedLink(target = "paraphyletic", anchorText = "paraphyletic", left = 139, right = 151),
       LocatedLink(target = "clade", anchorText = "clade", left = 256, right = 261),
-      LocatedLink(target = "Flowering plants", anchorText = "angiosperm", left = 298, right = 308),
-      LocatedLink(target = "Rosaceae", anchorText = "roses", left = 361, right = 366),
-      LocatedLink(target = "Poaceae", anchorText = "grasses", left = 383, right = 390),
+      LocatedLink(target = "Flowering plants", anchorText = "angiosperm", left = 281, right = 297),
+      LocatedLink(target = "Rosaceae", anchorText = "roses", left = 352, right = 360),
+      LocatedLink(target = "Poaceae", anchorText = "grasses", left = 375, right = 382),
       LocatedLink(target = "Gnetales", anchorText = "Gnetales", left = 412, right = 420),
       LocatedLink(target = "Bennettitales", anchorText = "Bennettitales", left = 441, right = 454),
       LocatedLink(target = "monophyletic", anchorText = "monophyletic", left = 879, right = 891),
       LocatedLink(target = "gnetophyte", anchorText = "gnetophyte", left = 1626, right = 1636),
       LocatedLink(target = "angiosperm", anchorText = "angiosperm", left = 1650, right = 1660),
       LocatedLink(target = "gymnosperm", anchorText = "gymnosperm", left = 1824, right = 1834),
-      LocatedLink(target = "Glossopteridales", anchorText = "glossopterids", left = 2437, right = 2450),
-      LocatedLink(target = "Corystospermaceae", anchorText = "corystosperms", left = 2474, right = 2487),
+      LocatedLink(target = "Glossopteridales", anchorText = "glossopterids", left = 2420, right = 2436),
+      LocatedLink(target = "Corystospermaceae", anchorText = "corystosperms", left = 2456, right = 2473),
       LocatedLink(target = "Petriellales", anchorText = "Petriellales", left = 2493, right = 2505),
       LocatedLink(target = "Pentoxylales", anchorText = "Pentoxylales", left = 2510, right = 2522),
       LocatedLink(target = "Bennettitales", anchorText = "Bennettitales", left = 2528, right = 2541),
@@ -42,7 +43,7 @@ class WikitextParserSpec extends UnitSpec {
     )
 
     parsed.links shouldBe expectedLinks
-    parsed.links.foreach(link => link.anchorText shouldBe markup.substring(link.left, link.right))
+    parsed.links.foreach(link => link.target shouldBe markup.substring(link.left, link.right))
     val expectedText = FileHelpers.readTextFile("src/test/resources/anthophyta.txt")
     parsed.text shouldBe expectedText
   }
@@ -72,7 +73,7 @@ class WikitextParserSpec extends UnitSpec {
       LocatedLink(target = "felsic", anchorText = "felsic", left = 775, right = 781),
       LocatedLink(target = "shield volcano", anchorText = "shield volcano", left = 1053, right = 1067),
       LocatedLink(target = "Hawaii", anchorText = "Hawaii", left = 1089, right = 1095),
-      LocatedLink(target = "Pegmatite", anchorText = "Pegmatitic", left = 1180, right = 1190),
+      LocatedLink(target = "Pegmatite", anchorText = "Pegmatitic", left = 1170, right = 1179),
       LocatedLink(target = "Gabbro", anchorText = "Gabbro", left = 1198, right = 1204),
       LocatedLink(target = "pegmatite", anchorText = "pegmatite", left = 1209, right = 1218),
       LocatedLink(target = "phaneritic", anchorText = "phaneritic", left = 1245, right = 1255),
@@ -87,9 +88,9 @@ class WikitextParserSpec extends UnitSpec {
       LocatedLink(target = "Basalt", anchorText = "Basalt", left = 1538, right = 1544),
       LocatedLink(target = "tuff", anchorText = "tuff", left = 1549, right = 1553),
       LocatedLink(target = "breccia", anchorText = "breccia", left = 1561, right = 1568),
-      LocatedLink(target = "Vesicular texture", anchorText = "Vesicular", left = 1579, right = 1588),
+      LocatedLink(target = "Vesicular texture", anchorText = "Vesicular", left = 1579, right = 1596),
       LocatedLink(target = "basalt", anchorText = "basalt", left = 1624, right = 1630),
-      LocatedLink(target = "Amygdule", anchorText = "Amygdaloidal", left = 1650, right = 1662),
+      LocatedLink(target = "Amygdule", anchorText = "Amygdaloidal", left = 1641, right = 1649),
       LocatedLink(target = "basalt", anchorText = "basalt", left = 1683, right = 1689),
       LocatedLink(target = "Scoria", anchorText = "Scoria", left = 1723, right = 1729),
       LocatedLink(target = "Tachylyte", anchorText = "Tachylyte", left = 1758, right = 1767),
@@ -125,7 +126,7 @@ class WikitextParserSpec extends UnitSpec {
     val expectedText = FileHelpers.readTextFile("src/test/resources/mafic.txt")
     parsed.text shouldBe expectedText
     parsed.links shouldBe expectedLinks
-    parsed.links.foreach(link => link.anchorText shouldBe markup.substring(link.left, link.right))
+    parsed.links.foreach(link => link.target shouldBe markup.substring(link.left, link.right))
 
     // The original markup for this sentence was
     // "Most mafic-lava volcanoes are [[shield volcano]]es, like those in [[Hawaii]]."
