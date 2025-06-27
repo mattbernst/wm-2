@@ -18,7 +18,7 @@ class WikitextParserSpec extends UnitSpec {
     val expectedLinks = Seq(
       Link(target = "paraphyletic", anchorText = "paraphyletic"),
       Link(target = "clade", anchorText = "clade"),
-      Link(target = "Flowering plant", anchorText = "angiosperms"),
+      Link(target = "Flowering plants", anchorText = "angiosperm"),
       Link(target = "Rosaceae", anchorText = "roses"),
       Link(target = "Poaceae", anchorText = "grasses"),
       Link(target = "Gnetales", anchorText = "Gnetales"),

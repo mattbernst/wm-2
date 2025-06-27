@@ -1,20 +1,42 @@
 package wiki.extractor
 
-import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
+import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
-import wiki.extractor.types.{LinkFeatures, Page, WordSense}
+import wiki.extractor.types.LinkFeatures
 import wiki.extractor.util.Progress
-import wiki.util.ConfiguredProperties
+import wiki.service.{ModelProperties, ServiceOps, ServiceParams}
+import wiki.util.{ConfiguredProperties, Logging}
 
-import scala.collection.mutable
-
-class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) {
+class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends ModelProperties with Logging {
 
   def articleToFeatures(pageId: Int, groupName: String): LinkFeatures = {
     tick()
 
-    val context = contextualizer.getContext(pageId, minSenseProbability)
-    val x       = contextualizer.getLabels("foo")
+    val context = ops.contextualizer.getContext(pageId, minSenseProbability)
+    // Get two label sets: those from links only (ground truth links)
+    // and those from full plain page text.
+    val links = db.link
+      .getBySource(pageId)
+      .filter(l => ops.labelToId(l.anchorText) > 0)
+      .distinctBy(rl => (rl.anchorText, rl.destination))
+
+    val linkLabels = links.map(_.anchorText).toSet
+    val page       = db.getPage(pageId)
+    val pagePlainText = db.page
+      .readMarkupAuto(pageId)
+      .flatMap(_.parseResult)
+      .map(_.text)
+      .getOrElse("")
+
+    val pageLabels                     = ops.contextualizer.getLabels(pagePlainText)
+    val (linkedLabels, unlinkedLabels) = pageLabels.partition(l => linkLabels.contains(l.stringContent))
+    BlackWhite.pprintln(page)
+    println(pagePlainText)
+    println("LINK DATA")
+    println("--- LINKED ---")
+    BlackWhite.pprintln(linkedLabels, height = 10000)
+    println("--- NOT LINKED ---")
+    BlackWhite.pprintln(unlinkedLabels, height = 10000)
     /*
     case class LinkModelEntry(
   sourcePageId: Int,
@@ -37,7 +59,7 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
     LinkFeatures(
       group = groupName,
-      page = pageCache.get(pageId),
+      page = ops.pageCache.get(pageId),
       context = context,
       examples = Array()
     )
@@ -52,30 +74,12 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private val minSenseProbability = 0.01
 
-  private val pageCache: LoadingCache[Int, Page] =
-    Scaffeine()
-      .maximumSize(250_000)
-      .build((pageId: Int) => db.getPage(pageId).get)
-
-  private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
-    WordSense.getSenseCache(
-      db = db,
-      maximumSize = 500_000,
-      minSenseProbability = minSenseProbability
+  private val ops = {
+    val params = ServiceParams(
+      minSenseProbability = minSenseProbability,
+      cacheSize = 500_000,
+      wordSenseModelName = wsdModelName
     )
-
-  private lazy val contextualizer =
-    new Contextualizer(
-      maxContextSize = 32,
-      labelIdToSense = labelIdToSense,
-      labelToId = labelToId,
-      comparer = comparer,
-      db = db,
-      language = props.language
-    )
-
-  private lazy val labelToId: mutable.Map[String, Int] = db.label
-    .readKnownLabels()
-
-  private lazy val comparer = new ArticleComparer(db)
+    new ServiceOps(db, params = params)
+  }
 }

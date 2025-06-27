@@ -60,6 +60,8 @@ class WikitextParser(languageLogic: LanguageLogic) {
   }
 
   private[extractor] def processNodes(input: Array[WtNode]): ParseResult = {
+    // Links as extracted here match the page text exactly.
+    // Properly casing the target and stripping sub-page sections happens later.
     val links = extractNodes[WtInternalLink](input).map { link =>
       if (link.hasTitle) {
         Link(target = textualize(link.getTarget).trim, textualize(link.getTitle).trim)
@@ -124,4 +126,8 @@ class WikitextParser(languageLogic: LanguageLogic) {
     false, // gather round trip data
     false  // autoCorrect
   )
+}
+
+object WikitextParser {
+
 }

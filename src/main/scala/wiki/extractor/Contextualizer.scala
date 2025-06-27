@@ -123,8 +123,9 @@ class Contextualizer(
     labelIdToSense.getAll(labelIds)
 
     goodLabels.foreach { label =>
-      // Get linkProbability for label, then for all senses of label get sense prior probability
-      // (e.g. Mercury-the-planet v.s. Mercury-the-god prior probability)
+      // Get linkProbability for label, then for all senses of label get sense
+      // prior probability (e.g. Mercury-the-planet v.s. Mercury-the-god prior
+      // probability)
       labelCounter
         .getLinkProbability(label)
         .foreach { linkProbability =>

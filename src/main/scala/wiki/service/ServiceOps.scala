@@ -90,11 +90,11 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     * "Mariner 10 flew by Mercury again on 21 September 1974." will resolve
     * "Mercury" to the Wikipedia page referring to the planet Mercury.
     *
-    * @param labels  Valid labels from a document, to be resolved into
-    *                unambiguous word senses
+    * @param labels  Valid NGram labels from a document, to be resolved into
+    *                definite word senses
     * @param context The source document's Context
     */
-  private def resolveSenses(labels: Array[NGram], context: Context): Array[NGResolvedLabel] = {
+  def resolveSenses(labels: Array[NGram], context: Context): Array[NGResolvedLabel] = {
     case class DGroup(nGram: NGram, wordSenseGroup: WordSenseGroup)
 
     val groups: Array[DGroup] = labels.flatMap { ng =>
@@ -166,7 +166,7 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     context.copy(pages = enriched)
   }
 
-  private val pageCache: LoadingCache[Int, Page] =
+  val pageCache: LoadingCache[Int, Page] =
     Scaffeine()
       .maximumSize(params.cacheSize)
       .build(
@@ -178,18 +178,18 @@ class ServiceOps(db: Storage, params: ServiceParams) {
         })
       )
 
-  private val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
+  val labelIdToSense: LoadingCache[Int, Option[WordSense]] =
     WordSense.getSenseCache(
       db = db,
       maximumSize = params.cacheSize,
       minSenseProbability = params.minSenseProbability
     )
 
-  private val comparer: ArticleComparer = new ArticleComparer(db)
+  val comparer: ArticleComparer = new ArticleComparer(db)
 
-  private val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
+  val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
 
-  private val contextualizer =
+  val contextualizer =
     new Contextualizer(
       maxContextSize = 32,
       labelIdToSense = labelIdToSense,
