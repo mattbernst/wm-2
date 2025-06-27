@@ -3,9 +3,10 @@ package wiki.extractor
 import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.types.{Link, ParseResult}
+import wiki.extractor.types.{Link, LocatedLink, ParseResult}
 import wiki.extractor.util.DBLogging
 
+import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -31,7 +32,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
       parse(title, markup)
     } match {
       case Success(nodes) =>
-        Some(processNodes(nodes))
+        Some(processNodes(nodes, markup))
       case Failure(ex) =>
         DBLogging.warn(s"""Could not parse "$title" wikitext markup: ${ex.getClass.getSimpleName}""", both = false)
         None
@@ -59,7 +60,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
     parser.parseArticle(markup, title).iterator().asScala.toArray
   }
 
-  private[extractor] def processNodes(input: Array[WtNode]): ParseResult = {
+  private[extractor] def processNodes(input: Array[WtNode], markup: String): ParseResult = {
     // Links as extracted here match the page text exactly.
     // Properly casing the target and stripping sub-page sections happens later.
     val links = extractNodes[WtInternalLink](input).map { link =>
@@ -76,7 +77,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
     ParseResult(
       snippet = snippet,
       text = text,
-      links = links.toSeq
+      links = WikitextParser.getLinkLocations(links.toSeq, markup)
     )
   }
 
@@ -130,4 +131,64 @@ class WikitextParser(languageLogic: LanguageLogic) {
 
 object WikitextParser {
 
+  /**
+    * Take links previously extracted with the Sweble wikitext parser and
+    * assign positions relative to the original page markup, using the anchor
+    * text.
+    *
+    * @param links  Links to match to page text
+    * @param markup Raw wikitext page markup
+    * @return       Links with left/right locations populated
+    */
+  def getLinkLocations(links: Seq[Link], markup: String): Seq[LocatedLink] = {
+    val result           = ListBuffer[LocatedLink]()
+    var searchStartIndex = 0
+
+    for (link <- links) {
+      // Find the next occurrence of this anchor text that's actually within link brackets
+      var found            = false
+      var currentSearchPos = searchStartIndex
+
+      while (!found && currentSearchPos < markup.length) {
+        val anchorIndex = markup.indexOf(link.anchorText, currentSearchPos)
+
+        if (anchorIndex >= 0) {
+          // Check if this anchor text is within a wikilink by looking backwards for [[
+          val linkStart = markup.lastIndexOf("[[", anchorIndex)
+          val linkEnd   = markup.indexOf("]]", anchorIndex)
+
+          // Verify this is actually within a complete link
+          if (linkStart >= 0 && linkEnd >= 0 && linkEnd > anchorIndex) {
+            // Make sure there's no intervening [[ between linkStart and our anchor
+            val interferingStart = markup.indexOf("[[", linkStart + 2)
+            if (interferingStart == -1 || interferingStart > anchorIndex) {
+              val left  = anchorIndex
+              val right = anchorIndex + link.anchorText.length
+
+              result += LocatedLink(
+                target = link.target,
+                anchorText = link.anchorText,
+                left = left,
+                right = right
+              )
+
+              searchStartIndex = right
+              found = true
+            } else {
+              // Keep searching past this false match
+              currentSearchPos = anchorIndex + 1
+            }
+          } else {
+            // Keep searching past this false match
+            currentSearchPos = anchorIndex + 1
+          }
+        } else {
+          // No more occurrences found - exit the loop
+          found = true
+        }
+      }
+    }
+
+    result.toSeq
+  }
 }

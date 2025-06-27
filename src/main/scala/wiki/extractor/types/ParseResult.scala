@@ -9,7 +9,17 @@ object Link {
   implicit val rw: ReadWriter[Link] = macroRW
 }
 
-case class ParseResult(snippet: Snippet, text: String, links: Seq[Link])
+case class LocatedLink(
+  target: String,
+  anchorText: String,
+  left: Int,
+  right: Int)
+
+object LocatedLink {
+  implicit val rw: ReadWriter[LocatedLink] = macroRW
+}
+
+case class ParseResult(snippet: Snippet, text: String, links: Seq[LocatedLink])
 
 object ParseResult {
   implicit val rw: ReadWriter[ParseResult] = macroRW
