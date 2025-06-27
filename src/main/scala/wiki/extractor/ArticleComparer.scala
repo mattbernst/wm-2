@@ -225,19 +225,18 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     var j = 0
     var k = 0
 
-    // Two-pointer approach since both arrays are sorted
+    // Two-index approach since both arrays are sorted
     while (i < distinctLinksA.length && j < distinctLinksB.length) {
       if (distinctLinksA(i) == distinctLinksB(j) && pageCount.count(distinctLinksA(i)) > 0) {
-        // Found a common element
         commonLinks(k) = distinctLinksA(i)
         k += 1
         i += 1
         j += 1
       } else if (distinctLinksA(i) < distinctLinksB(j)) {
-        // Element in A is smaller, advance A's pointer
+        // Element in A is smaller, advance A's index
         i += 1
       } else {
-        // Element in B is smaller, advance B's pointer
+        // Element in B is smaller, advance B's index
         j += 1
       }
     }
