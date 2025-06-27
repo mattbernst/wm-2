@@ -1,17 +1,16 @@
 package wiki.service
 
 import org.rogach.scallop.*
-import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
-import wiki.util.FileHelpers
+import wiki.util.{FileHelpers, Logging}
 
 import java.nio.file.NoSuchFileException
 
-object PrepareDisambiguation extends ServiceProperties {
+object PrepareDisambiguation extends ModelProperties with Logging {
 
   private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
     // These turn into kebab-case arguments, e.g.
-    // sbt "runMain wiki.service.PrepareWebService --database en_wiki.db --word-sense-model en_word_sense_ranker.cbm"
+    // sbt "runMain wiki.service.PrepareDisambiguation --database en_wiki.db --word-sense-model en_word_sense_ranker.cbm"
     val database: ScallopOption[String]       = opt[String]()
     val wordSenseModel: ScallopOption[String] = opt[String]()
     verify()
@@ -24,17 +23,8 @@ object PrepareDisambiguation extends ServiceProperties {
       .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
-    println(s"Preparing word sense disambiguation data with db $databaseFileName")
-    val db = if (FileHelpers.isFileReadable(databaseFileName)) {
-      new Storage(fileName = databaseFileName)
-    } else {
-      throw new NoSuchFileException(s"Database file $databaseFileName is not readable")
-    }
-
-    require(
-      db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
-      "Extraction has not completed. Finish extraction and training first."
-    )
+    logger.info(s"Preparing word sense disambiguation data with db $databaseFileName")
+    val db = getDb(databaseFileName)
     prepareDisambiguationModels(db, conf)
   }
 
@@ -44,8 +34,8 @@ object PrepareDisambiguation extends ServiceProperties {
       val defaultWsdFile = s"pysrc/wiki_${props.language.code}_word_sense_ranker.cbm"
       val wsdFile        = conf.wordSenseModel.getOrElse(defaultWsdFile)
       if (!FileHelpers.isFileReadable(wsdFile)) {
-        println(s"Word sense disambiguation model $wsdFile could not be read")
-        println(s"You need to give the CatBoost model with --word-sense-model or run train-disambiguation")
+        logger.error(s"Word sense disambiguation model $wsdFile could not be read")
+        logger.error(s"You need to give the CatBoost model with --word-sense-model or run train-disambiguation")
         throw new NoSuchFileException(wsdFile)
       } else {
         val modelData = FileHelpers.readBinaryFile(wsdFile)
@@ -53,10 +43,10 @@ object PrepareDisambiguation extends ServiceProperties {
         db.mlModel.write(wsdModelName, modelData)
         val retrieved = db.mlModel.read(wsdModelName).get
         require(retrieved.sameElements(modelData), s"Model data from $wsdFile does not match db $wsdModelName")
-        println(s"Model from $wsdFile saved to ml_model as $wsdModelName")
+        logger.info(s"Model from $wsdFile saved to ml_model as $wsdModelName")
       }
     } else {
-      println(s"Model already stored in ml_model as $wsdModelName")
+      logger.info(s"Model already stored in ml_model as $wsdModelName")
     }
   }
 }

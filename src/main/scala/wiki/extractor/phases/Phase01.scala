@@ -28,7 +28,7 @@ class Phase01(db: Storage) extends Phase(db: Storage) with Logging {
     }
     if (args.length > 1) {
       val pArgs = args.mkString(", ")
-      println(s"$usage (Expected one file, got multiple arguments: '$pArgs')")
+      logger.error(s"$usage (Expected one file, got multiple arguments: '$pArgs')")
       sys.exit(1)
     }
 

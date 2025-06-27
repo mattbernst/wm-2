@@ -9,7 +9,7 @@ import wiki.util.ConfiguredProperties
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
+class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   /**
     * Get features to train on from a Wikipedia article. We're trying
@@ -21,7 +21,7 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
     * "relatedness" did not perform as well as a CatBoost model given
     * the underlying individual features like inLinkVectorMeasure.
     *
-    * @param pageId   The numeric ID of a Wikipedia page used for feature
+    * @param pageId    The numeric ID of a Wikipedia page used for feature
     *                  extraction
     * @param groupName The name of the feature extraction group
     */
@@ -146,8 +146,6 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private lazy val labelToId: mutable.Map[String, Int] = db.label
     .readKnownLabels()
-    // Empirical hack: very short labels like "$" or "2d" are poor labels
-    .filter(_._1.length > 2)
 
   private lazy val comparer = new ArticleComparer(db)
 }

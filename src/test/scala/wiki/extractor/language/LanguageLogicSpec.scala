@@ -155,7 +155,7 @@ class LanguageLogicSpec extends UnitSpec {
     )
 
     val nGrams = EnglishLanguageLogic.wordNGrams(language = englishLanguage, documentText = input)
-    nGrams.toList shouldBe expected.toList
+    nGrams.map(_.stringContent).toList shouldBe expected.toList
   }
 
   private lazy val englishLanguage = Language(

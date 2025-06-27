@@ -1,9 +1,10 @@
 package wiki.service
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
-import wiki.db.Storage
-import wiki.extractor.types.{Context, Page, WordSense}
 import upickle.default.*
+import wiki.db.Storage
+import wiki.extractor.language.types.NGram
+import wiki.extractor.types.{Context, Page, WordSense}
 import wiki.extractor.{ArticleComparer, Contextualizer}
 import wiki.ml.{WordSenseCandidate, WordSenseDisambiguator, WordSenseGroup}
 import wiki.util.ConfiguredProperties
@@ -11,6 +12,7 @@ import wiki.util.ConfiguredProperties
 import scala.collection.mutable
 
 case class ResolvedLabel(label: String, page: Page, allSenses: mutable.Map[Int, Double])
+case class NGResolvedLabel(nGram: NGram, resolvedLabel: ResolvedLabel)
 
 object ResolvedLabel {
   implicit val rw: ReadWriter[ResolvedLabel] = macroRW
@@ -41,13 +43,15 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     */
   def getContextWithLabels(req: DocumentProcessingRequest): ContextWithLabels = {
     val labels          = contextualizer.getLabels(req.doc)
-    val context         = contextualizer.getContext(labels, params.minSenseProbability)
+    val context         = contextualizer.getContext(labels.map(_.stringContent), params.minSenseProbability)
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
     ContextWithLabels(
       context = enrichedContext,
-      labels = cleanedLabels.toSeq,
-      resolvedLabels = resolveSenses(cleanedLabels, context).toSeq
+      labels = cleanedLabels.map(_.stringContent).toSeq.distinct,
+      resolvedLabels = resolveSenses(cleanedLabels, context)
+        .map(_.resolvedLabel)
+        .toSeq
     )
   }
 
@@ -56,13 +60,13 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     * below-threshold sense probability. It does not make sense to resolve
     * these labels to senses or to return them as part of the API response.
     *
-    * @param labels              NGram strings derived from original document
+    * @param labels              NGrams derived from original document
     * @param minSenseProbability The minimum prior probability for any label
     * @return                    Labels minus low-information labels
     */
-  private def removeNoisyLabels(labels: Array[String], minSenseProbability: Double): Array[String] = {
+  private def removeNoisyLabels(labels: Array[NGram], minSenseProbability: Double): Array[NGram] = {
     labels.filter { label =>
-      labelIdToSense.get(labelToId(label)) match {
+      labelIdToSense.get(labelToId(label.stringContent)) match {
         case Some(sense) =>
           sense.commonness(sense.commonestSense) > minSenseProbability
         case None =>
@@ -90,8 +94,11 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     *                unambiguous word senses
     * @param context The source document's Context
     */
-  private def resolveSenses(labels: Array[String], context: Context): Array[ResolvedLabel] = {
-    val groups: Array[WordSenseGroup] = labels.flatMap { label =>
+  private def resolveSenses(labels: Array[NGram], context: Context): Array[NGResolvedLabel] = {
+    case class DGroup(nGram: NGram, wordSenseGroup: WordSenseGroup)
+
+    val groups: Array[DGroup] = labels.flatMap { ng =>
+      val label = ng.stringContent
       labelIdToSense.get(labelToId(label)).map { sense =>
         val candidates = sense.senseCounts.keys.map { senseId =>
           val features = comparer.getRelatednessByFeature(senseId, context)
@@ -105,29 +112,42 @@ class ServiceOps(db: Storage, params: ServiceParams) {
           )
         }
 
-        WordSenseGroup(
-          label = label,
-          contextQuality = context.quality,
-          candidates = candidates.toArray
+        DGroup(
+          nGram = ng,
+          wordSenseGroup = WordSenseGroup(
+            label = label,
+            contextQuality = context.quality,
+            candidates = candidates.toArray
+          )
         )
       }
     }
 
-    // Drop irrelevant senses (those having negative-scored best sense)
-    groups.flatMap { group =>
-      val senses = wsd.getScoredSenses(group)
-      if (senses.bestScore > 0.0) {
-        Some(
-          ResolvedLabel(
-            label = group.label,
+    // If subgroups have identical positions, keep the one with the highest
+    // scoring best sense. Identical positions can show up from casing
+    // variants generated for beginning-of-sentence NGrams.
+    // Drop irrelevant groups (those having negative-scored best sense)
+    groups
+      .groupBy(e => (e.nGram.start, e.nGram.end))
+      .toArray
+      .flatMap { posGroup =>
+        val candidates            = posGroup._2
+        val candidateScoredSenses = candidates.map(e => wsd.getScoredSenses(e.wordSenseGroup))
+        val bestScores            = candidateScoredSenses.map(_.bestScore)
+        val bestScore             = bestScores.max
+        if (bestScore > 0.0) {
+          val chosen = candidates(bestScores.indexOf(bestScore))
+          val senses = candidateScoredSenses(bestScores.indexOf(bestScore))
+          val rl = ResolvedLabel(
+            label = chosen.wordSenseGroup.label,
             page = pageCache.get(senses.bestPageId),
             allSenses = senses.scores
           )
-        )
-      } else {
-        None
+          Some(NGResolvedLabel(nGram = chosen.nGram, resolvedLabel = rl))
+        } else {
+          None
+        }
       }
-    }
   }
 
   /**

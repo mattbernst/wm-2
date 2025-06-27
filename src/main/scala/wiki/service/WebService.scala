@@ -15,7 +15,7 @@ object DocumentProcessingRequest {
   implicit val rw: ReadWriter[DocumentProcessingRequest] = macroRW
 }
 
-object WebService extends cask.MainRoutes with ServiceProperties with Logging {
+object WebService extends cask.MainRoutes with ModelProperties with Logging {
   override def port: Int      = configuredPort
   private var configuredPort  = 0
   private var ops: ServiceOps = null

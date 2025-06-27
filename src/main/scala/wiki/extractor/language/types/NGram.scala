@@ -7,11 +7,30 @@ case class NGram(
   end: Int,
   tokenSpans: Array[Span],
   caseContext: CaseContext,
+  stringContent: String,
   isSentenceStart: Boolean)
     extends Span(start, end) {
 
-  def getNgramAsString(sourceText: String): String =
-    sourceText.substring(start, end)
+  override def equals(other: Any): Boolean = other match {
+    case that: NGram =>
+      start == that.start &&
+        end == that.end &&
+        caseContext == that.caseContext &&
+        stringContent == that.stringContent &&
+        isSentenceStart == that.isSentenceStart
+    case _ => false
+  }
+
+  override def hashCode(): Int = {
+    val prime  = 31
+    var result = 1
+    result = prime * result + start
+    result = prime * result + end
+    result = prime * result + caseContext.hashCode
+    result = prime * result + stringContent.hashCode
+    result = prime * result + (if (isSentenceStart) 1 else 0)
+    result
+  }
 }
 
 object NGram {
@@ -31,5 +50,5 @@ object NGram {
   }
 
   def generateString(sourceString: String, ngram: NGram): String =
-    sourceString.slice(ngram.start, ngram.end)
+    sourceString.substring(ngram.start, ngram.end)
 }

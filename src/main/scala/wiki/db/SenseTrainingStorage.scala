@@ -53,6 +53,25 @@ object SenseTrainingStorage {
   }
 
   /**
+    * Get distinct page IDs used during sense training.
+    * This is used to ensure that link training does not train/test on the
+    * same pages.
+    *
+    * @param groupName The name of the word sense training group
+    * @return          A set of involved page IDs
+    */
+  def getTrainingPages(groupName: String): Set[Int] = {
+    DB.autoCommit { implicit session =>
+      sql"""SELECT DISTINCT(sense_page_id)
+           FROM $exampleTable
+           WHERE group_name=$groupName"""
+        .map(rs => rs.int("sense_page_id"))
+        .list()
+        .toSet
+    }
+  }
+
+  /**
     * Write context data to the sense_training_context and
     * sense_training_context_page tables.
     *

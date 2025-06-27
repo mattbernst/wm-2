@@ -2,7 +2,7 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
-import wiki.extractor.language.types.Snippet
+import wiki.extractor.language.types.{NGram, Snippet}
 import wiki.extractor.types.Language
 import wiki.util.Logging
 
@@ -69,16 +69,18 @@ trait LanguageLogic {
     *
     * @param language     The language to use for processing the document
     * @param documentText The plain text of a document
-    * @return             An array of word-level NGrams as strings
+    * @return             An array of word-level NGrams
     */
-  def wordNGrams(language: Language, documentText: String): Array[String] = {
-    val buffer = ListBuffer[String]()
+  def wordNGrams(language: Language, documentText: String): Array[NGram] = {
+    val buffer = ListBuffer[NGram]()
     val ngg    = new NGramGenerator(sentenceDetector.get(), tokenizer.get())
 
     ngg.generate(documentText).foreach { ng =>
-      buffer.append(ng.getNgramAsString(documentText))
+      buffer.append(ng)
       if (ng.isSentenceStart) {
-        buffer.append(language.unCapitalizeFirst(ng.getNgramAsString(documentText)))
+        val uncapitalized = language.unCapitalizeFirst(ng.stringContent)
+        val variant       = ng.copy(stringContent = uncapitalized)
+        buffer.append(variant)
       }
     }
 

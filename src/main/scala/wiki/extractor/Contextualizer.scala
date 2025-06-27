@@ -3,6 +3,7 @@ package wiki.extractor
 import com.github.blemale.scaffeine.LoadingCache
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
+import wiki.extractor.language.types.NGram
 import wiki.extractor.types.*
 import wiki.extractor.util.Text
 import wiki.util.Logging
@@ -57,14 +58,14 @@ class Contextualizer(
     * to be incorrect. The Context is actually initialized with *all* labels,
     * retaining the top N candidates after weighting/sorting.
     *
-    * @param labels              The document text
+    * @param labels              NGram strings from the document text
     * @param minSenseProbability The minimum prior probability for any word
     *                            sense
     * @return                    A Context containing top candidate Wikipedia
     *                            pages
     */
   def getContext(labels: Array[String], minSenseProbability: Double): Context = {
-    val candidates    = collectCandidates(labels, minSenseProbability)
+    val candidates    = collectCandidates(labels.distinct, minSenseProbability)
     val topCandidates = collectTopCandidates(candidates)
     Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
   }
@@ -78,18 +79,18 @@ class Contextualizer(
     * Wikipedia.
     *
     * @param text A document or passage of text for extraction of labels
-    * @return     All eligible NGram strings derivable from input document
+    * @return     All eligible NGrams derivable from input document
     */
-  def getLabels(text: String): Array[String] = {
+  def getLabels(text: String): Array[NGram] = {
     val ng1 = languageLogic.wordNGrams(language, text)
     // Also capture NGrams that may have been obscured by punctuation
     val simpleText = Text.filterToLettersAndDigits(text)
     val ng2        = languageLogic.wordNGrams(language, simpleText)
 
     (ng1 ++ ng2)
-      .filter(n => goodLabels.contains(n))
-      .filter(l => labelCounter.getLinkOccurrenceDocCount(l).exists(_ >= minInLinks))
-      .filter(l => labelCounter.getLinkProbability(l).exists(_ >= minLinkProbability))
+      .filter(n => goodLabels.contains(n.stringContent))
+      .filter(l => labelCounter.getLinkOccurrenceDocCount(l.stringContent).exists(_ >= minInLinks))
+      .filter(l => labelCounter.getLinkProbability(l.stringContent).exists(_ >= minLinkProbability))
       .distinct
   }
 
@@ -212,7 +213,7 @@ class Contextualizer(
     db.label.read()
   }
 
-  private val goodLabels  = labelToId.keySet
+  private val goodLabels  = mutable.Set.from(labelToId.keys)
   private val dateStrings = language.generateValidDateStrings()
   private val datePageIds = dateStrings.flatMap(d => db.getPage(d)).map(_.id)
 }
