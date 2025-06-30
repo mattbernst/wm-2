@@ -2,7 +2,6 @@ package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
 import org.sweble.wikitext.parser.nodes.WtListItem
-import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.EnglishLanguageLogic
 import wiki.extractor.types.LocatedLink
 import wiki.util.{FileHelpers, UnitSpec}
@@ -16,20 +15,20 @@ class WikitextParserSpec extends UnitSpec {
     val markup = FileHelpers.readTextFile("src/test/resources/anthophyta.wikitext")
     val parsed = parser.parseMarkup(title, markup).get
 
-    val expectedLinks = List(
+    val expectedLinks = Seq(
       LocatedLink(target = "paraphyletic", anchorText = "paraphyletic", left = 139, right = 151),
       LocatedLink(target = "clade", anchorText = "clade", left = 256, right = 261),
-      LocatedLink(target = "Flowering plants", anchorText = "angiosperm", left = 281, right = 297),
-      LocatedLink(target = "Rosaceae", anchorText = "roses", left = 352, right = 360),
-      LocatedLink(target = "Poaceae", anchorText = "grasses", left = 375, right = 382),
+      LocatedLink(target = "Flowering plants", anchorText = "angiosperm", left = 281, right = 308),
+      LocatedLink(target = "Rosaceae", anchorText = "roses", left = 352, right = 366),
+      LocatedLink(target = "Poaceae", anchorText = "grasses", left = 375, right = 390),
       LocatedLink(target = "Gnetales", anchorText = "Gnetales", left = 412, right = 420),
       LocatedLink(target = "Bennettitales", anchorText = "Bennettitales", left = 441, right = 454),
       LocatedLink(target = "monophyletic", anchorText = "monophyletic", left = 879, right = 891),
       LocatedLink(target = "gnetophyte", anchorText = "gnetophyte", left = 1626, right = 1636),
       LocatedLink(target = "angiosperm", anchorText = "angiosperm", left = 1650, right = 1660),
       LocatedLink(target = "gymnosperm", anchorText = "gymnosperm", left = 1824, right = 1834),
-      LocatedLink(target = "Glossopteridales", anchorText = "glossopterids", left = 2420, right = 2436),
-      LocatedLink(target = "Corystospermaceae", anchorText = "corystosperms", left = 2456, right = 2473),
+      LocatedLink(target = "Glossopteridales", anchorText = "glossopterids", left = 2420, right = 2450),
+      LocatedLink(target = "Corystospermaceae", anchorText = "corystosperms", left = 2456, right = 2487),
       LocatedLink(target = "Petriellales", anchorText = "Petriellales", left = 2493, right = 2505),
       LocatedLink(target = "Pentoxylales", anchorText = "Pentoxylales", left = 2510, right = 2522),
       LocatedLink(target = "Bennettitales", anchorText = "Bennettitales", left = 2528, right = 2541),
@@ -43,7 +42,6 @@ class WikitextParserSpec extends UnitSpec {
     )
 
     parsed.links shouldBe expectedLinks
-    parsed.links.foreach(link => link.target shouldBe markup.substring(link.left, link.right))
     val expectedText = FileHelpers.readTextFile("src/test/resources/anthophyta.txt")
     parsed.text shouldBe expectedText
   }
@@ -54,7 +52,7 @@ class WikitextParserSpec extends UnitSpec {
     val markup = FileHelpers.readTextFile("src/test/resources/mafic.wikitext")
     val parsed = parser.parseMarkup(title, markup).get
 
-    val expectedLinks = List(
+    val expectedLinks = Seq(
       LocatedLink(target = "silicate mineral", anchorText = "silicate mineral", left = 85, right = 101),
       LocatedLink(target = "magnesium", anchorText = "magnesium", left = 130, right = 139),
       LocatedLink(target = "iron", anchorText = "iron", left = 148, right = 152),
@@ -73,7 +71,7 @@ class WikitextParserSpec extends UnitSpec {
       LocatedLink(target = "felsic", anchorText = "felsic", left = 775, right = 781),
       LocatedLink(target = "shield volcano", anchorText = "shield volcano", left = 1053, right = 1067),
       LocatedLink(target = "Hawaii", anchorText = "Hawaii", left = 1089, right = 1095),
-      LocatedLink(target = "Pegmatite", anchorText = "Pegmatitic", left = 1170, right = 1179),
+      LocatedLink(target = "Pegmatite", anchorText = "Pegmatitic", left = 1170, right = 1190),
       LocatedLink(target = "Gabbro", anchorText = "Gabbro", left = 1198, right = 1204),
       LocatedLink(target = "pegmatite", anchorText = "pegmatite", left = 1209, right = 1218),
       LocatedLink(target = "phaneritic", anchorText = "phaneritic", left = 1245, right = 1255),
@@ -88,9 +86,9 @@ class WikitextParserSpec extends UnitSpec {
       LocatedLink(target = "Basalt", anchorText = "Basalt", left = 1538, right = 1544),
       LocatedLink(target = "tuff", anchorText = "tuff", left = 1549, right = 1553),
       LocatedLink(target = "breccia", anchorText = "breccia", left = 1561, right = 1568),
-      LocatedLink(target = "Vesicular texture", anchorText = "Vesicular", left = 1579, right = 1596),
+      LocatedLink(target = "Vesicular texture", anchorText = "Vesicular", left = 1579, right = 1606),
       LocatedLink(target = "basalt", anchorText = "basalt", left = 1624, right = 1630),
-      LocatedLink(target = "Amygdule", anchorText = "Amygdaloidal", left = 1641, right = 1649),
+      LocatedLink(target = "Amygdule", anchorText = "Amygdaloidal", left = 1641, right = 1662),
       LocatedLink(target = "basalt", anchorText = "basalt", left = 1683, right = 1689),
       LocatedLink(target = "Scoria", anchorText = "Scoria", left = 1723, right = 1729),
       LocatedLink(target = "Tachylyte", anchorText = "Tachylyte", left = 1758, right = 1767),
@@ -126,7 +124,6 @@ class WikitextParserSpec extends UnitSpec {
     val expectedText = FileHelpers.readTextFile("src/test/resources/mafic.txt")
     parsed.text shouldBe expectedText
     parsed.links shouldBe expectedLinks
-    parsed.links.foreach(link => link.target shouldBe markup.substring(link.left, link.right))
 
     // The original markup for this sentence was
     // "Most mafic-lava volcanoes are [[shield volcano]]es, like those in [[Hawaii]]."
@@ -137,6 +134,72 @@ class WikitextParserSpec extends UnitSpec {
     val correct1 = "Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii."
     parsed.text.contains(error1) shouldBe true
     parsed.text.contains(correct1) shouldBe false
+  }
+
+  it should "extract links from a trickier page" in {
+    val title = "B.F. Skinner"
+    // This page was missing most of its links when parsed in a single pass
+    val markup = FileHelpers.readTextFile("src/test/resources/bfskinner.wikitext")
+    val expected = Seq(
+      LocatedLink(
+        target = "B. F. Skinner",
+        anchorText = "Burrhus Frederic (B. F.) Skinner",
+        left = 77,
+        right = 135
+      ),
+      LocatedLink(target = "psychologist", anchorText = "psychologist", left = 194, right = 206),
+      LocatedLink(target = "behaviorist", anchorText = "behaviorist", left = 212, right = 223),
+      LocatedLink(
+        target = "Social philosophy",
+        anchorText = "social philosopher",
+        left = 251,
+        right = 287
+      ),
+      LocatedLink(
+        target = "Harvard University",
+        anchorText = "Harvard University",
+        left = 344,
+        right = 362
+      ),
+      LocatedLink(
+        target = "operant conditioning chamber",
+        anchorText = "operant conditioning chamber",
+        left = 429,
+        right = 457
+      ),
+      LocatedLink(
+        target = "radical behaviorism",
+        anchorText = "radical behaviorism",
+        left = 931,
+        right = 950
+      ),
+      LocatedLink(
+        target = "experimental analysis of behavior",
+        anchorText = "experimental analysis of behavior",
+        left = 1023,
+        right = 1056
+      ),
+      LocatedLink(
+        target = "operant conditioning",
+        anchorText = "operant conditioning",
+        left = 1079,
+        right = 1099
+      ),
+      LocatedLink(target = "Verbal Behavior", anchorText = "Verbal Behavior", left = 1161, right = 1176),
+      LocatedLink(target = "Walden Two", anchorText = "Walden Two", left = 1225, right = 1235),
+      LocatedLink(target = "John B. Watson", anchorText = "John B. Watson", left = 1326, right = 1340),
+      LocatedLink(target = "Ivan Pavlov", anchorText = "Ivan Pavlov", left = 1349, right = 1360),
+      LocatedLink(target = "B. F. Skinner", anchorText = "(Full article...)", left = 1366, right = 1403),
+      LocatedLink(
+        target = "Category:Psychology portal",
+        anchorText = "Category:Psychology portal",
+        left = 1408,
+        right = 1434
+      )
+    )
+
+    val parsed = parser.parseMarkup(title, markup).get
+    parsed.links shouldBe expected
   }
 
   it should "produce readable plain text from tables" in {
@@ -158,8 +221,8 @@ class WikitextParserSpec extends UnitSpec {
         |
         |Breeds
         |: Breed : Country : Origin : Body type : Coat : Pattern : Image
-        || Abyssinian cat | Egypt | Natural | Oriental | Short | Ticked | File:Gustav chocolate.jpg
-        || Aegean cat | Greece | Natural/Standard | ||Semi-long|| Bi- or tri-colored ||File:Aegean cat.jpg""".stripMargin
+        || Abyssinian cat | Egypt | Natural | Oriental | Short | Ticked |
+        || Aegean cat | Greece | Natural/Standard | ||Semi-long|| Bi- or tri-colored ||""".stripMargin
 
     parsed.text shouldBe expectedText
   }

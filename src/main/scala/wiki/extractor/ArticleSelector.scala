@@ -73,7 +73,7 @@ class ArticleSelector(db: Storage, languageLogic: LanguageLogic) {
       .count(_.length > 5)
 
     val listCount = parser
-      .extractNodes[WtListItem](parser.parse("", wikiText))
+      .extractNodes[WtListItem](parser.parse(title = "", markup = wikiText))
       .length
 
     if (lineCount > 0) {
