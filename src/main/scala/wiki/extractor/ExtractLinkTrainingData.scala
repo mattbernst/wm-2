@@ -49,8 +49,8 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
       val parallelGroup = subset.par
       parallelGroup.tasksupport = taskSupport
       parallelGroup.foreach { pageId =>
-        println(s"FEATURES")
-        BlackWhite.pprintln(processor.articleToFeatures(pageId, groupName))
+        val linkFeatures = processor.articleToFeatures(pageId, groupName)
+
 //        val senseFeatures = processor.articleToFeatures(pageId, groupName)
 //        db.senseTraining.write(senseFeatures)
       }

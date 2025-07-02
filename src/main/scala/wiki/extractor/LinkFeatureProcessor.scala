@@ -1,7 +1,6 @@
 package wiki.extractor
 
 import org.apache.commons.lang3.StringUtils
-import pprint.PPrinter.BlackWhite
 import wiki.db.Storage
 import wiki.extractor.language.types.NGram
 import wiki.extractor.types.*
@@ -44,10 +43,6 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Log
     // negative example.
     val negativeExamples = pageLabels
       .filterNot(pl => linkedLabelSet.contains(pl.stringContent.toLowerCase(language.locale)))
-
-    BlackWhite.pprintln(page)
-    println("MARKUP")
-    println(markup.wikitext.getOrElse(""))
 
     // Generate positive examples from labels that are linked anywhere
     val positiveExampleEntries = makeLinkModelEntries(
