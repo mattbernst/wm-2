@@ -129,8 +129,8 @@ class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
     .readKnownLabels()
 
   private lazy val ops = new ServiceOps(
-    db,
-    ServiceParams(minSenseProbability = minSenseProbability, cacheSize = 250_000, wordSenseModelName = "")
+    db = db,
+    params = ServiceParams(minSenseProbability = minSenseProbability, cacheSize = 250_000)
   )
 
   private lazy val comparer = new ArticleComparer(db)

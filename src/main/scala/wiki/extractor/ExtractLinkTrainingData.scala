@@ -25,13 +25,13 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
     logger.info(s"Preparing link training data with db $databaseFileName")
-    val db      = getDb(databaseFileName)
-    val props   = db.configuration.readConfiguredPropertiesOptimistic()
-    val profile = props.language.trainingProfile
-
-    val ll        = LanguageLogic.getLanguageLogic(props.language.code)
-    val selector  = new ArticleSelector(db, ll)
+    val db        = getDb(databaseFileName)
+    val props     = db.configuration.readConfiguredPropertiesOptimistic()
     val processor = new LinkFeatureProcessor(db, props)
+    val profile   = props.language.trainingProfile
+
+    val ll       = LanguageLogic.getLanguageLogic(props.language.code)
+    val selector = new ArticleSelector(db, ll)
 
     val used: Set[Int] = profile.disambiguatorGroup
       .map(g => db.senseTraining.getTrainingPages(g.name))

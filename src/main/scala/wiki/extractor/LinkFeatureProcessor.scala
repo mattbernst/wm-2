@@ -6,10 +6,10 @@ import wiki.db.Storage
 import wiki.extractor.language.types.NGram
 import wiki.extractor.types.*
 import wiki.extractor.util.Progress
-import wiki.service.{ModelProperties, ServiceOps, ServiceParams}
+import wiki.service.{ServiceOps, ServiceParams}
 import wiki.util.{ConfiguredProperties, Logging}
 
-class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends ModelProperties with Logging {
+class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Logging {
 
   def articleToFeatures(pageId: Int, groupName: String): LinkFeatures = {
     tick()
@@ -165,10 +165,11 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Mod
   private val ops = {
     val params = ServiceParams(
       minSenseProbability = minSenseProbability,
-      cacheSize = 500_000,
-      wordSenseModelName = wsdModelName
+      cacheSize = 500_000
     )
-    new ServiceOps(db, params = params)
+    val serviceOps = new ServiceOps(db, params = params)
+    serviceOps.validateWordSenseData()
+    serviceOps
   }
 
   private val language = props.language

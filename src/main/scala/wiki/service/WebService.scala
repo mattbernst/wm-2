@@ -3,7 +3,6 @@ package wiki.service
 import cask.model.Response
 import org.rogach.scallop.*
 import upickle.default.*
-import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.util.{FileHelpers, Logging}
 
@@ -54,22 +53,10 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   private def jsonResponse(jsonString: String): Response[String] =
     cask.Response(data = jsonString, headers = Seq("Content-Type" -> "application/json"))
 
-  private def validateData(db: Storage): Unit = {
-    require(
-      db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
-      "Extraction has not completed. Finish extraction and training first."
-    )
-    require(
-      db.mlModel.read(wsdModelName).nonEmpty,
-      s"Could not find model $wsdModelName in db. Run make prepare-disambiguation."
-    )
-  }
-
   override def main(args: Array[String]): Unit = {
     val serviceParams = ServiceParams(
       minSenseProbability = 0.01,
-      cacheSize = 500_000,
-      wordSenseModelName = wsdModelName
+      cacheSize = 500_000
     )
 
     val conf = new Conf(args.toIndexedSeq)
@@ -86,8 +73,8 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
       throw new NoSuchFileException(s"Database file $databaseFileName is not readable")
     }
 
-    validateData(db)
     ops = new ServiceOps(db, serviceParams)
+    ops.validateWordSenseData()
     logger.info(s"Starting web service on port $port with db $databaseFileName")
 
     initialize()

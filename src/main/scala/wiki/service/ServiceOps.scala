@@ -2,6 +2,7 @@ package wiki.service
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import upickle.default.*
+import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.extractor.language.types.NGram
 import wiki.extractor.types.{Context, LabelCounter, Page, WordSense}
@@ -24,9 +25,9 @@ object ContextWithLabels {
   implicit val rw: ReadWriter[ContextWithLabels] = macroRW
 }
 
-case class ServiceParams(minSenseProbability: Double, cacheSize: Int, wordSenseModelName: String)
+case class ServiceParams(minSenseProbability: Double, cacheSize: Int)
 
-class ServiceOps(db: Storage, params: ServiceParams) {
+class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
   def getPageById(pageId: Int): Option[Page] = db.getPage(pageId)
 
   def getPageByTitle(title: String): Option[Page] = db.getPage(title)
@@ -166,6 +167,17 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     context.copy(pages = enriched)
   }
 
+  def validateWordSenseData(): Unit = {
+    require(
+      db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
+      "Extraction has not completed. Finish extraction and training first."
+    )
+    require(
+      db.mlModel.read(wsdModelName).nonEmpty,
+      s"Could not find model $wsdModelName in db. Run make prepare-disambiguation."
+    )
+  }
+
   val pageCache: LoadingCache[Int, Page] =
     Scaffeine()
       .maximumSize(params.cacheSize)
@@ -185,13 +197,13 @@ class ServiceOps(db: Storage, params: ServiceParams) {
       minSenseProbability = params.minSenseProbability
     )
 
-  val comparer: ArticleComparer = new ArticleComparer(db)
+  lazy val comparer: ArticleComparer = new ArticleComparer(db)
 
-  val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
+  lazy val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
 
-  val labelCounter: LabelCounter = db.label.read()
+  lazy val labelCounter: LabelCounter = db.label.read()
 
-  val contextualizer =
+  lazy val contextualizer =
     new Contextualizer(
       maxContextSize = 32,
       labelIdToSense = labelIdToSense,
@@ -203,7 +215,7 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     )
 
   lazy val wsd: WordSenseDisambiguator = {
-    val modelData = db.mlModel.read(params.wordSenseModelName).get
+    val modelData = db.mlModel.read(wsdModelName).get
     new WordSenseDisambiguator(modelData)
   }
 
