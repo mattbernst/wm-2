@@ -1,7 +1,6 @@
 package wiki.extractor
 
 import org.rogach.scallop.*
-import pprint.PPrinter.BlackWhite
 import wiki.extractor.language.LanguageLogic
 import wiki.service.ModelProperties
 import wiki.util.Logging
@@ -43,16 +42,14 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
 
     // Generate features from the subsets of articles
     subsets.zip(profile.disambiguatorGroup).foreach { set =>
-      val subset    = set._1.take(1) // TODO remove take(1)
+      val subset    = set._1.take(3) // TODO remove take
       val groupName = set._2.name
       logger.info(s"Processing ${subset.length} pages for group $groupName")
       val parallelGroup = subset.par
       parallelGroup.tasksupport = taskSupport
       parallelGroup.foreach { pageId =>
         val linkFeatures = processor.articleToFeatures(pageId, groupName)
-
-//        val senseFeatures = processor.articleToFeatures(pageId, groupName)
-//        db.senseTraining.write(senseFeatures)
+        db.linkTraining.write(linkFeatures)
       }
     }
 
