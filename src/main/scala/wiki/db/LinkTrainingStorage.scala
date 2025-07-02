@@ -73,6 +73,14 @@ object LinkTrainingStorage {
     }
   }
 
+  def deleteAll(): Unit = {
+    DB.autoCommit { implicit session =>
+      sql"""DELETE FROM $contextTable;""".update(): Unit
+      sql"""DELETE FROM $contextPageTable;""".update(): Unit
+      sql"""DELETE FROM $exampleTable;""".update(): Unit
+    }
+  }
+
   /**
     * Write context data to the Link_training_context and
     * Link_training_context_page tables.
