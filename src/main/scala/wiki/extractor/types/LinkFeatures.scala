@@ -2,7 +2,6 @@ package wiki.extractor.types
 
 case class LinkModelEntry(
   sourcePageId: Int,
-  linkDestination: Int,
   label: String,
   sensePageTitle: String,
   senseId: Int,
@@ -11,8 +10,7 @@ case class LinkModelEntry(
   avgDisambigConfidence: Double,
   relatednessToContext: Double,
   relatednessToOtherTopics: Double,
-  maxLinkProbability: Double,
-  avgLinkProbability: Double,
+  linkProbability: Double,
   firstOccurrence: Double,
   lastOccurrence: Double,
   spread: Double,
@@ -25,8 +23,7 @@ case class LinkTrainingFields(
   avgDisambigConfidence: Double,
   relatednessToContext: Double,
   relatednessToOtherTopics: Double,
-  maxLinkProbability: Double,
-  avgLinkProbability: Double,
+  linkProbability: Double,
   firstOccurrence: Double,
   lastOccurrence: Double,
   spread: Double,

@@ -4,6 +4,7 @@ import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.*
 import wiki.extractor.util.Progress
+import wiki.service.{ServiceOps, ServiceParams}
 import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
@@ -87,7 +88,7 @@ class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
     SenseFeatures(
       group = groupName,
       page = pageCache.get(pageId),
-      context = enrichContext(context),
+      context = ops.enrichContext(context),
       examples = buffer.toArray
     )
   }
@@ -95,27 +96,6 @@ class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
   private def tick(): Unit = this.synchronized {
     Progress.tick(count = nProcessed, marker = "+", n = 10)
     nProcessed += 1
-  }
-
-  /**
-    * Enrich context by adding full Page objects to each representative page.
-    * This is useful for reading/debugging/understanding the Context output.
-    *
-    * @param context A Context object that may not yet have complete
-    *                page descriptions for representative pages
-    * @return        A Context object with complete page descriptions for
-    *                representative pages
-    */
-  private def enrichContext(context: Context): Context = {
-    val enriched = context.pages.map { rep =>
-      if (rep.page.nonEmpty) {
-        rep
-      } else {
-        rep.copy(page = Some(pageCache.get(rep.pageId)))
-      }
-    }
-
-    context.copy(pages = enriched)
   }
 
   private var nProcessed = 0
@@ -139,6 +119,7 @@ class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
       maxContextSize = 32,
       labelIdToSense = labelIdToSense,
       labelToId = labelToId,
+      labelCounter = db.label.read(),
       comparer = comparer,
       db = db,
       language = props.language
@@ -146,6 +127,11 @@ class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private lazy val labelToId: mutable.Map[String, Int] = db.label
     .readKnownLabels()
+
+  private lazy val ops = new ServiceOps(
+    db,
+    ServiceParams(minSenseProbability = minSenseProbability, cacheSize = 250_000, wordSenseModelName = "")
+  )
 
   private lazy val comparer = new ArticleComparer(db)
 }

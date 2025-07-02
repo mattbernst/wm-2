@@ -15,6 +15,7 @@ class Contextualizer(
   maxContextSize: Int,
   labelIdToSense: LoadingCache[Int, Option[WordSense]],
   labelToId: mutable.Map[String, Int],
+  labelCounter: LabelCounter,
   comparer: ArticleComparer,
   db: Storage,
   language: Language)
@@ -58,6 +59,9 @@ class Contextualizer(
     * to be incorrect. The Context is actually initialized with *all* labels,
     * retaining the top N candidates after weighting/sorting.
     *
+    * The top candidate pages are those with the greatest topic-based
+    * relatedness among themselves.
+    *
     * @param labels              NGram strings from the document text
     * @param minSenseProbability The minimum prior probability for any word
     *                            sense
@@ -66,7 +70,7 @@ class Contextualizer(
     */
   def getContext(labels: Array[String], minSenseProbability: Double): Context = {
     val candidates    = collectCandidates(labels.distinct, minSenseProbability)
-    val topCandidates = collectTopCandidates(candidates)
+    val topCandidates = collectTopTopicCandidates(candidates)
     Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
   }
 
@@ -92,6 +96,34 @@ class Contextualizer(
       .filter(l => labelCounter.getLinkOccurrenceDocCount(l.stringContent).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l.stringContent).exists(_ >= minLinkProbability))
       .distinct
+  }
+
+  /**
+    * Get the relatedness of a single word-sense to the surrounding context.
+    * This uses the mean relatedness generated from composite features.
+    *
+    * @param senseId A single sense ID to compare with the context
+    * @param context A Context object previously generated from a document
+    * @return        Weighted mean relatedness across the Context's
+    *                representative pages
+    */
+  def getRelatedness(senseId: Int, context: Context): Double = {
+    if (context.pages.isEmpty) {
+      0.0
+    } else {
+      var averageRelatedness = 0.0
+      var j                  = 0
+      while (j < context.pages.length) {
+        val page = context.pages(j)
+        val cmp  = comparer.compare(senseId, page.pageId)
+        if (cmp.nonEmpty) {
+          averageRelatedness += (cmp.get.mean * page.weight)
+        }
+        j += 1
+      }
+
+      averageRelatedness / context.pages.length
+    }
   }
 
   /**
@@ -171,7 +203,7 @@ class Contextualizer(
     * @return           Candidates reweighted, ranked, and limited to a maximum
     *                   of maxContextSize results
     */
-  private def collectTopCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
+  private def collectTopTopicCandidates(candidates: Array[RepresentativePage]): Array[RepresentativePage] = {
     val pages = ListBuffer[RepresentativePage]()
     var j     = 0
     comparer.primeCaches(candidates.map(_.pageId))
@@ -183,15 +215,16 @@ class Contextualizer(
       while (k < candidates.length) {
         val b = candidates(k)
         if (a.pageId != b.pageId) {
-          comparer
-            .compare(a.pageId, b.pageId)
-            .foreach(comparison => averageRelatedness += comparison.mean)
+          val cmp = comparer.compare(a.pageId, b.pageId)
+          if (cmp.nonEmpty) {
+            averageRelatedness += cmp.get.mean
+          }
         }
         k += 1
       }
 
-      if (candidates.length > 1) {
-        averageRelatedness /= (candidates.length - 1)
+      if (candidates.nonEmpty) {
+        averageRelatedness /= candidates.length
       }
 
       val weight = a.weight + (4 * averageRelatedness) / 5
@@ -208,11 +241,6 @@ class Contextualizer(
   private val minInLinks         = language.trainingProfile.minInLinks
 
   private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code)
-
-  private val labelCounter: LabelCounter = {
-    logger.info(s"Loading LabelCounter")
-    db.label.read()
-  }
 
   private val goodLabels  = mutable.Set.from(labelToId.keys)
   private val dateStrings = language.generateValidDateStrings()

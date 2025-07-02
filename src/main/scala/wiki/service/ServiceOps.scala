@@ -4,7 +4,7 @@ import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import upickle.default.*
 import wiki.db.Storage
 import wiki.extractor.language.types.NGram
-import wiki.extractor.types.{Context, Page, WordSense}
+import wiki.extractor.types.{Context, LabelCounter, Page, WordSense}
 import wiki.extractor.{ArticleComparer, Contextualizer}
 import wiki.ml.{WordSenseCandidate, WordSenseDisambiguator, WordSenseGroup}
 import wiki.util.ConfiguredProperties
@@ -12,12 +12,12 @@ import wiki.util.ConfiguredProperties
 import scala.collection.mutable
 
 case class ResolvedLabel(label: String, page: Page, allSenses: mutable.Map[Int, Double])
-case class NGResolvedLabel(nGram: NGram, resolvedLabel: ResolvedLabel)
 
 object ResolvedLabel {
   implicit val rw: ReadWriter[ResolvedLabel] = macroRW
 }
 
+case class NGResolvedLabel(nGram: NGram, resolvedLabel: ResolvedLabel)
 case class ContextWithLabels(context: Context, labels: Seq[String], resolvedLabels: Seq[ResolvedLabel])
 
 object ContextWithLabels {
@@ -64,7 +64,7 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     * @param minSenseProbability The minimum prior probability for any label
     * @return                    Labels minus low-information labels
     */
-  private def removeNoisyLabels(labels: Array[NGram], minSenseProbability: Double): Array[NGram] = {
+  def removeNoisyLabels(labels: Array[NGram], minSenseProbability: Double): Array[NGram] = {
     labels.filter { label =>
       labelIdToSense.get(labelToId(label.stringContent)) match {
         case Some(sense) =>
@@ -158,7 +158,7 @@ class ServiceOps(db: Storage, params: ServiceParams) {
     * @return        An enriched Context with full page data for each
     *                representative page
     */
-  private def enrichContext(context: Context): Context = {
+  def enrichContext(context: Context): Context = {
     pageCache.getAll(context.pages.map(_.pageId)): Unit
     val enriched = context.pages
       .map(rep => rep.copy(page = Some(pageCache.get(rep.pageId))))
@@ -189,17 +189,20 @@ class ServiceOps(db: Storage, params: ServiceParams) {
 
   val labelToId: mutable.Map[String, Int] = db.label.readKnownLabels()
 
+  val labelCounter: LabelCounter = db.label.read()
+
   val contextualizer =
     new Contextualizer(
       maxContextSize = 32,
       labelIdToSense = labelIdToSense,
       labelToId = labelToId,
+      labelCounter = labelCounter,
       comparer = comparer,
       db = db,
       language = props.language
     )
 
-  private val wsd: WordSenseDisambiguator = {
+  lazy val wsd: WordSenseDisambiguator = {
     val modelData = db.mlModel.read(params.wordSenseModelName).get
     new WordSenseDisambiguator(modelData)
   }

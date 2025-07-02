@@ -2,6 +2,7 @@
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 PREPARE_DISAMBIGUATION_MAIN := wiki.service.PrepareDisambiguation
+PREPARE_LINK_TRAINING_MAIN := wiki.extractor.ExtractLinkTrainingData
 WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors
@@ -41,6 +42,9 @@ test:
 
 prepare-disambiguation: build
 	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_DISAMBIGUATION_MAIN) $(input)
+
+prepare-link-training: build
+	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
 
 run-web-service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
