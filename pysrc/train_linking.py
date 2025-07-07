@@ -19,19 +19,9 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold
 warnings.filterwarnings('ignore')
 
 
-def get_prefix(file_path):
-    """
-    Extract prefix from file path for naming output files.
-
-    Args:
-        file_path (str): Path to the input file
-
-    Returns:
-        str: Prefix for output files
-    """
-    base_name = os.path.basename(file_path)
-    return os.path.splitext(base_name)[0]
-
+def get_prefix(train_file):
+    train_basename = os.path.basename(train_file)
+    return train_basename.split("_linking")[0]
 
 def load_and_prepare_data(file_path):
     """
@@ -141,6 +131,62 @@ def evaluate_model(model, X_val, y_val):
     print(classification_report(y_val, conservative_preds))
     print("\nConfusion Matrix:")
     print(confusion_matrix(y_val, y_pred))
+
+    # Print example predictions
+    print("\nExample Predictions:")
+    print("=" * 80)
+    print(f"{'Index':<6} {'Actual':<7} {'Predicted':<10} {'Probability':<12} {'Correct':<8} {'Status'}")
+    print("-" * 80)
+
+    # Get indices for different prediction scenarios
+    correct_indices = np.where(y_pred == y_val)[0]
+    incorrect_indices = np.where(y_pred != y_val)[0]
+
+    # Show a mix of correct and incorrect predictions
+    example_indices = []
+
+    # Add some correct predictions
+    if len(correct_indices) > 0:
+        example_indices.extend(correct_indices[:5])
+
+    # Add some incorrect predictions
+    if len(incorrect_indices) > 0:
+        example_indices.extend(incorrect_indices[:5])
+
+    # If we don't have enough examples, add more randomly
+    if len(example_indices) < 10:
+        remaining_indices = np.setdiff1d(np.arange(len(y_val)), example_indices)
+        additional_needed = min(10 - len(example_indices), len(remaining_indices))
+        if additional_needed > 0:
+            additional_indices = np.random.choice(remaining_indices, additional_needed, replace=False)
+            example_indices.extend(additional_indices)
+
+    # Sort indices for better readability
+    example_indices = sorted(example_indices[:10])
+
+    for idx in example_indices:
+        actual = y_val.iloc[idx]
+        predicted = y_pred[idx]
+        probability = y_pred_proba[idx]
+        is_correct = actual == predicted
+
+        status = "✓ Correct" if is_correct else "✗ Wrong"
+        print(f"{idx:<6} {actual:<7} {predicted:<10} {probability:<12.4f} {str(is_correct):<8} {status}")
+
+    print("-" * 80)
+
+    # Summary statistics for the examples
+    correct_count = sum(1 for idx in example_indices if y_val.iloc[idx] == y_pred[idx])
+    total_examples = len(example_indices)
+    example_accuracy = correct_count / total_examples if total_examples > 0 else 0
+
+    print(f"Example set accuracy: {correct_count}/{total_examples} ({example_accuracy:.2%})")
+
+    # Show prediction confidence distribution
+    print(f"\nPrediction Confidence Distribution:")
+    print(f"High confidence (>0.8): {np.sum(y_pred_proba > 0.8)} predictions")
+    print(f"Medium confidence (0.2-0.8): {np.sum((y_pred_proba >= 0.2) & (y_pred_proba <= 0.8))} predictions")
+    print(f"Low confidence (<0.2): {np.sum(y_pred_proba < 0.2)} predictions")
 
     return {
         'f1': f1,

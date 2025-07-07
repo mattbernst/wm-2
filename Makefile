@@ -1,11 +1,11 @@
-.PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation
+.PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation train-link-detector
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 PREPARE_DISAMBIGUATION_MAIN := wiki.service.PrepareDisambiguation
 PREPARE_LINK_TRAINING_MAIN := wiki.extractor.ExtractLinkTrainingData
 WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
-# encountering StackOverflowErrors
+# encountering StackOverflowErrors during extraction
 JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
 
 clean:
@@ -110,3 +110,65 @@ train-disambiguation:
 	uv run python train_word_sense_disambiguation.py \
 		--train-file ../wiki_$${LANG_CODE}_disambiguation-train.csv \
 		--val-file ../wiki_$${LANG_CODE}_disambiguation-test.csv
+
+train-link-detector:
+	@echo "Setting up link detection training..."
+	@# Check for CSV files and determine language
+	@if [ -n "$(WP_LANG)" ]; then \
+		LANG_CODE="$(WP_LANG)"; \
+	else \
+		AVAILABLE_LANGS=$$(ls wiki_*_linking-train.csv 2>/dev/null | sed 's/wiki_\(.*\)_linking-train\.csv/\1/' | sort -u); \
+		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
+		if [ $$LANG_COUNT -eq 0 ]; then \
+			echo "Error: No training CSV files found (wiki_*_linking-train.csv)"; \
+			echo "Please run 'make prepare-link-training' first to generate the required CSV files."; \
+			exit 1; \
+		elif [ $$LANG_COUNT -gt 1 ]; then \
+			echo "Error: Multiple language CSV files found: $$AVAILABLE_LANGS"; \
+			echo "Please set WP_LANG environment variable to specify which language to use."; \
+			echo "Example: WP_LANG=en make train-link-detector"; \
+			exit 1; \
+		else \
+			LANG_CODE="$$AVAILABLE_LANGS"; \
+		fi; \
+	fi; \
+	\
+	echo "Using language code: $$LANG_CODE"; \
+	\
+	if [ ! -f "wiki_$${LANG_CODE}_linking-train.csv" ]; then \
+		echo "Error: Training file wiki_$${LANG_CODE}_linking-train.csv not found"; \
+		echo "Please run 'make prepare-link-training' to generate the required CSV files."; \
+		exit 1; \
+	fi; \
+	\
+	if [ ! -f "wiki_$${LANG_CODE}_linking-test.csv" ]; then \
+		echo "Error: Test file wiki_$${LANG_CODE}_linking-test.csv not found"; \
+		echo "Please run 'make prepare-link-training' to generate the required CSV files."; \
+		exit 1; \
+	fi; \
+	\
+	echo "Found required CSV files for language: $$LANG_CODE"; \
+	\
+	if ! command -v uv >/dev/null 2>&1; then \
+		echo "Installing uv package manager..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+		export PATH="$$HOME/.local/bin:$$PATH"; \
+		if ! command -v uv >/dev/null 2>&1; then \
+			echo "Error: Failed to install uv. Please install it manually."; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	echo "Setting up Python virtual environment..."; \
+	if [ ! -d "pysrc/.venv" ]; then \
+		echo "Creating virtual environment and installing requirements..."; \
+		cd pysrc && uv venv && uv pip install -r requirements.txt && cd ..; \
+	else \
+		echo "Virtual environment already exists"; \
+	fi; \
+	\
+	echo "Running link detector training..."; \
+	cd pysrc && \
+	uv run python train_linking.py \
+		--train-file ../wiki_$${LANG_CODE}_linking-train.csv \
+		--val-file ../wiki_$${LANG_CODE}_linking-test.csv
