@@ -76,14 +76,18 @@ class LinkDetector(catBoostModel: Array[Byte]) {
     val predictions: CatBoostPredictions          = model.predict(numericalFeatures, categoricalFeatures)
     candidates.indices.toArray.map { j =>
       val candidate = candidates(j)
-      val pred      = predictions.get(j, 0)
+      // The JVM CatBoost library doesn't have an implementation of
+      // "predict_proba" like that used in the Python training code
+      // (via sklearn), so manually convert the raw prediction to probability
+      // using the sigmoid function
+      val rawPred = predictions.get(j, 0)
+      val probability = 1.0 / (1.0 + math.exp(-rawPred))
       LabelLinkPrediction(
         label = candidate.label,
         linkedPageId = candidate.linkedPageId,
-        prediction = pred
+        prediction = probability
       )
     }
-
   }
 
   private val model = CatBoostModel.loadModel(catBoostModel)
