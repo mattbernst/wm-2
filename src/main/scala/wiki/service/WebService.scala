@@ -74,7 +74,8 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     }
 
     ops = new ServiceOps(db, serviceParams)
-    ops.validateWordSenseData()
+    ops.validateWordSenseModel()
+    ops.validateLinkingModel()
     logger.info(s"Starting web service on port $port with db $databaseFileName")
 
     initialize()

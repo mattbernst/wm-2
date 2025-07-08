@@ -7,7 +7,8 @@ import wiki.util.FileHelpers
 import java.nio.file.NoSuchFileException
 
 trait ModelProperties {
-  val wsdModelName: String = "word_sense_disambiguation_ranker"
+  val wsdModelName: String     = "word_sense_disambiguation_ranker"
+  val linkingModelName: String = "link_detection_classifier"
 
   /**
     * Try to automatically infer the name of the DB file to use for models.

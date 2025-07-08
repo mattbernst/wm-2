@@ -167,7 +167,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     context.copy(pages = enriched)
   }
 
-  def validateWordSenseData(): Unit = {
+  def validateWordSenseModel(): Unit = {
     require(
       db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
       "Extraction has not completed. Finish extraction and training first."
@@ -175,6 +175,17 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     require(
       db.mlModel.read(wsdModelName).nonEmpty,
       s"Could not find model $wsdModelName in db. Run make prepare-disambiguation."
+    )
+  }
+
+  def validateLinkingModel(): Unit = {
+    require(
+      db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
+      "Extraction has not completed. Finish extraction and training first."
+    )
+    require(
+      db.mlModel.read(linkingModelName).nonEmpty,
+      s"Could not find model $linkingModelName in db. Run make prepare-disambiguation."
     )
   }
 

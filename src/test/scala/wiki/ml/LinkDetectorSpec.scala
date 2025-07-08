@@ -65,7 +65,7 @@ class LinkDetectorSpec extends UnitSpec {
   }
 
   private def approximatelyEqual(a: Double, b: Double, epsilon: Double = 0.01): Boolean =
-    (a-b).abs < epsilon
+    (a - b).abs < epsilon
 
   lazy val detector = {
     val model = FileHelpers.readBinaryFile("src/test/resources/wiki_en_link_validity.cbm")

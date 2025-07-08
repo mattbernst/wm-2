@@ -1,7 +1,8 @@
-.PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation train-link-detector
+.PHONY: build clean extract extract-graal extract_with_profiling fetch_english_wikipedia fetch_french_wikipedia fetch_simple_english_wikipedia format load_disambiguation load_linking prepare_link_training test train_disambiguation train_link_detector
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
-PREPARE_DISAMBIGUATION_MAIN := wiki.service.PrepareDisambiguation
+LOAD_DISAMBIGUATION_MAIN := wiki.service.LoadDisambiguationModel
+LOAD_LINKING_MAIN := wiki.service.LoadLinkDetectionModel
 PREPARE_LINK_TRAINING_MAIN := wiki.extractor.ExtractLinkTrainingData
 WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
@@ -17,13 +18,13 @@ build:
 extract: build
 	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
-fetch-english-wikipedia:
+fetch_english_wikipedia:
 	curl -L -o enwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
 
-fetch-french-wikipedia:
+fetch_french_wikipedia:
 	curl -L -o frwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/frwiki/latest/frwiki-latest-pages-articles.xml.bz2
 
-fetch-simple-english-wikipedia:
+fetch_simple_english_wikipedia:
 	curl -L -o simplewiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/simplewiki/latest/simplewiki-latest-pages-articles.xml.bz2
 
 P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=10000MB,filename=extraction.jfr
@@ -31,7 +32,7 @@ P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+Unloc
 # Mission Control
 # https://www.oracle.com/java/technologies/jdk-mission-control.html
 # https://github.com/openjdk/jmc
-extract-with-profiling: build
+extract_with_profiling: build
 	java $(P_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
 format:
@@ -40,16 +41,19 @@ format:
 test:
 	sbt test
 
-prepare-disambiguation: build
-	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_DISAMBIGUATION_MAIN) $(input)
+load_disambiguation: build
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_DISAMBIGUATION_MAIN) $(input)
 
-prepare-link-training: build
+load_linking: build
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_LINKING_MAIN) $(input)
+
+prepare_link_training: build
 	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
 
-run-web-service: build
+run_web_service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
 
-train-disambiguation:
+train_disambiguation:
 	@echo "Setting up disambiguation training..."
 	@# Check for CSV files and determine language
 	@if [ -n "$(WP_LANG)" ]; then \
@@ -111,7 +115,7 @@ train-disambiguation:
 		--train-file ../wiki_$${LANG_CODE}_disambiguation-train.csv \
 		--val-file ../wiki_$${LANG_CODE}_disambiguation-test.csv
 
-train-link-detector:
+train_link_detector:
 	@echo "Setting up link detection training..."
 	@# Check for CSV files and determine language
 	@if [ -n "$(WP_LANG)" ]; then \

@@ -163,7 +163,7 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Log
       cacheSize = 500_000
     )
     val serviceOps = new ServiceOps(db, params = params)
-    serviceOps.validateWordSenseData()
+    serviceOps.validateWordSenseModel()
     serviceOps
   }
 
