@@ -13,14 +13,14 @@ the Scala build tool. The code has been tested on JREs 17 through 23.
 The Makefile is written for GNU Make.
 
 The CatBoost model training relies on Python 3.8+ and several libraries, which will be automatically installed via
-[uv](https://github.com/astral-sh/uv) when invoking `make train-disambiguation`.
+[uv](https://github.com/astral-sh/uv) when invoking `make train_disambiguation`.
 
 ### Input data
 
 Download [the latest pages and articles](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
-for English Wikipedia by running `make fetch-english-wikipedia`. As of 2024-09-03 the file is about 21 GB originally
+for English Wikipedia by running `make fetch_english_wikipedia`. As of 2024-09-03 the file is about 21 GB originally
 compressed as .bz2 and 97 GB decompressed. To run a faster end-to-end test you may first want to use the Simple English
-Wikipedia, obtained with `make fetch-simple-english-wikipedia`.
+Wikipedia, obtained with `make fetch_simple_english_wikipedia`.
 
 It is possible to run the extraction process directly from the downloaded .bz2 file but this will be slow. The
 code will spend much of its time decompressing the data and the worker threads may be starved. If you are going to run
@@ -63,7 +63,7 @@ The last extraction phase will write CSV files for training word sense disambigu
 working directory. After that, you can run
 
 ```
-make train-disambiguation
+make train_disambiguation
 ```
 
 to train CatBoost models. Both extraction and model training must be run before starting the service for the first time.

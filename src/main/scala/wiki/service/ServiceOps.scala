@@ -174,7 +174,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     )
     require(
       db.mlModel.read(wsdModelName).nonEmpty,
-      s"Could not find model $wsdModelName in db. Run make prepare-disambiguation."
+      s"Could not find model $wsdModelName in db. Run make prepare_disambiguation."
     )
   }
 
@@ -185,7 +185,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     )
     require(
       db.mlModel.read(linkingModelName).nonEmpty,
-      s"Could not find model $linkingModelName in db. Run make prepare-disambiguation."
+      s"Could not find model $linkingModelName in db. Run make prepare_disambiguation."
     )
   }
 
