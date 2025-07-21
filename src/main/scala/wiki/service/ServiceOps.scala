@@ -1,14 +1,15 @@
 package wiki.service
 
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
+import org.apache.commons.lang3.StringUtils
 import upickle.default.*
 import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.extractor.language.types.NGram
-import wiki.extractor.types.{Context, LabelCounter, Page, WordSense}
+import wiki.extractor.types.{Context, LabelCounter, LinkModelEntry, Page, WordSense}
 import wiki.extractor.{ArticleComparer, Contextualizer}
-import wiki.ml.{WordSenseCandidate, WordSenseDisambiguator, WordSenseGroup}
-import wiki.util.ConfiguredProperties
+import wiki.ml.{LabelLinkFeatures, LinkDetector, WordSenseCandidate, WordSenseDisambiguator, WordSenseGroup}
+import wiki.util.{ConfiguredProperties, FileHelpers}
 
 import scala.collection.mutable
 
@@ -151,6 +152,44 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       }
   }
 
+  private def makeLinkFeatures(text: String,
+                               context: Context,
+                               page: Page): Array[LabelLinkFeatures] = {
+    val pageLabels = removeNoisyLabels(contextualizer.getLabels(text), params.minSenseProbability)
+
+    val docLength = text.length.toDouble
+    val resolvedSenses = resolveSenses(pageLabels, context)
+      .map(r => (r.nGram, r.resolvedLabel))
+      .toMap
+
+    pageLabels.flatMap { nGram =>
+      val firstOccurrence = text.indexOf(nGram.stringContent) / docLength
+      val lastOccurrence  = text.lastIndexOf(nGram.stringContent) / docLength
+      assert(firstOccurrence > -1)
+      assert(lastOccurrence > -1)
+      val occurrences     = StringUtils.countMatches(text, nGram.stringContent)
+      val linkProbability = labelCounter.getLinkProbability(nGram.stringContent)
+
+      resolvedSenses.get(nGram).filter(_ => linkProbability.nonEmpty).map { resolvedLabel =>
+        val senseId = resolvedLabel.page.id
+
+        LabelLinkFeatures(
+          label = nGram,
+          linkedPageId = senseId,
+          normalizedOccurrences = math.log(occurrences + 1),
+          maxDisambigConfidence = resolvedLabel.allSenses.values.max,
+          avgDisambigConfidence = resolvedLabel.allSenses.values.sum / resolvedLabel.allSenses.size,
+          relatednessToContext = contextualizer.getRelatedness(senseId, context),
+          relatednessToOtherTopics = -1.0, // Assigned later in assignRelatednessToOtherTopics
+          linkProbability = linkProbability.get,
+          firstOccurrence = firstOccurrence,
+          lastOccurrence = lastOccurrence,
+          spread = lastOccurrence - firstOccurrence
+        )
+      }
+    }
+  }
+
   /**
     * Enrich the Context with full page data. Normally the representative pages
     * only have bare page IDs.
@@ -225,9 +264,14 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       language = props.language
     )
 
-  lazy val wsd: WordSenseDisambiguator = {
+  private lazy val wsd: WordSenseDisambiguator = {
     val modelData = db.mlModel.read(wsdModelName).get
     new WordSenseDisambiguator(modelData)
+  }
+
+  private lazy val linkDetector: LinkDetector = {
+    val modelData = db.mlModel.read(linkingModelName).get
+    new LinkDetector(modelData)
   }
 
   private lazy val props: ConfiguredProperties =
