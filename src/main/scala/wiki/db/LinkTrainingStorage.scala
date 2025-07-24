@@ -43,7 +43,8 @@ object LinkTrainingStorage {
               avgDisambigConfidence = rs.double("avg_disambig_confidence"),
               relatednessToContext = rs.double("relatedness_to_context"),
               relatednessToOtherTopics = rs.double("relatedness_to_other_topics"),
-              linkProbability = rs.double("link_probability"),
+              avgLinkProbability = rs.double("avg_link_probability"),
+              maxLinkProbability = rs.double("max_link_probability"),
               firstOccurrence = rs.double("first_occurrence"),
               lastOccurrence = rs.double("last_occurrence"),
               spread = rs.double("spread"),
@@ -128,19 +129,19 @@ object LinkTrainingStorage {
   )(implicit session: DBSession
   ): Unit = {
     sql"""INSERT INTO $exampleTable
-         (context_id, group_name, source_page_id, label,
+         (context_id, group_name, source_page_id,
          sense_page_title, sense_id, normalized_occurrences,
          max_disambig_confidence, avg_disambig_confidence,
          relatedness_to_context, relatedness_to_other_topics,
-         link_probability, first_occurrence, last_occurrence,
-         spread, is_valid_link)
-         VALUES ($contextId, $group, $sourcePageId, ${example.label},
+         avg_link_probability, max_link_probability, first_occurrence,
+         last_occurrence, spread, is_valid_link)
+         VALUES ($contextId, $group, $sourcePageId,
                  ${example.sensePageTitle}, ${example.senseId},
                  ${example.normalizedOccurrences}, ${example.maxDisambigConfidence},
                  ${example.avgDisambigConfidence}, ${example.relatednessToContext},
-                 ${example.relatednessToOtherTopics}, ${example.linkProbability},
-                 ${example.firstOccurrence}, ${example.lastOccurrence},
-                 ${example.spread}, ${example.isValidLink})
+                 ${example.relatednessToOtherTopics}, ${example.avgLinkProbability},
+                 ${example.maxLinkProbability}, ${example.firstOccurrence},
+                 ${example.lastOccurrence}, ${example.spread}, ${example.isValidLink})
        """
       .update(): Unit
 

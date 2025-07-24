@@ -8,12 +8,19 @@ import wiki.db.Storage
 import wiki.extractor.language.types.NGram
 import wiki.extractor.types.{Context, LabelCounter, LinkModelEntry, Page, WordSense}
 import wiki.extractor.{ArticleComparer, Contextualizer}
-import wiki.ml.{LabelLinkFeatures, LinkDetector, WordSenseCandidate, WordSenseDisambiguator, WordSenseGroup}
+import wiki.ml.{
+  LabelLinkFeatures,
+  LinkDetector,
+  ScoredSenses,
+  WordSenseCandidate,
+  WordSenseDisambiguator,
+  WordSenseGroup
+}
 import wiki.util.{ConfiguredProperties, FileHelpers}
 
 import scala.collection.mutable
 
-case class ResolvedLabel(label: String, page: Page, allSenses: mutable.Map[Int, Double])
+case class ResolvedLabel(label: String, page: Page, scoredSenses: ScoredSenses)
 
 object ResolvedLabel {
   implicit val rw: ReadWriter[ResolvedLabel] = macroRW
@@ -143,7 +150,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
           val rl = ResolvedLabel(
             label = chosen.wordSenseGroup.label,
             page = pageCache.get(senses.bestPageId),
-            allSenses = senses.scores
+            scoredSenses = senses
           )
           Some(NGResolvedLabel(nGram = chosen.nGram, resolvedLabel = rl))
         } else {
@@ -152,9 +159,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       }
   }
 
-  private def makeLinkFeatures(text: String,
-                               context: Context,
-                               page: Page): Array[LabelLinkFeatures] = {
+  private def makeLinkFeatures(text: String, context: Context, page: Page): Array[LabelLinkFeatures] = {
     val pageLabels = removeNoisyLabels(contextualizer.getLabels(text), params.minSenseProbability)
 
     val docLength = text.length.toDouble
@@ -171,14 +176,16 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       val linkProbability = labelCounter.getLinkProbability(nGram.stringContent)
 
       resolvedSenses.get(nGram).filter(_ => linkProbability.nonEmpty).map { resolvedLabel =>
-        val senseId = resolvedLabel.page.id
+        val senseId          = resolvedLabel.page.id
+        val totalSenseWeight = resolvedLabel.scoredSenses.scores.values.sum
+        val totalSenseCount  = resolvedLabel.scoredSenses.scores.size
 
         LabelLinkFeatures(
           label = nGram,
           linkedPageId = senseId,
           normalizedOccurrences = math.log(occurrences + 1),
-          maxDisambigConfidence = resolvedLabel.allSenses.values.max,
-          avgDisambigConfidence = resolvedLabel.allSenses.values.sum / resolvedLabel.allSenses.size,
+          maxDisambigConfidence = resolvedLabel.scoredSenses.bestScore, // TODO fix
+          avgDisambigConfidence = totalSenseWeight / totalSenseCount,   // TODO fix
           relatednessToContext = contextualizer.getRelatedness(senseId, context),
           relatednessToOtherTopics = -1.0, // Assigned later in assignRelatednessToOtherTopics
           linkProbability = linkProbability.get,

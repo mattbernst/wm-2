@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS link_training_example (
     context_id INTEGER NOT NULL,     -- References the context for this example
     group_name TEXT NOT NULL,        -- Training group (e.g., "training", "test", "validation")
     source_page_id INTEGER NOT NULL, -- References the page from LinkFeatures that contains this example
-    label TEXT NOT NULL,
     sense_page_title TEXT NOT NULL,
     sense_id INTEGER NOT NULL,
     normalized_occurrences REAL NOT NULL,
@@ -11,7 +10,8 @@ CREATE TABLE IF NOT EXISTS link_training_example (
     avg_disambig_confidence REAL NOT NULL,
     relatedness_to_context REAL NOT NULL,
     relatedness_to_other_topics REAL NOT NULL,
-    link_probability REAL NOT NULL,
+    avg_link_probability REAL NOT NULL,
+    max_link_probability REAL NOT NULL,
     first_occurrence REAL NOT NULL,
     last_occurrence REAL NOT NULL,
     spread REAL NOT NULL,

@@ -77,7 +77,8 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
         "avgDisambigConfidence",
         "relatednessToContext",
         "relatednessToOtherTopics",
-        "linkProbability",
+        "avgLinkProbability",
+        "maxLinkProbability",
         "firstOccurrence",
         "lastOccurrence",
         "spread",
@@ -86,7 +87,7 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
       writer.println(headerFields.mkString(","))
       rows.foreach { row =>
         writer.println(
-          s"${row.normalizedOccurrences},${row.maxDisambigConfidence},${row.avgDisambigConfidence},${row.relatednessToContext},${row.relatednessToOtherTopics},${row.linkProbability},${row.firstOccurrence},${row.lastOccurrence},${row.spread},${row.isValidLink}"
+          s"${row.normalizedOccurrences},${row.maxDisambigConfidence},${row.avgDisambigConfidence},${row.relatednessToContext},${row.relatednessToOtherTopics},${row.avgLinkProbability},${row.maxLinkProbability},${row.firstOccurrence},${row.lastOccurrence},${row.spread},${row.isValidLink}"
         )
       }
     } finally {
