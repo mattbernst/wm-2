@@ -18,7 +18,7 @@ class LinkDetectorSpec extends UnitSpec {
       relatednessToContext = 0.17740502993759308,
       relatednessToOtherTopics = 0.1276921533737109,
       avgLinkProbability = 0.33660340009315326,
-      maxLinkProbability = 0.49557522123893805,
+      maxLinkProbability = 0.50557522123893805,
       firstOccurrence = 0.051762114537444934,
       lastOccurrence = 0.13892385147891756,
       spread = 0.08716173694147263
@@ -26,7 +26,7 @@ class LinkDetectorSpec extends UnitSpec {
 
     val res = detector.predict(Array(input)).head
     // Detected as likely link from features
-    approximatelyEqual(res.prediction, 0.53) shouldBe true
+    approximatelyEqual(res.prediction, 0.56) shouldBe true
   }
 
   it should "predict link-worthiness from features (2)" in {

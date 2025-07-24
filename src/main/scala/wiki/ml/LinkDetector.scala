@@ -1,10 +1,11 @@
 package wiki.ml
 
+import upickle.default.*
 import ai.catboost.{CatBoostModel, CatBoostPredictions}
 
 case class LabelLinkFeatures(
   linkedPageId: Int,
-  // Fields above are for bookkeeping. Fields below are model features.
+  // Linked page ID is for bookkeeping. Fields below are model features.
   normalizedOccurrences: Double,
   maxDisambigConfidence: Double,
   avgDisambigConfidence: Double,
@@ -16,7 +17,11 @@ case class LabelLinkFeatures(
   lastOccurrence: Double,
   spread: Double)
 
-case class LabelLinkPrediction(linkedPageId: Int, prediction: Double)
+case class PageLinkPrediction(linkedPageId: Int, prediction: Double)
+
+object PageLinkPrediction {
+  implicit val rw: ReadWriter[PageLinkPrediction] = macroRW
+}
 
 class LinkDetector(catBoostModel: Array[Byte]) {
 
@@ -51,7 +56,7 @@ class LinkDetector(catBoostModel: Array[Byte]) {
     * @return           An array of per-candidate predictions. Higher
     *                   prediction score means more likely to be linked.
     */
-  def predict(candidates: Array[LabelLinkFeatures]): Array[LabelLinkPrediction] = {
+  def predict(candidates: Array[LabelLinkFeatures]): Array[PageLinkPrediction] = {
     // Prepare numerical features.
     // The feature order must exactly match the order used during training.
     // See pysrc/train_linking.py and ExtractLinkTrainingData.scala
@@ -82,7 +87,7 @@ class LinkDetector(catBoostModel: Array[Byte]) {
       // using the sigmoid function.
       val rawPred     = predictions.get(j, 0)
       val probability = 1.0 / (1.0 + math.exp(-rawPred))
-      LabelLinkPrediction(
+      PageLinkPrediction(
         linkedPageId = candidate.linkedPageId,
         prediction = probability
       )

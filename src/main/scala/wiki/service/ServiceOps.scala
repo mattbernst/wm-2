@@ -6,7 +6,7 @@ import upickle.default.*
 import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.extractor.language.types.NGram
-import wiki.extractor.types.{Context, LabelCounter, Page, WordSense}
+import wiki.extractor.types.*
 import wiki.extractor.{ArticleComparer, Contextualizer}
 import wiki.ml.*
 import wiki.util.ConfiguredProperties
@@ -20,10 +20,15 @@ object ResolvedLabel {
 }
 
 case class NGResolvedLabel(nGram: NGram, resolvedLabel: ResolvedLabel)
-case class ContextWithLabels(context: Context, labels: Seq[String], resolvedLabels: Seq[ResolvedLabel])
 
-object ContextWithLabels {
-  implicit val rw: ReadWriter[ContextWithLabels] = macroRW
+case class LabelsAndLinks(
+  context: Context,
+  labels: Seq[String],
+  resolvedLabels: Seq[ResolvedLabel],
+  links: Seq[(Page, Double)])
+
+object LabelsAndLinks {
+  implicit val rw: ReadWriter[LabelsAndLinks] = macroRW
 }
 
 case class ServiceParams(minSenseProbability: Double, cacheSize: Int)
@@ -35,7 +40,8 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
 
   /**
     * Get all valid labels derivable from a document, their resolved senses,
-    * and an enriched Context for the document. The pages included in the
+    * and an enriched Context for the document. Also get link predictions for
+    * pages that the document might be linked to. The pages included in the
     * Context indicate the topical tendency of the document contents. Very
     * short documents and very long documents will produce low-quality
     * Contexts.
@@ -43,17 +49,20 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     * @param req DocumentProcessingRequest containing a plain text document
     * @return    All derivable labels and a representative Context
     */
-  def getContextWithLabels(req: DocumentProcessingRequest): ContextWithLabels = {
+  def getLabelsAndLinks(req: DocumentProcessingRequest): LabelsAndLinks = {
     val labels          = contextualizer.getLabels(req.doc)
     val context         = contextualizer.getContext(labels.map(_.stringContent), params.minSenseProbability)
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
-    ContextWithLabels(
+    val resolvedLabels  = resolveSenses(cleanedLabels, context)
+    val predictedLinks  = getLinkPredictions(req.doc, resolvedLabels, context)
+    val linkedPages     = predictedLinks.map(e => (pageCache.get(e.linkedPageId), e.prediction))
+
+    LabelsAndLinks(
       context = enrichedContext,
       labels = cleanedLabels.map(_.stringContent).toSeq.distinct,
-      resolvedLabels = resolveSenses(cleanedLabels, context)
-        .map(_.resolvedLabel)
-        .toSeq
+      resolvedLabels = resolvedLabels.map(_.resolvedLabel).toSeq,
+      links = linkedPages.toSeq
     )
   }
 
@@ -152,43 +161,88 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       }
   }
 
-  private def makeLinkFeatures(text: String, context: Context, page: Page): Array[LabelLinkFeatures] = {
-    // TODO fix everything
-    val pageLabels = removeNoisyLabels(contextualizer.getLabels(text), params.minSenseProbability)
+  private def getLinkPredictions(
+    text: String,
+    resolvedNgrams: Array[NGResolvedLabel],
+    context: Context
+  ): Array[PageLinkPrediction] = {
+    val docLength   = text.length.toDouble
+    val topicGroups = resolvedNgrams.groupBy(_.resolvedLabel.page)
+    val topics = topicGroups.flatMap {
+      case (topicPage, allLabels) =>
+        val linkProbabilities: Map[String, Double] = allLabels
+          .map(e => (e.nGram.stringContent, labelCounter.getLinkProbability(e.nGram.stringContent)))
+          .filter(_._2.exists(_ > params.minSenseProbability))
+          .map(e => (e._1, e._2.get))
+          .toMap
 
-    val docLength = text.length.toDouble
-    val resolvedSenses = resolveSenses(pageLabels, context)
-      .map(r => (r.nGram, r.resolvedLabel))
-      .toMap
+        if (linkProbabilities.nonEmpty) {
+          val labels                = allLabels.filter(e => linkProbabilities.contains(e.nGram.stringContent))
+          val occurrences           = labels.map(e => StringUtils.countMatches(text, e.nGram.stringContent)).sum
+          val disambigConfidences   = labels.map(_.resolvedLabel.scoredSenses.bestScore)
+          val maxDisambigConfidence = disambigConfidences.max
+          val avgDisambigConfidence = disambigConfidences.sum / labels.length
+          val firstOccurrence       = labels.map(e => e.nGram.start).min / docLength
+          val lastOccurrence        = labels.map(e => e.nGram.start).max / docLength
+          val avgLinkProbability    = linkProbabilities.values.sum / linkProbabilities.size
+          val maxLinkProbability    = linkProbabilities.values.max
 
-    pageLabels.flatMap { nGram =>
-      val firstOccurrence = text.indexOf(nGram.stringContent) / docLength
-      val lastOccurrence  = text.lastIndexOf(nGram.stringContent) / docLength
-      assert(firstOccurrence > -1)
-      assert(lastOccurrence > -1)
-      val occurrences     = StringUtils.countMatches(text, nGram.stringContent)
-      val linkProbability = labelCounter.getLinkProbability(nGram.stringContent)
+          val e = LabelLinkFeatures(
+            linkedPageId = topicPage.id,
+            normalizedOccurrences = math.log(occurrences + 1),
+            maxDisambigConfidence = maxDisambigConfidence,
+            avgDisambigConfidence = avgDisambigConfidence,
+            relatednessToContext = contextualizer.getRelatedness(topicPage.id, context),
+            relatednessToOtherTopics = -1.0,
+            avgLinkProbability = avgLinkProbability,
+            maxLinkProbability = maxLinkProbability,
+            firstOccurrence = firstOccurrence,
+            lastOccurrence = lastOccurrence,
+            spread = lastOccurrence - firstOccurrence
+          )
+          Some(e)
+        } else {
+          None
+        }
+    }.toArray
 
-      resolvedSenses.get(nGram).filter(_ => linkProbability.nonEmpty).map { resolvedLabel =>
-        val senseId          = resolvedLabel.page.id
-        val totalSenseWeight = resolvedLabel.scoredSenses.scores.values.sum
-        val totalSenseCount  = resolvedLabel.scoredSenses.scores.size
+    val topicLinks  = topics.map(e => TopicLink(e.linkedPageId, e.avgLinkProbability, e.normalizedOccurrences))
+    val relatedness = getRelatednessToOtherTopics(input = topicLinks, topN = 25)
+    val candidates  = topics.map(e => e.copy(relatednessToOtherTopics = relatedness(e.linkedPageId)))
+    linkDetector.predict(candidates)
+  }
 
-        LabelLinkFeatures(
-          linkedPageId = senseId,
-          normalizedOccurrences = math.log(occurrences + 1),
-          maxDisambigConfidence = resolvedLabel.scoredSenses.bestScore, // TODO fix
-          avgDisambigConfidence = totalSenseWeight / totalSenseCount,   // TODO fix
-          relatednessToContext = contextualizer.getRelatedness(senseId, context),
-          relatednessToOtherTopics = -1.0, // Assigned later in assignRelatednessToOtherTopics
-          avgLinkProbability = linkProbability.get,
-          maxLinkProbability = 0.0, // TODO fix
-          firstOccurrence = firstOccurrence,
-          lastOccurrence = lastOccurrence,
-          spread = lastOccurrence - firstOccurrence
-        )
-      }
-    }
+  /**
+    * A topic's relatedness to other topics can't be calculated until the
+    * full collection of topics is ready. Calculate relatedness to other
+    * topics using a context generated from the top N topics.
+    *
+    * @param input A sequence of TopicLink objects from a single document
+    * @param topN  Maximum number of "other topics" to use for relatedness
+    * @return      A map of sense IDs to other-topic relatedness values
+    */
+  def getRelatednessToOtherTopics(input: Array[TopicLink], topN: Int): Map[Int, Double] = {
+    val senses = input.map(_.senseId)
+    require(senses.length == senses.distinct.length, "Sense IDs for topics must not repeat")
+    // Generate a new context for comparison, based on link relevance
+    val topCandidates = input
+      .map(
+        e =>
+          RepresentativePage(
+            pageId = e.senseId,
+            weight = e.avgLinkProbability * e.normalizedOccurrences,
+            page = None
+          )
+      )
+      .sortBy(-_.weight)
+      .take(topN)
+
+    val context = Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
+
+    input.map { entry =>
+      val relatedness = contextualizer.getRelatedness(entry.senseId, context)
+      (entry.senseId, relatedness)
+    }.toMap
   }
 
   /**

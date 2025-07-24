@@ -41,29 +41,34 @@ class LinkFeatureProcessor(db: Storage) extends Logging {
       .getOrElse(Array())
 
     val resolvedNgrams = ops.resolveSenses(pageLabels, context)
-
-    val rawEntries = assignRelatednessToOtherTopics(
-      input = makeLinkModelEntries(
-        markup = markup.wikitext.get,
-        context = context,
-        page = page,
-        examples = resolvedNgrams
-      ),
-      topN = 25
+    val linkModelEntries = makeLinkModelEntries(
+      markup = markup.wikitext.get,
+      context = context,
+      page = page,
+      examples = resolvedNgrams
+    )
+    val topicLinks = linkModelEntries.map(
+      e =>
+        TopicLink(
+          senseId = e.senseId,
+          avgLinkProbability = e.avgLinkProbability,
+          normalizedOccurrences = e.normalizedOccurrences
+        )
     )
 
-    val examples = Array.ofDim[LinkModelEntry](rawEntries.length)
-    var j        = 0
+    val relatedness = ops.getRelatednessToOtherTopics(input = topicLinks, topN = 25)
+    val examples    = Array.ofDim[LinkModelEntry](linkModelEntries.length)
+    var j           = 0
     // A topic that is not an ordinary article gets ignored
     // completely. If a topic appears among the link targets, it serves as a
     // positive example for training a linking model. Otherwise, it is a
     // negative example.
-    rawEntries.foreach { entry =>
+    linkModelEntries.foreach { entry =>
       if (pageTypeCache.get(entry.senseId) == ARTICLE) {
         if (linkedPages.contains(entry.senseId)) {
-          examples(j) = entry.copy(isValidLink = true)
+          examples(j) = entry.copy(isValidLink = true, relatednessToOtherTopics = relatedness(entry.senseId))
         } else {
-          examples(j) = entry.copy(isValidLink = false)
+          examples(j) = entry.copy(isValidLink = false, relatednessToOtherTopics = relatedness(entry.senseId))
         }
         j += 1
       }
@@ -143,39 +148,6 @@ class LinkFeatureProcessor(db: Storage) extends Logging {
           None
         }
     }.toArray
-  }
-
-  /**
-    * A topic's relatedness to other topics can't be calculated until the
-    * full collection of topics is ready. Update each of the entries with
-    * relatedness to other topics.
-    *
-    * @param input A group of LinkModelEntry objects from a single document,
-    *              without relatednessToOtherTopics
-    * @param topN  Maximum number of "other topics" to use for relatedness
-    * @return      A group of LinkModelEntry objects from a single document,
-    *              with relatednessToOtherTopics assigned
-    */
-  private def assignRelatednessToOtherTopics(input: Array[LinkModelEntry], topN: Int): Array[LinkModelEntry] = {
-    // Generate a new context for comparison, based on link relevance
-    val topCandidates = input
-      .map(
-        e =>
-          RepresentativePage(
-            pageId = e.senseId,
-            weight = e.avgLinkProbability * e.normalizedOccurrences,
-            page = None
-          )
-      )
-      .sortBy(-_.weight)
-      .take(topN)
-
-    val context = Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
-
-    input.map { entry =>
-      val relatedness = ops.contextualizer.getRelatedness(entry.senseId, context)
-      entry.copy(relatednessToOtherTopics = relatedness)
-    }
   }
 
   private def tick(): Unit = this.synchronized {

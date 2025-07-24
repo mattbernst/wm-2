@@ -36,6 +36,8 @@ case class LinkTrainingFields(
   spread: Double,
   isValidLink: Boolean)
 
+case class TopicLink(senseId: Int, avgLinkProbability: Double, normalizedOccurrences: Double)
+
 case class LinkFeatures(
   group: String,
   page: Page,
