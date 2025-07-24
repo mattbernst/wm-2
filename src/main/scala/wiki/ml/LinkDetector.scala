@@ -1,10 +1,8 @@
 package wiki.ml
 
 import ai.catboost.{CatBoostModel, CatBoostPredictions}
-import wiki.extractor.language.types.NGram
 
 case class LabelLinkFeatures(
-  label: NGram,
   linkedPageId: Int,
   // Fields above are for bookkeeping. Fields below are model features.
   normalizedOccurrences: Double,
@@ -12,12 +10,13 @@ case class LabelLinkFeatures(
   avgDisambigConfidence: Double,
   relatednessToContext: Double,
   relatednessToOtherTopics: Double,
-  linkProbability: Double,
+  avgLinkProbability: Double,
+  maxLinkProbability: Double,
   firstOccurrence: Double,
   lastOccurrence: Double,
   spread: Double)
 
-case class LabelLinkPrediction(label: NGram, linkedPageId: Int, prediction: Double)
+case class LabelLinkPrediction(linkedPageId: Int, prediction: Double)
 
 class LinkDetector(catBoostModel: Array[Byte]) {
 
@@ -63,7 +62,8 @@ class LinkDetector(catBoostModel: Array[Byte]) {
         candidate.avgDisambigConfidence.toFloat,
         candidate.relatednessToContext.toFloat,
         candidate.relatednessToOtherTopics.toFloat,
-        candidate.linkProbability.toFloat,
+        candidate.avgLinkProbability.toFloat,
+        candidate.maxLinkProbability.toFloat,
         candidate.firstOccurrence.toFloat,
         candidate.lastOccurrence.toFloat,
         candidate.spread.toFloat
@@ -83,7 +83,6 @@ class LinkDetector(catBoostModel: Array[Byte]) {
       val rawPred     = predictions.get(j, 0)
       val probability = 1.0 / (1.0 + math.exp(-rawPred))
       LabelLinkPrediction(
-        label = candidate.label,
         linkedPageId = candidate.linkedPageId,
         prediction = probability
       )

@@ -6,17 +6,10 @@ import upickle.default.*
 import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.extractor.language.types.NGram
-import wiki.extractor.types.{Context, LabelCounter, LinkModelEntry, Page, WordSense}
+import wiki.extractor.types.{Context, LabelCounter, Page, WordSense}
 import wiki.extractor.{ArticleComparer, Contextualizer}
-import wiki.ml.{
-  LabelLinkFeatures,
-  LinkDetector,
-  ScoredSenses,
-  WordSenseCandidate,
-  WordSenseDisambiguator,
-  WordSenseGroup
-}
-import wiki.util.{ConfiguredProperties, FileHelpers}
+import wiki.ml.*
+import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 
@@ -160,6 +153,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
   }
 
   private def makeLinkFeatures(text: String, context: Context, page: Page): Array[LabelLinkFeatures] = {
+    // TODO fix everything
     val pageLabels = removeNoisyLabels(contextualizer.getLabels(text), params.minSenseProbability)
 
     val docLength = text.length.toDouble
@@ -181,14 +175,14 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
         val totalSenseCount  = resolvedLabel.scoredSenses.scores.size
 
         LabelLinkFeatures(
-          label = nGram,
           linkedPageId = senseId,
           normalizedOccurrences = math.log(occurrences + 1),
           maxDisambigConfidence = resolvedLabel.scoredSenses.bestScore, // TODO fix
           avgDisambigConfidence = totalSenseWeight / totalSenseCount,   // TODO fix
           relatednessToContext = contextualizer.getRelatedness(senseId, context),
           relatednessToOtherTopics = -1.0, // Assigned later in assignRelatednessToOtherTopics
-          linkProbability = linkProbability.get,
+          avgLinkProbability = linkProbability.get,
+          maxLinkProbability = 0.0, // TODO fix
           firstOccurrence = firstOccurrence,
           lastOccurrence = lastOccurrence,
           spread = lastOccurrence - firstOccurrence

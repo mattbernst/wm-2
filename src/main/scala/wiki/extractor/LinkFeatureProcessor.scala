@@ -3,26 +3,25 @@ package wiki.extractor
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import org.apache.commons.lang3.StringUtils
 import wiki.db.Storage
-import wiki.extractor.language.types.NGram
 import wiki.extractor.types.*
 import wiki.extractor.types.PageType.ARTICLE
 import wiki.extractor.util.Progress
 import wiki.service.{NGResolvedLabel, ServiceOps, ServiceParams}
-import wiki.util.{ConfiguredProperties, Logging}
+import wiki.util.Logging
 
-class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Logging {
+class LinkFeatureProcessor(db: Storage) extends Logging {
 
   /**
-   * Generate per-topic linking model features from the contents of a
-   * Wikipedia page. Topics that are not ordinary articles will be
-   * ignored.
-   *
-   * @param pageId    The numeric ID of the Wikipedia page
-   * @param groupName The name of the data group this page is in, like
-   *                  "linking-train"
-   * @return          A LinkFeatures object with context and examples from
-   *                  the original page
-   */
+    * Generate per-topic linking model features from the contents of a
+    * Wikipedia page. Topics that are not ordinary articles will be
+    * ignored.
+    *
+    * @param pageId    The numeric ID of the Wikipedia page
+    * @param groupName The name of the data group this page is in, like
+    *                  "linking-train"
+    * @return          A LinkFeatures object with context and examples from
+    *                  the original page
+    */
   def articleToFeatures(pageId: Int, groupName: String): LinkFeatures = {
     tick()
     val context = ops.contextualizer.getContext(pageId, minSenseProbability)
@@ -54,22 +53,20 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Log
     )
 
     val examples = Array.ofDim[LinkModelEntry](rawEntries.length)
-    var j = 0
+    var j        = 0
     // A topic that is not an ordinary article gets ignored
     // completely. If a topic appears among the link targets, it serves as a
     // positive example for training a linking model. Otherwise, it is a
     // negative example.
-    rawEntries
-      .foreach { entry =>
-        if (pageTypeCache.get(entry.senseId) == ARTICLE) {
-          if (linkedPages.contains(entry.senseId)) {
-            examples(j) = entry.copy(isValidLink = true)
-          }
-          else {
-            examples(j) = entry.copy(isValidLink = false)
-          }
-          j += 1
+    rawEntries.foreach { entry =>
+      if (pageTypeCache.get(entry.senseId) == ARTICLE) {
+        if (linkedPages.contains(entry.senseId)) {
+          examples(j) = entry.copy(isValidLink = true)
+        } else {
+          examples(j) = entry.copy(isValidLink = false)
         }
+        j += 1
+      }
     }
 
     LinkFeatures(
@@ -103,6 +100,7 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Log
     page: Page,
     examples: Array[NGResolvedLabel]
   ): Array[LinkModelEntry] = {
+    val docLength   = markup.length.toDouble
     val topicGroups = examples.groupBy(_.resolvedLabel.page)
 
     topicGroups.flatMap {
@@ -119,8 +117,8 @@ class LinkFeatureProcessor(db: Storage, props: ConfiguredProperties) extends Log
           val disambigConfidences   = labels.map(_.resolvedLabel.scoredSenses.bestScore)
           val maxDisambigConfidence = disambigConfidences.max
           val avgDisambigConfidence = disambigConfidences.sum / labels.length
-          val firstOccurrence       = labels.map(e => e.nGram.start).min
-          val lastOccurrence        = labels.map(e => e.nGram.start).max
+          val firstOccurrence       = labels.map(e => e.nGram.start).min / docLength
+          val lastOccurrence        = labels.map(e => e.nGram.start).max / docLength
           val avgLinkProbability    = linkProbabilities.values.sum / linkProbabilities.size
           val maxLinkProbability    = linkProbabilities.values.max
 

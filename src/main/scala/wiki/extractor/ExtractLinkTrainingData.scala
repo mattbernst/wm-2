@@ -27,7 +27,7 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
 
     logger.info(s"Preparing link training data with db $databaseFileName")
     db = getDb(databaseFileName)
-    val processor = new LinkFeatureProcessor(db, props)
+    val processor = new LinkFeatureProcessor(db)
     db.linkTraining.deleteAll()
     val profile  = props.language.trainingProfile
     val ll       = LanguageLogic.getLanguageLogic(props.language.code)
