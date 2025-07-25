@@ -51,7 +51,7 @@ prepare_link_training: build
 	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
 
 run_web_service: build
-	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
+	java $(P_JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
 
 train_disambiguation:
 	@echo "Setting up disambiguation training..."

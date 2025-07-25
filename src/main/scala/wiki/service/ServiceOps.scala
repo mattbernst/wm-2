@@ -55,7 +55,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
     val resolvedLabels  = resolveSenses(cleanedLabels, context)
-    val predictedLinks  = getLinkPredictions(req.doc, resolvedLabels, context)
+    val predictedLinks  = getLinkPredictions(req.doc, resolvedLabels, context).filter(_.prediction > 0.5)
     val linkedPages     = predictedLinks.map(e => (pageCache.get(e.linkedPageId), e.prediction))
 
     LabelsAndLinks(
