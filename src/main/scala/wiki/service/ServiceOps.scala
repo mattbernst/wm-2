@@ -55,8 +55,10 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
     val resolvedLabels  = resolveSenses(cleanedLabels, context)
-    val predictedLinks  = getLinkPredictions(req.doc, resolvedLabels, context).filter(_.prediction > 0.25)
-    val linkedPages     = predictedLinks.map(e => (pageCache.get(e.linkedPageId), e.prediction))
+    val predictedLinks = getLinkPredictions(req.doc, resolvedLabels, context)
+      .filter(_.prediction > 0.25)
+      .sortBy(-_.prediction)
+    val linkedPages = predictedLinks.map(e => (pageCache.get(e.linkedPageId), e.prediction))
 
     LabelsAndLinks(
       context = enrichedContext,
@@ -268,7 +270,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     )
     require(
       db.mlModel.read(wsdModelName).nonEmpty,
-      s"Could not find model $wsdModelName in db. Run make prepare_disambiguation."
+      s"Could not find model $wsdModelName in db. Run make load_disambiguation."
     )
   }
 
@@ -279,7 +281,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     )
     require(
       db.mlModel.read(linkingModelName).nonEmpty,
-      s"Could not find model $linkingModelName in db. Run make prepare_disambiguation."
+      s"Could not find model $linkingModelName in db. Run make load_linking."
     )
   }
 
@@ -310,7 +312,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
 
   lazy val contextualizer =
     new Contextualizer(
-      maxContextSize = 32,
+      maxContextSize = 25,
       labelIdToSense = labelIdToSense,
       labelToId = labelToId,
       labelCounter = labelCounter,

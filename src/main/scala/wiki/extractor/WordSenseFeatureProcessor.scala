@@ -116,7 +116,7 @@ class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private lazy val contextualizer =
     new Contextualizer(
-      maxContextSize = 32,
+      maxContextSize = 25,
       labelIdToSense = labelIdToSense,
       labelToId = labelToId,
       labelCounter = db.label.read(),
