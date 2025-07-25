@@ -6,9 +6,11 @@ import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
 import wiki.util.Logging
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.hashing.MurmurHash3
 case class CountsWithMax(m: mutable.Map[Int, Int], max: Double)
 case class LinkVector(links: Array[Int], key: Long, distinctLinks: Array[Int])
+case class CommonLinks(links: Array[Int], pageCounts: Array[Int])
 
 object LinkVector {
 
@@ -186,16 +188,16 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     if (a.links.nonEmpty && b.links.nonEmpty) {
       val commonLinks = getCommonLinks(pageCount, a.distinctLinks, b.distinctLinks)
 
-      if (commonLinks.nonEmpty) {
-        val vectorA     = Array.ofDim[Double](commonLinks.length)
-        val vectorB     = Array.ofDim[Double](commonLinks.length)
+      if (commonLinks.links.nonEmpty) {
+        val vectorA     = Array.ofDim[Double](commonLinks.links.length)
+        val vectorB     = Array.ofDim[Double](commonLinks.links.length)
         val linkACounts = getCounts(a)
         val linkBCounts = getCounts(b)
 
         var j = 0
-        while (j < commonLinks.length) {
-          val link                    = commonLinks(j)
-          val countDistinct           = pageCount.count(link)
+        while (j < commonLinks.links.length) {
+          val link                    = commonLinks.links(j)
+          val countDistinct           = commonLinks.pageCounts(j)
           val inverseArticleFrequency = math.log(articleCount / countDistinct.toDouble)
           val linkFrequencyA          = 0.5 + (0.5 * (linkACounts.m(link) / linkACounts.max))
           val linkFrequencyB          = 0.5 + (0.5 * (linkBCounts.m(link) / linkBCounts.max))
@@ -217,7 +219,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     pageCount: PageCount,
     distinctLinksA: Array[Int],
     distinctLinksB: Array[Int]
-  ): Array[Int] = {
+  ): CommonLinks = {
     val maxDistinctOverlap      = math.min(distinctLinksA.length, distinctLinksB.length)
     val commonLinks: Array[Int] = Array.ofDim[Int](maxDistinctOverlap)
 
@@ -227,7 +229,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
 
     // Two-index approach since both arrays are sorted
     while (i < distinctLinksA.length && j < distinctLinksB.length) {
-      if (distinctLinksA(i) == distinctLinksB(j) && pageCount.count(distinctLinksA(i)) > 0) {
+      if (distinctLinksA(i) == distinctLinksB(j)) {
         commonLinks(k) = distinctLinksA(i)
         k += 1
         i += 1
@@ -241,8 +243,21 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       }
     }
 
-    // Return only the filled portion of the array
-    commonLinks.take(k)
+    // Return only common links that have non-zero page counts, along with
+    // their counts
+    val filteredLinks  = ListBuffer[Int]()
+    val filteredCounts = ListBuffer[Int]()
+    var m              = 0
+    while (m < k) {
+      val count = pageCount.count(commonLinks(m))
+      if (count > 0) {
+        filteredLinks.append(commonLinks(m))
+        filteredCounts.append(count)
+      }
+      m += 1
+    }
+
+    CommonLinks(links = filteredLinks.toArray, pageCounts = filteredCounts.toArray)
   }
 
   private def getCounts(v: LinkVector): CountsWithMax =
