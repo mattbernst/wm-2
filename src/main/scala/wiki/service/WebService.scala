@@ -55,8 +55,8 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
 
   override def main(args: Array[String]): Unit = {
     val serviceParams = ServiceParams(
-      minSenseProbability = 0.01,
-      cacheSize = 500_000
+      minSenseProbability = 0.02,
+      cacheSize = 1_000_000
     )
 
     val conf = new Conf(args.toIndexedSeq)
