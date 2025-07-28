@@ -61,7 +61,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
 
     val conf = new Conf(args.toIndexedSeq)
     val databaseFileName = conf.database
-      .orElse(inferDbFile())
+      .orElse(inferDbFile(None))
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
     val defaultPort = 7777

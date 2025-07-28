@@ -1,6 +1,6 @@
 # Usage
 
-## Extracting data from English Wikipedia
+## Preparing data, models, and web service for English Wikipedia
 
 ### Software requirements
 
@@ -15,11 +15,35 @@ The Makefile is written for GNU Make.
 The CatBoost model training relies on Python 3.8+ and several libraries, which will be automatically installed via
 [uv](https://github.com/astral-sh/uv) when invoking `make train_disambiguation`.
 
+### Quick start
+
+To quickly generate a small, complete database with trained models, run
+```
+WP_LANG=en_simple make all_in_one
+```
+
+If nothing fails, you can then run
+```
+make run_web_service
+```
+
+to activate the live service.
+
+To generate a complete database and trained models for the full English wikipedia, run
+```
+WP_LANG=en make all_in_one
+```
+
+or just
+```
+make all_in_one
+```
+
 ### Input data
 
 Download [the latest pages and articles](https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
-for English Wikipedia by running `make fetch_english_wikipedia`. As of 2024-09-03 the file is about 21 GB originally
-compressed as .bz2 and 97 GB decompressed. To run a faster end-to-end test you may first want to use the Simple English
+for English Wikipedia by running `make fetch_english_wikipedia`. As of 2025-07-25 the file is about 23 GB originally
+compressed as .bz2 and 103 GB decompressed. To run a faster end-to-end test you may first want to use the Simple English
 Wikipedia, obtained with `make fetch_simple_english_wikipedia`.
 
 It is possible to run the extraction process directly from the downloaded .bz2 file but this will be slow. The
@@ -41,8 +65,8 @@ The equivalent sbt command is
 sbt "runMain wiki.extractor.WikipediaExtractor enwiki-latest-pages-articles.xml.bz2"
 ```
 
-With default settings on a 2024 Macbook Pro (M4 Pro, 64 GB RAM) and the dump file from September
-2024 this takes about 2.5 hours to complete. The output SQLite database is about 73 GB on disk (much larger if running
+With default settings on a 2024 Macbook Pro (M4 Pro, 64 GB RAM) and the dump file from July
+2025 this takes about 3 hours to complete. The output SQLite database is about 80 GB on disk (much larger if running
 without page markup compression), with most of the space consumed by `markup_z` or `markup` (table used
 depends on "COMPRESS_MARKUP" environment variable).
 
@@ -59,14 +83,27 @@ WP_LANG=fr make extract input=frwiki-20240901-pages-articles.xml.bz2
 ```
 
 ### Model training
-The last extraction phase will write CSV files for training word sense disambiguation and topic models to the current
+The last extraction phase will write CSV files for training word a sense disambiguation model to the current
 working directory. After that, you can run
 
 ```
 make train_disambiguation
 ```
 
-to train CatBoost models. Both extraction and model training must be run before starting the service for the first time.
+to train a CatBoost model for word sense disambiguation.
+
+Then run
+
+```
+make load_disambiguation
+make prepare_link_training
+make train_link_detector
+make load_linking
+```
+
+to train a CatBoost model for linkability detection.
+
+These extraction and model training steps must be run before starting the service for the first time.
 
 ### Caveats
 
@@ -103,7 +140,7 @@ difficult to parse correctly. Milne had some ad-hoc approaches to the parsing in
 marked by some frustrated comments. It is very difficult for any software outside the Wikimedia ecosystem to parse
 wikitext with full fidelity, but the [Sweble Wikitext Components](https://github.com/sweble/sweble-wikitext) project
 comes close. I chose this parser to enable the extraction of cross-references and the rendering of wikitext into
-simplified plain text. Its increased fidelity comes at a cost: about 2 hours of the initial 2.5 hour runtime to extract
+simplified plain text. Its increased fidelity comes at a cost: about 2 hours of the initial 3 hour runtime to extract
 English Wikipedia is spent in the Sweble parser.
 
 The original [sweble.org](http://sweble.org) domain is defunct now, as is its

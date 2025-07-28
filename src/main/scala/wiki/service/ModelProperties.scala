@@ -2,7 +2,7 @@ package wiki.service
 
 import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
-import wiki.util.FileHelpers
+import wiki.util.{Config, FileHelpers}
 
 import java.nio.file.NoSuchFileException
 
@@ -13,17 +13,28 @@ trait ModelProperties {
   /**
     * Try to automatically infer the name of the DB file to use for models.
     * This only works if there is a single DB file, located in the current
-    * working directory. Otherwise, the name must be given manually.
+    * working directory, matching the current WP_LANG. Otherwise, the name
+    * must be given manually.
+    *
+    * @param languageCode The current language. If not set, will be retrieved
+    *                     from WP_LANG.
     *
     * @return The name of the file (if it can be inferred)
     */
-  def inferDbFile(): Option[String] = {
-    val candidates = FileHelpers.glob("./*.db")
+  def inferDbFile(languageCode: Option[String]): Option[String] = {
+    val autoName = languageCode.getOrElse(Config.props.language.code) + "_wiki.db"
+    val candidates = FileHelpers
+      .glob("./*.db")
+      .filter(_.contains(autoName))
     if (candidates.isEmpty) {
-      println("No db file found in current directory. Give db file name via command line or generate one.")
+      println(
+        s"No db file found in current directory matching $autoName. Givee db file name via command line or generate one."
+      )
       None
     } else if (candidates.length > 1) {
-      println(s"Found multiple db files: ${candidates.mkString(", ")}. Give db file name via command line.")
+      println(
+        s"Found multiple db files matching $autoName: ${candidates.mkString(", ")}. Give db file name via command line."
+      )
       None
     } else {
       candidates.headOption

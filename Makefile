@@ -1,4 +1,4 @@
-.PHONY: build clean extract extract-graal extract_with_profiling fetch_english_wikipedia fetch_french_wikipedia fetch_simple_english_wikipedia format load_disambiguation load_linking prepare_link_training test train_disambiguation train_link_detector
+.PHONY: clean build all_in_one extract extract_with_profiling fetch_english_wikipedia fetch_french_wikipedia fetch_simple_english_wikipedia format load_disambiguation load_linking prepare_link_training test train_disambiguation train_link_detector
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 LOAD_DISAMBIGUATION_MAIN := wiki.service.LoadDisambiguationModel
@@ -14,6 +14,62 @@ clean:
 
 build:
 	sbt assembly
+
+# All-in-one target with language support
+all_in_one:
+	@# Determine language and set variables
+	@if [ -n "$(WP_LANG)" ]; then \
+		if [ "$(WP_LANG)" = "fr" ]; then \
+			WIKI_DUMP="frwiki-latest-pages-articles.xml.bz2"; \
+			FETCH_TARGET="fetch_french_wikipedia"; \
+			LANG_CODE="fr"; \
+		elif [ "$(WP_LANG)" = "en_simple" ]; then \
+			WIKI_DUMP="simplewiki-latest-pages-articles.xml.bz2"; \
+			FETCH_TARGET="fetch_simple_english_wikipedia"; \
+			LANG_CODE="en_simple"; \
+		else \
+			echo "Error: Unsupported language '$(WP_LANG)'"; \
+			echo "Supported values: fr, en_simple (or leave unset for English)"; \
+			exit 1; \
+		fi; \
+	else \
+		WIKI_DUMP="enwiki-latest-pages-articles.xml.bz2"; \
+		FETCH_TARGET="fetch_english_wikipedia"; \
+		LANG_CODE="en"; \
+	fi; \
+	\
+	echo "Processing Wikipedia for language: $$LANG_CODE"; \
+	\
+	if [ ! -f "$(JAR)" ]; then \
+		echo "Building JAR file..."; \
+		sbt assembly; \
+	fi; \
+	\
+	if [ ! -f "$$WIKI_DUMP" ]; then \
+		echo "Downloading Wikipedia dump for $$LANG_CODE..."; \
+		$(MAKE) $$FETCH_TARGET; \
+	fi; \
+	\
+	echo "Starting all-in-one Wikipedia processing for $$LANG_CODE..."; \
+	echo "Step 1/7: Extracting Wikipedia data..."; \
+	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) ./$$WIKI_DUMP; \
+	\
+	echo "Step 2/7: Training disambiguation model..."; \
+	$(MAKE) train_disambiguation WP_LANG=$$LANG_CODE; \
+	\
+	echo "Step 3/7: Loading disambiguation model..."; \
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_DISAMBIGUATION_MAIN); \
+	\
+	echo "Step 4/7: Preparing link training data..."; \
+	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN); \
+	\
+	echo "Step 5/7: Training link detector..."; \
+	$(MAKE) train_link_detector WP_LANG=$$LANG_CODE; \
+	\
+	echo "Step 6/7: Loading link detection model..."; \
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_LINKING_MAIN); \
+	\
+	echo "All-in-one processing complete for $$LANG_CODE!"
 
 extract: build
 	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
@@ -51,7 +107,7 @@ prepare_link_training: build
 	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
 
 run_web_service: build
-	java $(P_JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
+	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
 
 train_disambiguation:
 	@echo "Setting up disambiguation training..."
@@ -125,7 +181,7 @@ train_link_detector:
 		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
 		if [ $$LANG_COUNT -eq 0 ]; then \
 			echo "Error: No training CSV files found (wiki_*_linking-train.csv)"; \
-			echo "Please run 'make prepare-link-training' first to generate the required CSV files."; \
+			echo "Please run 'make prepare_link_training' first to generate the required CSV files."; \
 			exit 1; \
 		elif [ $$LANG_COUNT -gt 1 ]; then \
 			echo "Error: Multiple language CSV files found: $$AVAILABLE_LANGS"; \
@@ -141,13 +197,13 @@ train_link_detector:
 	\
 	if [ ! -f "wiki_$${LANG_CODE}_linking-train.csv" ]; then \
 		echo "Error: Training file wiki_$${LANG_CODE}_linking-train.csv not found"; \
-		echo "Please run 'make prepare-link-training' to generate the required CSV files."; \
+		echo "Please run 'make prepare_link_training' to generate the required CSV files."; \
 		exit 1; \
 	fi; \
 	\
 	if [ ! -f "wiki_$${LANG_CODE}_linking-test.csv" ]; then \
 		echo "Error: Test file wiki_$${LANG_CODE}_linking-test.csv not found"; \
-		echo "Please run 'make prepare-link-training' to generate the required CSV files."; \
+		echo "Please run 'make prepare_link_training' to generate the required CSV files."; \
 		exit 1; \
 	fi; \
 	\
