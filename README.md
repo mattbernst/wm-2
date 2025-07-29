@@ -27,7 +27,85 @@ If nothing fails, you can then run
 make run_web_service
 ```
 
-to activate the live service.
+to activate the live service. To confirm that the service works, you can run a test request using an excerpt from
+Gibbon's *The History of the Decline and Fall of the Roman Empire*:
+
+```
+python3 pysrc/example_request.py pysrc/example-doc.txt
+```
+
+The output should look something like this:
+
+```
+{'elapsed': 29,
+ 'text_size': 7186,
+ 'mined_labels': ['Rome',
+                  'intelligence',
+                  'distress',
+                  'danger',
+                  'Illyrian',
+                  'provinces',
+                  'civil',
+                  'civil war',
+                  'war',
+                  'Roman',
+                  'Roman legions',
+...
+           {'linkedPageId': 24298,
+            'linkPrediction': 0.36590343713640744,
+            'surfaceForms': ['Roman',
+                             'Romans',
+                             'Roman',
+                             'Romans',
+                             'Romans',
+                             'Roman'],
+            'title': 'Ancient Rome'},
+           {'linkedPageId': 16559,
+            'linkPrediction': 0.347888455348875,
+            'surfaceForms': ['bands', 'tribes', 'tribe', 'tribes'],
+            'title': 'Tribe'},
+           {'linkedPageId': 11560,
+            'linkPrediction': 0.31178632338968587,
+            'surfaceForms': ['cavalry', 'cavalry'],
+            'title': 'Cavalry'},
+           {'linkedPageId': 792155,
+            'linkPrediction': 0.29575340105719805,
+            'surfaceForms': ['Sarmatian',
+                             'Sarmatians',
+                             'Sarmatian',
+                             'Sarmatians',
+                             'Sarmatians'],
+            'title': 'Sarmatians'},
+           {'linkedPageId': 18429,
+            'linkPrediction': 0.2871727461939889,
+            'surfaceForms': ['soldier', 'guards', 'troops', 'soldiers'],
+            'title': 'Soldier'}],
+'context': [('Germany', 0.9995315516444807),
+             ('Poland', 0.9753222420958145),
+             ('Exile', 0.9678065825483674),
+             ('Human', 0.9584291297515203),
+             ('Carpathian Mountains', 0.9580976093505893),
+             ('Government', 0.9507069314281719),
+             ('Danube', 0.9430590989583214),
+             ('Execution', 0.9167253054391389),
+             ('Nation', 0.9144756270402581),
+             ('War', 0.9093165537601804),
+             ('Country', 0.9075332018402454),
+             ('Military', 0.907481880144118),
+             ('Rome', 0.90519721780344),
+             ('Soldier', 0.8994872520918222),
+             ('Horse', 0.8951938196184104),
+             ('City', 0.8943831730861624),
+             ('Slavery', 0.8924800902086063),
+             ('Death', 0.8902564835127166),
+             ('Peace', 0.8890736841980329),
+             ('Army', 0.8851381353456419),
+             ('Weapon', 0.8851251370096674),
+             ('River', 0.8747851368040535),
+             ('Law', 0.8712627751948088),
+             ('Republic', 0.871164182080411),
+             ('Civil war', 0.8562339572418138)]}
+```
 
 To generate a complete database and trained models for the full English wikipedia, run
 ```
@@ -65,7 +143,7 @@ The equivalent sbt command is
 sbt "runMain wiki.extractor.WikipediaExtractor enwiki-latest-pages-articles.xml.bz2"
 ```
 
-With default settings on a 2024 Macbook Pro (M4 Pro, 64 GB RAM) and the dump file from July
+With default settings on a 2024 Macbook Pro (M4 Max, 64 GB RAM) and the dump file from July
 2025 this takes about 3 hours to complete. The output SQLite database is about 80 GB on disk (much larger if running
 without page markup compression), with most of the space consumed by `markup_z` or `markup` (table used
 depends on "COMPRESS_MARKUP" environment variable).
