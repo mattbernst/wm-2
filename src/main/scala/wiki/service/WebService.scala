@@ -3,7 +3,6 @@ package wiki.service
 import cask.model.Response
 import org.rogach.scallop.*
 import upickle.default.*
-import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
 import wiki.util.{FileHelpers, Logging}
 
@@ -15,16 +14,16 @@ object DocumentProcessingRequest {
   implicit val rw: ReadWriter[DocumentProcessingRequest] = macroRW
 }
 
-object WebService extends cask.MainRoutes with ServiceProperties with Logging {
+object WebService extends cask.MainRoutes with ModelProperties with Logging {
   override def port: Int      = configuredPort
   private var configuredPort  = 0
-  private var ops: ServiceOps = null
+  private var ops: ServiceOps = _
   private val startedAt: Long = System.currentTimeMillis()
 
   @cask.post("/doc/labels")
   def getDocumentLabels(req: cask.Request): Response[String] = {
-    val docReq                    = read[DocumentProcessingRequest](req.text())
-    val result: ContextWithLabels = ops.getContextWithLabels(docReq)
+    val docReq                 = read[DocumentProcessingRequest](req.text())
+    val result: LabelsAndLinks = ops.getLabelsAndLinks(docReq)
     jsonResponse(write(result))
   }
 
@@ -54,27 +53,15 @@ object WebService extends cask.MainRoutes with ServiceProperties with Logging {
   private def jsonResponse(jsonString: String): Response[String] =
     cask.Response(data = jsonString, headers = Seq("Content-Type" -> "application/json"))
 
-  private def validateData(db: Storage): Unit = {
-    require(
-      db.phase.getPhaseState(db.phase.lastPhase).contains(COMPLETED),
-      "Extraction has not completed. Finish extraction and training first."
-    )
-    require(
-      db.mlModel.read(wsdModelName).nonEmpty,
-      s"Could not find model $wsdModelName in db. Run make prepare-web-service."
-    )
-  }
-
   override def main(args: Array[String]): Unit = {
     val serviceParams = ServiceParams(
-      minSenseProbability = 0.01,
-      cacheSize = 500_000,
-      wordSenseModelName = wsdModelName
+      minSenseProbability = 0.02,
+      cacheSize = 1_000_000
     )
 
     val conf = new Conf(args.toIndexedSeq)
     val databaseFileName = conf.database
-      .orElse(inferDbFile())
+      .orElse(inferDbFile(None))
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
     val defaultPort = 7777
@@ -86,8 +73,12 @@ object WebService extends cask.MainRoutes with ServiceProperties with Logging {
       throw new NoSuchFileException(s"Database file $databaseFileName is not readable")
     }
 
-    validateData(db)
     ops = new ServiceOps(db, serviceParams)
+    ops.validateWordSenseModel()
+    ops.validateLinkingModel()
+    // Load lazy data in advance
+    logger.info(s"Initializing data")
+    ops.contextualizer
     logger.info(s"Starting web service on port $port with db $databaseFileName")
 
     initialize()

@@ -23,7 +23,7 @@ class AnchorLogic(language: Language) {
     // in the language-specific Wikipedia instance. Remove these
     // language-indicator prefixes.
     val cleaned = if (k.startsWith(language.currentWikiPrefix)) {
-      k.slice(language.currentWikiPrefix.length, k.length).trim
+      k.substring(language.currentWikiPrefix.length, k.length).trim
     } else {
       k
     }

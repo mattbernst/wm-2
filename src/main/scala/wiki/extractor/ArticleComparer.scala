@@ -6,18 +6,22 @@ import wiki.extractor.types.{Comparison, Context, PageType, VectorPair}
 import wiki.util.Logging
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.hashing.MurmurHash3
 case class CountsWithMax(m: mutable.Map[Int, Int], max: Double)
 case class LinkVector(links: Array[Int], key: Long, distinctLinks: Array[Int])
+case class CommonLinks(links: Array[Int], pageCounts: Array[Int])
 
 object LinkVector {
 
-  def apply(links: Array[Int]): LinkVector =
+  def apply(links: Array[Int]): LinkVector = {
+    links.sortInPlace()
     LinkVector(
       links = links,
       key = ArticleComparer.hashLinks(links),
-      distinctLinks = links.distinct.sorted
+      distinctLinks = links.distinct
     )
+  }
 }
 
 class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
@@ -132,12 +136,14 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     // otherwise, all results are crammed into the upper portion of the 0-1
     // range.
     val inGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAIn.distinctLinks, linksBIn.distinctLinks, articleCount)
+      val original = ArticleComparer
+        .googleMeasure(linksAIn.distinctLinks, linksBIn.distinctLinks, ilvm.vectorA.length, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
     val outGoogleMeasure = {
-      val original = ArticleComparer.googleMeasure(linksAOut.distinctLinks, linksBOut.distinctLinks, articleCount)
+      val original = ArticleComparer
+        .googleMeasure(linksAOut.distinctLinks, linksBOut.distinctLinks, olvm.vectorB.length, articleCount)
       (original - googleMeasureLowerLimit) / (1.0 - googleMeasureLowerLimit)
     }
 
@@ -180,40 +186,18 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     */
   private def makeVectors(a: LinkVector, b: LinkVector, pageCount: PageCount): VectorPair = {
     if (a.links.nonEmpty && b.links.nonEmpty) {
-      val linkACounts = getCounts(a)
-      val linkBCounts = getCounts(b)
+      val commonLinks = getCommonLinks(pageCount, a.distinctLinks, b.distinctLinks)
 
-      var k = 0
-      // Set up outer/inner maps to minimize the number of keys that need
-      // to be iterated over
-      val outer = if (linkACounts.m.size < linkBCounts.m.size) {
-        linkACounts.m
-      } else {
-        linkBCounts.m
-      }
-      val inner = if (linkACounts.m.size < linkBCounts.m.size) {
-        linkBCounts.m
-      } else {
-        linkACounts.m
-      }
-
-      val commonLinks = Array.ofDim[Int](outer.size)
-      // Find common links
-      outer.keys.foreach { link =>
-        if (inner.contains(link) && pageCount.count(link) > 0) {
-          commonLinks(k) = link
-          k += 1
-        }
-      }
-
-      if (k > 0) {
-        val vectorA = Array.ofDim[Double](k)
-        val vectorB = Array.ofDim[Double](k)
+      if (commonLinks.links.nonEmpty) {
+        val vectorA     = Array.ofDim[Double](commonLinks.links.length)
+        val vectorB     = Array.ofDim[Double](commonLinks.links.length)
+        val linkACounts = getCounts(a)
+        val linkBCounts = getCounts(b)
 
         var j = 0
-        while (j < k) {
-          val link                    = commonLinks(j)
-          val countDistinct           = pageCount.count(link)
+        while (j < commonLinks.links.length) {
+          val link                    = commonLinks.links(j)
+          val countDistinct           = commonLinks.pageCounts(j)
           val inverseArticleFrequency = math.log(articleCount / countDistinct.toDouble)
           val linkFrequencyA          = 0.5 + (0.5 * (linkACounts.m(link) / linkACounts.max))
           val linkFrequencyB          = 0.5 + (0.5 * (linkBCounts.m(link) / linkBCounts.max))
@@ -231,22 +215,87 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
     }
   }
 
-  private def getCounts(v: LinkVector): CountsWithMax = {
-    linkCountsCache.get(
-      v.key,
-      (_: Long) => {
-        val linkCounts = mutable.Map[Int, Int]().withDefaultValue(0)
-        var maxCount   = 0
-        v.links.foreach { link =>
-          val newCount = linkCounts(link) + 1
-          linkCounts(link) = newCount
-          if (newCount > maxCount) {
-            maxCount = newCount
-          }
-        }
-        CountsWithMax(linkCounts, maxCount.toDouble)
+  private def getCommonLinks(
+    pageCount: PageCount,
+    distinctLinksA: Array[Int],
+    distinctLinksB: Array[Int]
+  ): CommonLinks = {
+    val maxDistinctOverlap      = math.min(distinctLinksA.length, distinctLinksB.length)
+    val commonLinks: Array[Int] = Array.ofDim[Int](maxDistinctOverlap)
+
+    var i = 0
+    var j = 0
+    var k = 0
+
+    // Two-index approach since both arrays are sorted
+    while (i < distinctLinksA.length && j < distinctLinksB.length) {
+      if (distinctLinksA(i) == distinctLinksB(j)) {
+        commonLinks(k) = distinctLinksA(i)
+        k += 1
+        i += 1
+        j += 1
+      } else if (distinctLinksA(i) < distinctLinksB(j)) {
+        // Element in A is smaller, advance A's index
+        i += 1
+      } else {
+        // Element in B is smaller, advance B's index
+        j += 1
       }
-    )
+    }
+
+    // Return only common links that have non-zero page counts, along with
+    // their counts
+    val filteredLinks  = ListBuffer[Int]()
+    val filteredCounts = ListBuffer[Int]()
+    var m              = 0
+    while (m < k) {
+      val count = pageCount.count(commonLinks(m))
+      if (count > 0) {
+        filteredLinks.append(commonLinks(m))
+        filteredCounts.append(count)
+      }
+      m += 1
+    }
+
+    CommonLinks(links = filteredLinks.toArray, pageCounts = filteredCounts.toArray)
+  }
+
+  private def getCounts(v: LinkVector): CountsWithMax =
+    linkCountsCache.get(v.key, (_: Long) => getCountsWithMax(v.links))
+
+  /**
+    * Take a pre-sorted array of links, generate counts for each distinct
+    * link, and track the maximum count for any distinct link. This is
+    * complicated by micro-optimizations because it stands out during profiling
+    * as one of the most intensively used functions.
+    *
+    * @param links A pre-sorted array of page IDs representing links
+    * @return      Per-link counts along with maximum count
+    */
+  private def getCountsWithMax(links: Array[Int]): CountsWithMax = {
+    val linkCounts = mutable.Map[Int, Int]()
+    var maxCount   = 0
+    var j          = 0
+    var current    = 0
+    while (j < links.length) {
+      val link = links(j)
+      val newCount = if (link > current) {
+        current = link
+        linkCounts.put(link, 1)
+        1
+      } else {
+        val res = linkCounts(link) + 1
+        linkCounts(link) = res
+        res
+      }
+
+      if (newCount > maxCount) {
+        maxCount = newCount
+      }
+      j += 1
+    }
+
+    CountsWithMax(linkCounts, maxCount.toDouble)
   }
 
   private val linkCountsCache: Cache[Long, CountsWithMax] =
@@ -259,7 +308,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       .maximumSize(cacheSize)
       .build(
         loader = (id: Int) => {
-          val ids = db.link.getByDestination(id).map(_.source).toArray.sorted
+          val ids = db.link.getByDestination(id).map(_.source).toArray
           LinkVector(ids)
         },
         allLoader = Some((pageIds: Iterable[Int]) => {
@@ -274,7 +323,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
       .maximumSize(cacheSize)
       .build(
         loader = (id: Int) => {
-          val ids = db.link.getBySource(id).map(_.destination).toArray.sorted
+          val ids = db.link.getBySource(id).map(_.destination).toArray
           LinkVector(ids)
         },
         allLoader = Some((pageIds: Iterable[Int]) => {
@@ -312,7 +361,7 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
   private lazy val googleMeasureLowerLimit = {
     val nTerms = math.min(articleCount - 1, 100_000)
     val links  = 0.until(nTerms).toArray
-    ArticleComparer.googleMeasure(links, links.take(1), articleCount)
+    ArticleComparer.googleMeasure(links, links.take(1), 1, articleCount)
   }
 }
 
@@ -342,13 +391,18 @@ object ArticleComparer {
     *
     * @param linksA       Distinct links into or out of article A
     * @param linksB       Distinct links into or out of article B
+    * @param intersections Count of intersecting links across A and B
     * @param articleCount A count of the total number of Wikipedia articles
     * @return             A number between 0 and 1, with a high number
     *                     representing "more similar"
     */
-  def googleMeasure(linksA: Array[Int], linksB: Array[Int], articleCount: Int): Double = {
+  def googleMeasure(
+    linksA: Array[Int],
+    linksB: Array[Int],
+    intersections: Int,
+    articleCount: Int
+  ): Double = {
     require(articleCount > math.max(linksA.length, linksB.length), "Article count must be > link count")
-    val intersections = countIntersection(linksA, linksB)
 
     val normalizedGoogleDistance = if (intersections == 0) {
       1.0
@@ -402,26 +456,6 @@ object ArticleComparer {
     } else {
       dotProduct / math.sqrt(magnitudeASquared * magnitudeBSquared)
     }
-  }
-
-  def countIntersection(linksA: Array[Int], linksB: Array[Int]): Int = {
-    var j     = 0
-    var k     = 0
-    var count = 0
-
-    while (j < linksA.length && k < linksB.length) {
-      if (linksA(j) == linksB(k)) {
-        count += 1
-        j += 1
-        k += 1
-      } else if (linksA(j) < linksB(k)) {
-        j += 1
-      } else {
-        k += 1
-      }
-    }
-
-    count
   }
 
   private[extractor] def hashLinks(input: Array[Int]): Long = {

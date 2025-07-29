@@ -101,7 +101,7 @@ class PageMarkupLinkProcessor(titleMap: mutable.Map[String, Int], language: Lang
     // in the language-specific Wikipedia instance. We can only resolve
     // links that point within the current Wikipedia.
     val cleaned = if (k.startsWith(language.currentWikiPrefix)) {
-      k.slice(language.currentWikiPrefix.length, k.length).trim
+      k.substring(language.currentWikiPrefix.length, k.length).trim
     }
     // Category links may start this way, e.g. ":Category:Songwriters"
     else if (k.startsWith(extraColonCatPrefix)) {

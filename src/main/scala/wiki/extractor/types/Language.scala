@@ -16,7 +16,8 @@ object DataGroup {
 }
 
 case class TrainingProfile(
-  groups: Seq[DataGroup],
+  disambiguatorGroup: Seq[DataGroup],
+  linkingGroup: Seq[DataGroup],
   minOutLinks: Int,
   minInLinks: Int,
   maxListProportion: Double,
@@ -28,7 +29,8 @@ object TrainingProfile {
 
   def empty: TrainingProfile =
     TrainingProfile(
-      groups = Seq(),
+      disambiguatorGroup = Seq(),
+      linkingGroup = Seq(),
       minOutLinks = 0,
       minInLinks = 0,
       maxListProportion = 0.0,

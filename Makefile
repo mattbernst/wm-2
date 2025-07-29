@@ -1,10 +1,12 @@
-.PHONY: build clean extract extract-graal extract-with-profiling fetch-english-wikipedia fetch-french-wikipedia fetch-simple-english-wikipedia format test train-disambiguation
+.PHONY: clean build all_in_one extract extract_with_profiling fetch_english_wikipedia fetch_french_wikipedia fetch_simple_english_wikipedia format load_disambiguation load_linking prepare_link_training test train_disambiguation train_link_detector
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
-PREPARE_WEB_SERVICE_MAIN := wiki.service.PrepareWebService
+LOAD_DISAMBIGUATION_MAIN := wiki.service.LoadDisambiguationModel
+LOAD_LINKING_MAIN := wiki.service.LoadLinkDetectionModel
+PREPARE_LINK_TRAINING_MAIN := wiki.extractor.ExtractLinkTrainingData
 WEB_SERVICE_MAIN := wiki.service.WebService
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
-# encountering StackOverflowErrors
+# encountering StackOverflowErrors during extraction
 JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
 
 clean:
@@ -13,16 +15,72 @@ clean:
 build:
 	sbt assembly
 
+# All-in-one target with language support
+all_in_one:
+	@# Determine language and set variables
+	@if [ -n "$(WP_LANG)" ]; then \
+		if [ "$(WP_LANG)" = "fr" ]; then \
+			WIKI_DUMP="frwiki-latest-pages-articles.xml.bz2"; \
+			FETCH_TARGET="fetch_french_wikipedia"; \
+			LANG_CODE="fr"; \
+		elif [ "$(WP_LANG)" = "en_simple" ]; then \
+			WIKI_DUMP="simplewiki-latest-pages-articles.xml.bz2"; \
+			FETCH_TARGET="fetch_simple_english_wikipedia"; \
+			LANG_CODE="en_simple"; \
+		else \
+			echo "Error: Unsupported language '$(WP_LANG)'"; \
+			echo "Supported values: fr, en_simple (or leave unset for English)"; \
+			exit 1; \
+		fi; \
+	else \
+		WIKI_DUMP="enwiki-latest-pages-articles.xml.bz2"; \
+		FETCH_TARGET="fetch_english_wikipedia"; \
+		LANG_CODE="en"; \
+	fi; \
+	\
+	echo "Processing Wikipedia for language: $$LANG_CODE"; \
+	\
+	if [ ! -f "$(JAR)" ]; then \
+		echo "Building JAR file..."; \
+		sbt assembly; \
+	fi; \
+	\
+	if [ ! -f "$$WIKI_DUMP" ]; then \
+		echo "Downloading Wikipedia dump for $$LANG_CODE..."; \
+		$(MAKE) $$FETCH_TARGET; \
+	fi; \
+	\
+	echo "Starting all-in-one Wikipedia processing for $$LANG_CODE..."; \
+	echo "Step 1/7: Extracting Wikipedia data..."; \
+	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) ./$$WIKI_DUMP; \
+	\
+	echo "Step 2/7: Training disambiguation model..."; \
+	$(MAKE) train_disambiguation WP_LANG=$$LANG_CODE; \
+	\
+	echo "Step 3/7: Loading disambiguation model..."; \
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_DISAMBIGUATION_MAIN); \
+	\
+	echo "Step 4/7: Preparing link training data..."; \
+	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN); \
+	\
+	echo "Step 5/7: Training link detector..."; \
+	$(MAKE) train_link_detector WP_LANG=$$LANG_CODE; \
+	\
+	echo "Step 6/7: Loading link detection model..."; \
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_LINKING_MAIN); \
+	\
+	echo "All-in-one processing complete for $$LANG_CODE!"
+
 extract: build
 	java $(JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
-fetch-english-wikipedia:
+fetch_english_wikipedia:
 	curl -L -o enwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
 
-fetch-french-wikipedia:
+fetch_french_wikipedia:
 	curl -L -o frwiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/frwiki/latest/frwiki-latest-pages-articles.xml.bz2
 
-fetch-simple-english-wikipedia:
+fetch_simple_english_wikipedia:
 	curl -L -o simplewiki-latest-pages-articles.xml.bz2 https://dumps.wikimedia.org/simplewiki/latest/simplewiki-latest-pages-articles.xml.bz2
 
 P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -XX:StartFlightRecording:maxsize=10000MB,filename=extraction.jfr
@@ -30,7 +88,7 @@ P_JAVA_OPTS := $(JAVA_OPTS) -XX:FlightRecorderOptions=stackdepth=1024 -XX:+Unloc
 # Mission Control
 # https://www.oracle.com/java/technologies/jdk-mission-control.html
 # https://github.com/openjdk/jmc
-extract-with-profiling: build
+extract_with_profiling: build
 	java $(P_JAVA_OPTS) -cp $(JAR) $(EXTRACTOR_MAIN) $(input)
 
 format:
@@ -39,22 +97,28 @@ format:
 test:
 	sbt test
 
-prepare-web-service: build
-	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_WEB_SERVICE_MAIN) $(input)
+load_disambiguation: build
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_DISAMBIGUATION_MAIN) $(input)
 
-run-web-service: build
+load_linking: build
+	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_LINKING_MAIN) $(input)
+
+prepare_link_training: build
+	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
+
+run_web_service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)
 
-train-disambiguation:
+train_disambiguation:
 	@echo "Setting up disambiguation training..."
 	@# Check for CSV files and determine language
 	@if [ -n "$(WP_LANG)" ]; then \
 		LANG_CODE="$(WP_LANG)"; \
 	else \
-		AVAILABLE_LANGS=$$(ls wiki_*_train.csv 2>/dev/null | sed 's/wiki_\(.*\)_train\.csv/\1/' | sort -u); \
+		AVAILABLE_LANGS=$$(ls wiki_*_disambiguation-train.csv 2>/dev/null | sed 's/wiki_\(.*\)_disambiguation-train\.csv/\1/' | sort -u); \
 		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
 		if [ $$LANG_COUNT -eq 0 ]; then \
-			echo "Error: No training CSV files found (wiki_*_train.csv)"; \
+			echo "Error: No training CSV files found (wiki_*_disambiguation-train.csv)"; \
 			echo "Please run 'make extract' first to generate the required CSV files."; \
 			exit 1; \
 		elif [ $$LANG_COUNT -gt 1 ]; then \
@@ -69,8 +133,8 @@ train-disambiguation:
 	\
 	echo "Using language code: $$LANG_CODE"; \
 	\
-	if [ ! -f "wiki_$${LANG_CODE}_train.csv" ]; then \
-		echo "Error: Training file wiki_$${LANG_CODE}_train.csv not found"; \
+	if [ ! -f "wiki_$${LANG_CODE}_disambiguation-train.csv" ]; then \
+		echo "Error: Training file wiki_$${LANG_CODE}_disambiguation-train.csv not found"; \
 		echo "Please run 'make extract' to generate the required CSV files."; \
 		exit 1; \
 	fi; \
@@ -104,5 +168,67 @@ train-disambiguation:
 	echo "Running disambiguation training..."; \
 	cd pysrc && \
 	uv run python train_word_sense_disambiguation.py \
-		--train-file ../wiki_$${LANG_CODE}_train.csv \
+		--train-file ../wiki_$${LANG_CODE}_disambiguation-train.csv \
 		--val-file ../wiki_$${LANG_CODE}_disambiguation-test.csv
+
+train_link_detector:
+	@echo "Setting up link detection training..."
+	@# Check for CSV files and determine language
+	@if [ -n "$(WP_LANG)" ]; then \
+		LANG_CODE="$(WP_LANG)"; \
+	else \
+		AVAILABLE_LANGS=$$(ls wiki_*_linking-train.csv 2>/dev/null | sed 's/wiki_\(.*\)_linking-train\.csv/\1/' | sort -u); \
+		LANG_COUNT=$$(echo "$$AVAILABLE_LANGS" | wc -w); \
+		if [ $$LANG_COUNT -eq 0 ]; then \
+			echo "Error: No training CSV files found (wiki_*_linking-train.csv)"; \
+			echo "Please run 'make prepare_link_training' first to generate the required CSV files."; \
+			exit 1; \
+		elif [ $$LANG_COUNT -gt 1 ]; then \
+			echo "Error: Multiple language CSV files found: $$AVAILABLE_LANGS"; \
+			echo "Please set WP_LANG environment variable to specify which language to use."; \
+			echo "Example: WP_LANG=en make train-link-detector"; \
+			exit 1; \
+		else \
+			LANG_CODE="$$AVAILABLE_LANGS"; \
+		fi; \
+	fi; \
+	\
+	echo "Using language code: $$LANG_CODE"; \
+	\
+	if [ ! -f "wiki_$${LANG_CODE}_linking-train.csv" ]; then \
+		echo "Error: Training file wiki_$${LANG_CODE}_linking-train.csv not found"; \
+		echo "Please run 'make prepare_link_training' to generate the required CSV files."; \
+		exit 1; \
+	fi; \
+	\
+	if [ ! -f "wiki_$${LANG_CODE}_linking-test.csv" ]; then \
+		echo "Error: Test file wiki_$${LANG_CODE}_linking-test.csv not found"; \
+		echo "Please run 'make prepare_link_training' to generate the required CSV files."; \
+		exit 1; \
+	fi; \
+	\
+	echo "Found required CSV files for language: $$LANG_CODE"; \
+	\
+	if ! command -v uv >/dev/null 2>&1; then \
+		echo "Installing uv package manager..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+		export PATH="$$HOME/.local/bin:$$PATH"; \
+		if ! command -v uv >/dev/null 2>&1; then \
+			echo "Error: Failed to install uv. Please install it manually."; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	echo "Setting up Python virtual environment..."; \
+	if [ ! -d "pysrc/.venv" ]; then \
+		echo "Creating virtual environment and installing requirements..."; \
+		cd pysrc && uv venv && uv pip install -r requirements.txt && cd ..; \
+	else \
+		echo "Virtual environment already exists"; \
+	fi; \
+	\
+	echo "Running link detector training..."; \
+	cd pysrc && \
+	uv run python train_linking.py \
+		--train-file ../wiki_$${LANG_CODE}_linking-train.csv \
+		--val-file ../wiki_$${LANG_CODE}_linking-test.csv

@@ -4,12 +4,13 @@ import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import wiki.db.Storage
 import wiki.extractor.types.*
 import wiki.extractor.util.Progress
+import wiki.service.{ServiceOps, ServiceParams}
 import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
+class WordSenseFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   /**
     * Get features to train on from a Wikipedia article. We're trying
@@ -21,7 +22,7 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
     * "relatedness" did not perform as well as a CatBoost model given
     * the underlying individual features like inLinkVectorMeasure.
     *
-    * @param pageId   The numeric ID of a Wikipedia page used for feature
+    * @param pageId    The numeric ID of a Wikipedia page used for feature
     *                  extraction
     * @param groupName The name of the feature extraction group
     */
@@ -87,7 +88,7 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
     SenseFeatures(
       group = groupName,
       page = pageCache.get(pageId),
-      context = enrichContext(context),
+      context = ops.enrichContext(context),
       examples = buffer.toArray
     )
   }
@@ -95,27 +96,6 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
   private def tick(): Unit = this.synchronized {
     Progress.tick(count = nProcessed, marker = "+", n = 10)
     nProcessed += 1
-  }
-
-  /**
-    * Enrich context by adding full Page objects to each representative page.
-    * This is useful for reading/debugging/understanding the Context output.
-    *
-    * @param context A Context object that may not yet have complete
-    *                page descriptions for representative pages
-    * @return        A Context object with complete page descriptions for
-    *                representative pages
-    */
-  private def enrichContext(context: Context): Context = {
-    val enriched = context.pages.map { rep =>
-      if (rep.page.nonEmpty) {
-        rep
-      } else {
-        rep.copy(page = Some(pageCache.get(rep.pageId)))
-      }
-    }
-
-    context.copy(pages = enriched)
   }
 
   private var nProcessed = 0
@@ -136,9 +116,10 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private lazy val contextualizer =
     new Contextualizer(
-      maxContextSize = 32,
+      maxContextSize = 25,
       labelIdToSense = labelIdToSense,
       labelToId = labelToId,
+      labelCounter = db.label.read(),
       comparer = comparer,
       db = db,
       language = props.language
@@ -146,8 +127,11 @@ class ArticleFeatureProcessor(db: Storage, props: ConfiguredProperties) {
 
   private lazy val labelToId: mutable.Map[String, Int] = db.label
     .readKnownLabels()
-    // Empirical hack: very short labels like "$" or "2d" are poor labels
-    .filter(_._1.length > 2)
+
+  private lazy val ops = new ServiceOps(
+    db = db,
+    params = ServiceParams(minSenseProbability = minSenseProbability, cacheSize = 250_000)
+  )
 
   private lazy val comparer = new ArticleComparer(db)
 }

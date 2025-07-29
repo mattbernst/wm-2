@@ -61,7 +61,7 @@ class Storage(fileName: String) extends Logging {
     */
   def getPage(title: String): Option[Page] = {
     DB.autoCommit { implicit session =>
-      sql"""SELECT * FROM page WHERE title=$title""".map { r =>
+      val list = sql"""SELECT * FROM page WHERE title=$title""".map { r =>
         Page(
           id = r.int("id"),
           namespace = namespaceCache.get(r.int("namespace_id")),
@@ -71,7 +71,12 @@ class Storage(fileName: String) extends Logging {
           lastEdited = r.long("last_edited"),
           markupSize = r.intOpt("markup_size")
         )
-      }.single()
+      }.list()
+      if (list.length > 1) {
+        val ids = list.map(_.id).mkString(", ")
+        logger.warn(s"Title '$title' matched multiple pages: $ids")
+      }
+      list.headOption
     }
   }
 
@@ -227,6 +232,7 @@ class Storage(fileName: String) extends Logging {
   val configuration: ConfigurationStorage.type = ConfigurationStorage
   val label: LabelStorage.type                 = LabelStorage
   val link: LinkStorage.type                   = LinkStorage
+  val linkTraining: LinkTrainingStorage.type   = LinkTrainingStorage
   val log: LogStorage.type                     = LogStorage
   val mlModel: MLModelStorage.type             = MLModelStorage
   val namespace: NamespaceStorage.type         = NamespaceStorage

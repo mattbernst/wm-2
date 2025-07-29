@@ -11,37 +11,9 @@ from sklearn.metrics import *
 from sklearn.model_selection import GroupKFold
 
 
-def find_common_prefix(train_file, val_file):
-    """
-    Find the common prefix between training and validation file names.
-    Returns the prefix that can be used for generating the model filename.
-    """
-    # Get just the filenames without the directory path
+def get_prefix(train_file):
     train_basename = os.path.basename(train_file)
-    val_basename = os.path.basename(val_file)
-
-    # Remove file extensions
-    train_name = os.path.splitext(train_basename)[0]
-    val_name = os.path.splitext(val_basename)[0]
-
-    # Find common prefix
-    common_prefix = ""
-    min_length = min(len(train_name), len(val_name))
-
-    for i in range(min_length):
-        if train_name[i] == val_name[i]:
-            common_prefix += train_name[i]
-        else:
-            break
-
-    # Clean up the prefix - remove trailing underscores or hyphens
-    common_prefix = common_prefix.rstrip('_-')
-
-    # If no meaningful prefix found, use a default
-    if len(common_prefix) < 3:
-        common_prefix = "model"
-
-    return common_prefix
+    return train_basename.split("_disambiguation")[0]
 
 
 class CatBoostRankerTrainer:
@@ -64,7 +36,7 @@ class CatBoostRankerTrainer:
 
         # Generate model output filename if not provided
         if model_output is None:
-            prefix = find_common_prefix(train_file, val_file)
+            prefix = get_prefix(train_file)
             self.model_output = f"{prefix}_word_sense_ranker.cbm"
         else:
             self.model_output = model_output
@@ -578,7 +550,7 @@ def main():
 
     # Generate default model output name if not provided
     if args.model_output is None:
-        prefix = find_common_prefix(args.train_file, args.val_file)
+        prefix = get_prefix(args.train_file)
         args.model_output = f"{prefix}_word_sense_ranker.cbm"
 
     print("=" * 60)

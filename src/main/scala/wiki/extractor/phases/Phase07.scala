@@ -3,7 +3,7 @@ package wiki.extractor.phases
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.util.DBLogging
-import wiki.extractor.{ArticleFeatureProcessor, ArticleSelector}
+import wiki.extractor.{ArticleSelector, WordSenseFeatureProcessor}
 import wiki.util.ConfiguredProperties
 
 import java.io.{File, PrintWriter}
@@ -14,10 +14,9 @@ import scala.collection.parallel.ForkJoinTaskSupport
 class Phase07(db: Storage) extends Phase(db: Storage) {
 
   /**
-    * Generate 3 randomized exclusive sets of articles:
+    * Generate two randomized exclusive sets of articles:
     *  - Training set
     *  - Word sense disambiguation test set
-    *  - Topic detector test set
     *
     *  The article set only contains PageType.ARTICLE.
     */
@@ -26,23 +25,22 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context;")
     db.executeUnsafely("DROP TABLE IF EXISTS sense_training_context_page;")
     db.executeUnsafely("DROP TABLE IF EXISTS sense_training_example;")
-    db.phase.createPhase(number, s"Building training/test data")
+    db.phase.createPhase(number, s"Building word sense disambiguation training/test data")
     db.createTableDefinitions(number)
 
     val ll        = LanguageLogic.getLanguageLogic(props.language.code)
     val selector  = new ArticleSelector(db, ll)
-    val processor = new ArticleFeatureProcessor(db, props)
+    val processor = new WordSenseFeatureProcessor(db, props)
 
     DBLogging.info(s"Selecting eligible articles")
     val profile = props.language.trainingProfile
 
-    val res = selector.extractSets(profile)
-
+    val subsets     = selector.extractSets(profile = profile, groups = profile.disambiguatorGroup)
     val pool        = new ForkJoinPool(props.nWorkers)
     val taskSupport = new ForkJoinTaskSupport(pool)
 
     // Generate features from the subsets of articles
-    res.zip(profile.groups).foreach { set =>
+    subsets.zip(profile.disambiguatorGroup).foreach { set =>
       val subset    = set._1
       val groupName = set._2.name
       DBLogging.info(s"Processing ${subset.length} pages for group $groupName")
@@ -56,7 +54,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
 
     pool.shutdown()
 
-    profile.groups.foreach(t => writeCSV(t.name))
+    profile.disambiguatorGroup.foreach(t => writeCSV(t.name))
     db.phase.completePhase(number)
   }
 
