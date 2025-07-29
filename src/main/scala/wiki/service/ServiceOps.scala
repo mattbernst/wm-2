@@ -13,6 +13,12 @@ import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 
+case class TopicPage(linkedPageId: Int, linkPrediction: Double, surfaceForms: Seq[String])
+
+object TopicPage {
+  implicit val rw: ReadWriter[TopicPage] = macroRW
+}
+
 case class ResolvedLabel(label: String, page: Page, scoredSenses: ScoredSenses)
 
 object ResolvedLabel {
@@ -25,7 +31,7 @@ case class LabelsAndLinks(
   context: Context,
   labels: Seq[String],
   resolvedLabels: Seq[ResolvedLabel],
-  links: Seq[(Page, Double)])
+  links: Seq[(Page, TopicPage)])
 
 object LabelsAndLinks {
   implicit val rw: ReadWriter[LabelsAndLinks] = macroRW
@@ -47,7 +53,7 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     * Contexts.
     *
     * @param req DocumentProcessingRequest containing a plain text document
-    * @return    All derivable labels and a representative Context
+    * @return    All derivable labels, links, and a representative Context
     */
   def getLabelsAndLinks(req: DocumentProcessingRequest): LabelsAndLinks = {
     val labels          = contextualizer.getLabels(req.doc)
@@ -55,10 +61,9 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
     val resolvedLabels  = resolveSenses(cleanedLabels, context)
-    val predictedLinks = getLinkPredictions(req.doc, resolvedLabels, context)
-      .filter(_.prediction > 0.25)
-      .sortBy(-_.prediction)
-    val linkedPages = predictedLinks.map(e => (pageCache.get(e.linkedPageId), e.prediction))
+    val linkedTopics = getLinkedTopics(req.doc, resolvedLabels, context)
+      .sortBy(-_.linkPrediction)
+    val linkedPages = linkedTopics.map(e => (pageCache.get(e.linkedPageId), e))
 
     LabelsAndLinks(
       context = enrichedContext,
@@ -163,15 +168,15 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       }
   }
 
-  private def getLinkPredictions(
+  private def getLinkedTopics(
     text: String,
     resolvedNgrams: Array[NGResolvedLabel],
     context: Context
-  ): Array[PageLinkPrediction] = {
+  ): Array[TopicPage] = {
     val docLength   = text.length.toDouble
-    val topicGroups = resolvedNgrams.groupBy(_.resolvedLabel.page)
+    val topicGroups = resolvedNgrams.groupBy(_.resolvedLabel.page.id)
     val topics = topicGroups.flatMap {
-      case (topicPage, allLabels) =>
+      case (pageId, allLabels) =>
         val linkProbabilities: Map[String, Double] = allLabels
           .map(e => (e.nGram.stringContent, labelCounter.getLinkProbability(e.nGram.stringContent)))
           .filter(_._2.exists(_ > params.minSenseProbability))
@@ -190,11 +195,11 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
           val maxLinkProbability    = linkProbabilities.values.max
 
           val e = LabelLinkFeatures(
-            linkedPageId = topicPage.id,
+            linkedPageId = pageId,
             normalizedOccurrences = math.log(occurrences + 1),
             maxDisambigConfidence = maxDisambigConfidence,
             avgDisambigConfidence = avgDisambigConfidence,
-            relatednessToContext = contextualizer.getRelatedness(topicPage.id, context),
+            relatednessToContext = contextualizer.getRelatedness(pageId, context),
             relatednessToOtherTopics = -1.0,
             avgLinkProbability = avgLinkProbability,
             maxLinkProbability = maxLinkProbability,
@@ -211,7 +216,15 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     val topicLinks  = topics.map(e => TopicLink(e.linkedPageId, e.avgLinkProbability, e.normalizedOccurrences))
     val relatedness = getRelatednessToOtherTopics(input = topicLinks, topN = 25)
     val candidates  = topics.map(e => e.copy(relatednessToOtherTopics = relatedness(e.linkedPageId)))
-    linkDetector.predict(candidates)
+    linkDetector
+      .predict(candidates)
+      .map { e =>
+        TopicPage(
+          linkedPageId = e.linkedPageId,
+          linkPrediction = e.prediction,
+          surfaceForms = topicGroups(e.linkedPageId).map(_.nGram.stringContent).toSeq
+        )
+      }
   }
 
   /**
