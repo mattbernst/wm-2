@@ -58,4 +58,13 @@ object FileHelpers extends Logging {
       Files.exists(path) && Files.isReadable(path)
     }.getOrElse(false)
   }
+
+  def getFileSize(fileName: String): Long = {
+    if (isFileReadable(fileName)) {
+      Files.size(Paths.get(fileName))
+    }
+    else {
+      throw new IllegalArgumentException(s"File $fileName does not exist or is not a regular file")
+    }
+  }
 }
