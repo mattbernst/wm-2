@@ -54,14 +54,10 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     cask.Response(data = jsonString, headers = Seq("Content-Type" -> "application/json"))
 
   override def main(args: Array[String]): Unit = {
-    val serviceParams = ServiceParams(
-      minSenseProbability = 0.02,
-      cacheSize = 1_000_000
-    )
 
-    val conf = new Conf(args.toIndexedSeq)
+    val conf = new ServiceConf(args.toIndexedSeq)
     val databaseFileName = conf.database
-      .orElse(inferDbFile(None))
+      .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
     val defaultPort = 7777
@@ -73,7 +69,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
       throw new NoSuchFileException(s"Database file $databaseFileName is not readable")
     }
 
-    ops = new ServiceOps(db, serviceParams)
+    ops = new ServiceOps(db, defaultServiceParams)
     ops.validateWordSenseModel()
     ops.validateLinkingModel()
     // Load lazy data in advance
@@ -86,10 +82,10 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     // Call it with empty args to make that explicit.
     super.main(Array())
   }
+}
 
-  private class Conf(arguments: Seq[String]) extends ScallopConf(arguments) {
-    val database: ScallopOption[String] = opt[String]()
-    val port: ScallopOption[Int]        = opt[Int]()
-    verify()
-  }
+class ServiceConf(arguments: Seq[String]) extends ScallopConf(arguments) {
+  val database: ScallopOption[String] = opt[String]()
+  val port: ScallopOption[Int]        = opt[Int]()
+  verify()
 }

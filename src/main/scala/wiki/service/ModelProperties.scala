@@ -16,13 +16,10 @@ trait ModelProperties {
     * working directory, matching the current WP_LANG. Otherwise, the name
     * must be given manually.
     *
-    * @param languageCode The current language. If not set, will be retrieved
-    *                     from WP_LANG.
-    *
     * @return The name of the file (if it can be inferred)
     */
-  def inferDbFile(languageCode: Option[String]): Option[String] = {
-    val autoName = languageCode.getOrElse(Config.props.language.code) + "_wiki.db"
+  def inferDbFile(): Option[String] = {
+    val autoName = Config.props.language.code + "_wiki.db"
     val candidates = FileHelpers
       .glob("./*.db")
       .filter(_.contains(autoName))
@@ -61,4 +58,9 @@ trait ModelProperties {
 
     db
   }
+
+  val defaultServiceParams: ServiceParams = ServiceParams(
+    minSenseProbability = 0.02,
+    cacheSize = 1_000_000
+  )
 }

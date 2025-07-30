@@ -1,10 +1,11 @@
-.PHONY: clean build all_in_one extract extract_with_profiling fetch_english_wikipedia fetch_french_wikipedia fetch_simple_english_wikipedia format load_disambiguation load_linking prepare_link_training test train_disambiguation train_link_detector
+.PHONY: clean build all_in_one extract extract_with_profiling fetch_english_wikipedia fetch_french_wikipedia fetch_simple_english_wikipedia format load_disambiguation load_linking prepare_link_training test shrink train_disambiguation train_link_detector
 JAR := target/scala-2.13/wm-2-assembly-1.0.jar
 EXTRACTOR_MAIN := wiki.extractor.WikipediaExtractor
 LOAD_DISAMBIGUATION_MAIN := wiki.service.LoadDisambiguationModel
 LOAD_LINKING_MAIN := wiki.service.LoadLinkDetectionModel
 PREPARE_LINK_TRAINING_MAIN := wiki.extractor.ExtractLinkTrainingData
 WEB_SERVICE_MAIN := wiki.service.WebService
+SHRINK_MAIN := wiki.service.ShrinkDatabase
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors during extraction
 JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
@@ -29,7 +30,7 @@ all_in_one:
 			LANG_CODE="en_simple"; \
 		else \
 			echo "Error: Unsupported language '$(WP_LANG)'"; \
-			echo "Supported values: fr, en_simple (or leave unset for English)"; \
+			echo "Supported values: en, en_simple, fr (or leave unset for English)"; \
 			exit 1; \
 		fi; \
 	else \
@@ -104,7 +105,10 @@ load_linking: build
 	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_LINKING_MAIN) $(input)
 
 prepare_link_training: build
-	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
+	java $(JAVA_OPTS) -cp $(JAR) $(SHRINK_MAIN) $(input)
+
+shrink: build
+	java $(JAVA_OPTS) -cp $(JAR) $(SHRINK_MAIN) $(input)
 
 run_web_service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)

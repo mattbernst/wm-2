@@ -20,7 +20,7 @@ object LoadDisambiguationModel extends ModelProperties with Logging {
     val conf = new Conf(args.toIndexedSeq)
 
     val databaseFileName = conf.database
-      .orElse(inferDbFile(None))
+      .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
     logger.info(s"Preparing word sense disambiguation data with db $databaseFileName")
