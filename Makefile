@@ -105,7 +105,7 @@ load_linking: build
 	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_LINKING_MAIN) $(input)
 
 prepare_link_training: build
-	java $(JAVA_OPTS) -cp $(JAR) $(SHRINK_MAIN) $(input)
+	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
 
 shrink: build
 	java $(JAVA_OPTS) -cp $(JAR) $(SHRINK_MAIN) $(input)

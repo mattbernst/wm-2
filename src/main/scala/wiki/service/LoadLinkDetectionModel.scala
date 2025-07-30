@@ -20,7 +20,7 @@ object LoadLinkDetectionModel extends ModelProperties with Logging {
   def main(args: Array[String]): Unit = {
     val conf = new Conf(args.toIndexedSeq)
 
-    val databaseFileName = conf.database
+    val databaseFileName = conf.database.toOption
       .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 

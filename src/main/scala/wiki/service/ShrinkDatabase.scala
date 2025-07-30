@@ -6,10 +6,11 @@ import wiki.util.{FileHelpers, Logging}
 import java.nio.file.NoSuchFileException
 
 object ShrinkDatabase extends ModelProperties with Logging {
+
   def main(args: Array[String]): Unit = {
 
     val conf = new ServiceConf(args.toIndexedSeq)
-    val databaseFileName = conf.database
+    val databaseFileName = conf.database.toOption
       .orElse(inferDbFile())
       .getOrElse(throw new RuntimeException("No database file found or given!"))
 
@@ -31,7 +32,7 @@ object ShrinkDatabase extends ModelProperties with Logging {
     logger.info("Vacuuming database to reclaim space")
     db.executeUnsafely("VACUUM;")
     val afterSize = FileHelpers.getFileSize(databaseFileName)
-    val ratio = (afterSize / beforeSize.toDouble).toString.take(4)
+    val ratio     = (afterSize / beforeSize.toDouble).toString.take(4)
     logger.info(s"Completed optimization. Size before: $beforeSize After: $afterSize Ratio: $ratio")
   }
 }
