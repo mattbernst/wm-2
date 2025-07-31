@@ -20,7 +20,7 @@ class Storage(fileName: String) extends Logging {
     user = null,
     password = null,
     settings = ConnectionPoolSettings(
-      connectionTimeoutMillis = 30000L
+      connectionTimeoutMillis = 300000L
     )
   )
 
