@@ -16,6 +16,7 @@ object DocumentProcessingRequest {
 
 object WebService extends cask.MainRoutes with ModelProperties with Logging {
   override def port: Int      = configuredPort
+  override def host: String   = "0.0.0.0"
   private var configuredPort  = 0
   private var ops: ServiceOps = _
   private val startedAt: Long = System.currentTimeMillis()
