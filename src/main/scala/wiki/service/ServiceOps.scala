@@ -57,6 +57,15 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     val resolvedLabels  = resolveSenses(cleanedLabels, context)
     val linkedTopics = getLinkedTopics(req.doc, resolvedLabels, context)
       .sortBy(-_.linkPrediction)
+    // Store linked pages as a tuple of (Page, TopicPage) for each topic in
+    // linkedTopics. The reason to have add the Page is to carry the non-numeric
+    // page attributes.
+    // The data in linkedPages is similar to that found in the WikiminerEntity
+    // from the old wikipedia-miner:
+    // "name" is the page title
+    // "weight" is "weight"
+    // "frequency" is "surfaceForms" length
+    // "surfaceForms" is "surfaceForms"
     val linkedPages = linkedTopics.map(e => (pageCache.get(e.linkedPageId), e))
 
     LabelsAndLinks(
@@ -65,17 +74,6 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       resolvedLabels = resolvedLabels.map(_.resolvedLabel).toSeq,
       links = linkedPages.toSeq
     )
-  }
-
-  /**
-    * Like getLabelsAndLinks, but returns a streamlined response without extra
-    * page details.
-    *
-    * @param req
-    * @return
-    */
-  def getLabelsAndLinksSimplified(req: DocumentProcessingRequest): StreamlinedLinks = {
-    ???
   }
 
   /**
@@ -223,12 +221,16 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
     val candidates  = topics.map(e => e.copy(relatednessToOtherTopics = relatedness(e.linkedPageId)))
     linkDetector
       .predict(candidates)
-      .map { e =>
-        TopicPage(
-          linkedPageId = e.linkedPageId,
-          linkPrediction = e.prediction,
-          surfaceForms = topicGroups(e.linkedPageId).map(_.nGram.stringContent).toSeq
-        )
+      .zipWithIndex
+      .map {
+        case (prediction, j) =>
+          TopicPage(
+            linkedPageId = prediction.linkedPageId,
+            weight = topicLinks(j).avgLinkProbability * topicLinks(j).normalizedOccurrences,
+            relatedness = relatedness(prediction.linkedPageId),
+            linkPrediction = prediction.prediction,
+            surfaceForms = topicGroups(prediction.linkedPageId).map(_.nGram.stringContent).toSeq
+          )
       }
   }
 

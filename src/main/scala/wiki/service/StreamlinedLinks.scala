@@ -5,7 +5,12 @@ import upickle.default.*
 // Keep all of these case class definitions together so it's easy to refer
 // to them by consumers of the /doc/labels/simple endpoint.
 
-case class TopicPage(linkedPageId: Int, linkPrediction: Double, surfaceForms: Seq[String])
+case class TopicPage(
+  linkedPageId: Int,
+  weight: Double,
+  relatedness: Double,
+  linkPrediction: Double,
+  surfaceForms: Seq[String])
 
 object TopicPage {
   implicit val rw: ReadWriter[TopicPage] = macroRW
