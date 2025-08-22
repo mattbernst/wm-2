@@ -4,6 +4,7 @@ import cask.model.Response
 import org.rogach.scallop.*
 import upickle.default.*
 import wiki.db.Storage
+import wiki.extractor.types.Page
 import wiki.util.{FileHelpers, Logging}
 
 import java.nio.file.NoSuchFileException
@@ -26,6 +27,25 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     val docReq                 = read[DocumentProcessingRequest](req.text())
     val result: LabelsAndLinks = ops.getLabelsAndLinks(docReq)
     jsonResponse(write(result))
+  }
+
+  @cask.post("/doc/labels/simple")
+  def getDocumentLabelsSimple(req: cask.Request): Response[String] = {
+    val docReq = read[DocumentProcessingRequest](req.text())
+    val res    = ops.getLabelsAndLinks(docReq)
+
+    def simplify(p: Page): SimplePage = SimplePage(p.id, p.title)
+
+    val simplified = StreamlinedLinks(
+      contextPages = res.context.pages.map(p => SimpleRepresentativePage(simplify(p.page.get), p.weight)),
+      contextQuality = res.context.quality,
+      labels = res.labels,
+      resolvedLabels =
+        res.resolvedLabels.map(l => SimpleResolvedLabel(l.label, simplify(l.page), l.scoredSenses.scores.toMap)),
+      links = res.links.map(t => (simplify(t._1), t._2))
+    )
+
+    jsonResponse(write(simplified))
   }
 
   @cask.get("/ping")

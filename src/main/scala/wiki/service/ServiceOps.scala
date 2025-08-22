@@ -13,12 +13,6 @@ import wiki.util.ConfiguredProperties
 
 import scala.collection.mutable
 
-case class TopicPage(linkedPageId: Int, linkPrediction: Double, surfaceForms: Seq[String])
-
-object TopicPage {
-  implicit val rw: ReadWriter[TopicPage] = macroRW
-}
-
 case class ResolvedLabel(label: String, page: Page, scoredSenses: ScoredSenses)
 
 object ResolvedLabel {
@@ -71,6 +65,17 @@ class ServiceOps(db: Storage, params: ServiceParams) extends ModelProperties {
       resolvedLabels = resolvedLabels.map(_.resolvedLabel).toSeq,
       links = linkedPages.toSeq
     )
+  }
+
+  /**
+    * Like getLabelsAndLinks, but returns a streamlined response without extra
+    * page details.
+    *
+    * @param req
+    * @return
+    */
+  def getLabelsAndLinksSimplified(req: DocumentProcessingRequest): StreamlinedLinks = {
+    ???
   }
 
   /**
