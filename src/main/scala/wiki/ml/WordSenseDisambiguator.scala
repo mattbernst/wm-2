@@ -46,7 +46,8 @@ class WordSenseDisambiguator(catBoostRankerModel: Array[Byte]) {
     *
     * @param group A collection of candidates with features, plus context
     *              quality for the whole group, used for sense prediction
-    * @return      The scored senses found from the given candidates
+    * @return      The scored senses found from the given candidates with
+    *              probabilities that sum to 1.0
     */
   def getScoredSenses(group: WordSenseGroup): ScoredSenses = {
     val possibleSenses = group.candidates.map(_.pageId)
@@ -77,17 +78,42 @@ class WordSenseDisambiguator(catBoostRankerModel: Array[Byte]) {
       // For each row of numerical features, we provide an empty array of string features.
       val categoricalFeatures: Array[Array[String]] = Array.fill(numSenses)(Array.empty[String])
       val predictions: CatBoostPredictions          = model.predict(numericalFeatures, categoricalFeatures)
-      val senseScores                               = mutable.Map[Int, Double]()
 
-      // Extract scores from the predictions object.
-      // For ranking, each item gets one score, located at column index 0.
-      (0 until numSenses).foreach { i =>
-        val score = predictions.get(i, 0)
-        senseScores(possibleSenses(i)) = score
+      // Extract raw scores from the predictions object, then apply softmax
+      // to convert scores into probabilities
+      val rawScores = Array.ofDim[Double](numSenses)
+      var j         = 0
+      while (j < numSenses) {
+        rawScores(j) = predictions.get(j, 0)
+        j += 1
+      }
+
+      val softmaxProbs = softmax(rawScores)
+      val senseScores  = mutable.Map[Int, Double]()
+
+      j = 0
+      while (j < numSenses) {
+        senseScores(possibleSenses(j)) = softmaxProbs(j)
+        j += 1
       }
 
       ScoredSenses(senseScores)
     }
+  }
+
+  /**
+    * Apply softmax transformation to convert raw scores to probabilities.
+    * The resulting values will be between 0 and 1 and sum to 1.0.
+    *
+    * @param scores Array of raw scores
+    * @return Array of probabilities
+    */
+  private def softmax(scores: Array[Double]): Array[Double] = {
+    // For numerical stability, subtract the maximum value
+    val maxScore     = scores.max
+    val expScores    = scores.map(score => math.exp(score - maxScore))
+    val sumExpScores = expScores.sum
+    expScores.map(_ / sumExpScores)
   }
 
   private val model = CatBoostModel.loadModel(catBoostRankerModel)
