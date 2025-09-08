@@ -8,6 +8,7 @@ import wiki.extractor.types.Page
 import wiki.util.{FileHelpers, Logging}
 
 import java.nio.file.NoSuchFileException
+import scala.collection.mutable
 
 case class DocumentProcessingRequest(doc: String)
 
@@ -24,6 +25,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
 
   @cask.post("/doc/labels")
   def getDocumentLabels(req: cask.Request): Response[String] = {
+    incrementEndpoint("getDocumentLabels")
     val docReq                 = read[DocumentProcessingRequest](req.text())
     val result: LabelsAndLinks = ops.getLabelsAndLinks(docReq)
     jsonResponse(write(result))
@@ -31,6 +33,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
 
   @cask.post("/doc/labels/simple")
   def getDocumentLabelsSimple(req: cask.Request): Response[String] = {
+    incrementEndpoint("getDocumentLabelsSimple")
     val docReq = read[DocumentProcessingRequest](req.text())
     val res    = ops.getLabelsAndLinks(docReq)
 
@@ -49,14 +52,18 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   }
 
   @cask.get("/ping")
-  def ping(): Response[String] =
+  def ping(): Response[String] = {
+    incrementEndpoint("ping")
+    val counts = write(endpointCount.toMap)
     cask.Response(
-      data = s"PONG: Uptime ${System.currentTimeMillis() - startedAt}",
+      data = s"PONG: Uptime ${System.currentTimeMillis() - startedAt} Counts: $counts",
       headers = Seq("Content-Type" -> "text/plain")
     )
+  }
 
   @cask.get("/wiki/page_id/:pageId")
   def getArticleByPageId(pageId: Int): Response[String] = {
+    incrementEndpoint("getArticleByPageId")
     ops.getPageById(pageId) match {
       case Some(page) => jsonResponse(write(page))
       case None       => cask.Response(data = "", statusCode = 404)
@@ -65,9 +72,20 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
 
   @cask.get("/wiki/page_title/:pageTitle")
   def getArticleByPageTitle(pageTitle: String): Response[String] = {
+    incrementEndpoint("getArticleByPageTitle")
     ops.getPageByTitle(pageTitle) match {
       case Some(page) => jsonResponse(write(page))
       case None       => cask.Response(data = "", statusCode = 404)
+    }
+  }
+
+  private val endpointCount = mutable.Map[String, Int]()
+
+  private def incrementEndpoint(name: String): Unit = this.synchronized {
+    if (endpointCount.contains(name)) {
+      endpointCount(name) += 1
+    } else {
+      endpointCount(name) = 1
     }
   }
 
