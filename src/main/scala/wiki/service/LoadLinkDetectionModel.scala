@@ -36,7 +36,7 @@ object LoadLinkDetectionModel extends ModelProperties with Logging {
       val fileName    = conf.linkDetectionModel.getOrElse(defaultFile)
       if (!FileHelpers.isFileReadable(fileName)) {
         logger.error(s"Link validity model $fileName could not be read")
-        logger.error(s"You need to give the CatBoost model with --link-detection-model or run train-link-detector")
+        logger.error(s"You need to give the CatBoost model with --link-detection-model or run make train_link_detector")
         throw new NoSuchFileException(fileName)
       } else {
         val modelData = FileHelpers.readBinaryFile(fileName)

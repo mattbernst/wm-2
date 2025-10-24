@@ -56,7 +56,7 @@ class Storage(fileName: String) extends Logging {
     * instead of in PageStorage because it needs elements from PageStorage and
     * from NamespaceStorage.
     *
-    * @param title A page title a page to retrieve
+    * @param title A page title of a page to retrieve
     * @return      The full page record for the title, if retrievable
     */
   def getPage(title: String): Option[Page] = {

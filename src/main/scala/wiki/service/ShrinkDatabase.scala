@@ -26,7 +26,11 @@ object ShrinkDatabase extends ModelProperties with Logging {
     ops.validateWordSenseModel()
     ops.validateLinkingModel()
 
-    logger.info(s"Optimizing $databaseFileName by removing stored markup.")
+    // TODO: selectively remove data from markup table to preserve snippets
+    logger.warn(
+      s"Optimizing $databaseFileName by removing stored markup in 15 seconds. THIS BREAKS THE EXCERPTS ENDPOINT."
+    )
+    Thread.sleep(15000)
     db.executeUnsafely("DROP TABLE IF EXISTS markup;")
     db.executeUnsafely("DROP TABLE IF EXISTS markup_z;")
     logger.info("Vacuuming database to reclaim space")
