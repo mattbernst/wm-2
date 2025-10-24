@@ -1,5 +1,6 @@
 package wiki.extractor.language
 
+import wiki.extractor.WikitextParser
 import wiki.extractor.language.types.Snippet
 import wiki.extractor.types.{Language, TrainingProfile}
 import wiki.util.UnitSpec
@@ -50,6 +51,38 @@ class LanguageLogicSpec extends UnitSpec {
     snippet.firstSentence shouldBe Some(
       "Chemically, mafic rocks are on the other side of the rock spectrum from the felsic rocks."
     )
+  }
+
+  it should "handle wikitext input, discarding beginning-of-article images" in {
+    val wt =
+      """{{Short description|Harbor on the island of Oahu, Hawaii}}
+        |{{About||its current operations as a military base|Joint Base Pearl Harbor–Hickam|the attack operation in 1941|Attack on Pearl Harbor|other uses}}
+        |{{pp-move}}
+        |{{pp-semi-indef}}
+        |{{Use mdy dates|date=November 2023}}
+        |{{Infobox body of water
+        || pushpin_map = Hawaii#Pacific Ocean
+        || coordinates = {{coord|21.3679|-157.9771|type:waterbody_region:US|display=inline,title}}
+        || image_map = {{infobox mapframe | stroke-width = 1 }}
+        |}}
+        |[[File:Ford Island aerial photo RIMPAC 1986.JPEG|thumb|Seen in 1986 with [[Ford Island]] in center. The [[USS Arizona Memorial]] is the small white dot on the left side above Ford Island.]]
+        |'''Pearl Harbor''' is a [[lagoon]] [[harbor]] on the island of [[Oahu]], Hawaii, United States, west of [[Honolulu]]. It was often visited by the naval fleet of the [[United States]], before it was acquired from the [[Hawaiian Kingdom]] by the U.S. with the signing of the [[Reciprocity Treaty of 1875]]. Much of the harbor and surrounding lands are now a [[United States Navy]] deep-water naval base. It is also the headquarters of the [[United States Pacific Fleet]]. The U.S. government first obtained exclusive use of the inlet and the right to maintain a repair and coaling station for ships here in 1887.<ref>{{cite web | url=https://www.history.navy.mil/research/library/online-reading-room/title-list-alphabetically/u/the-us-navy-and-hawaii-a-historical-summary/pearl-harbor-its-origin-and-administrative-history.html | title=Pearl Harbor: Its Origin and Administrative History Through World War II | publisher=Naval History and Heritage Command | date=April 23, 2015 | access-date=September 9, 2016 | archive-date=August 21, 2016 | archive-url=https://web.archive.org/web/20160821051252/http://www.history.navy.mil/research/library/online-reading-room/title-list-alphabetically/u/the-us-navy-and-hawaii-a-historical-summary/pearl-harbor-its-origin-and-administrative-history.html | url-status=live }}</ref> The [[Attack on Pearl Harbor|surprise attack]] on the harbor by the [[Imperial Japanese Navy]] on December 7, 1941, led the United States to [[United States declaration of war on Japan|declare war]] on the [[Empire of Japan]], marking the [[American entry into World War II|United States' entry into World War II]].<ref>{{cite video |url=https://www.youtube.com/watch?v=CrVI6ENDL8Y  |archive-url=https://web.archive.org/web/20100724155011/http://www.youtube.com//watch?v=CrVI6ENDL8Y |archive-date=2010-07-24 |url-status=dead|title=FDR Pearl Harbor Speech |date=December 8, 1941 | access-date=2011-02-05 |quote=December 7th, 1941, a day that will live in infamy.}}</ref><ref name = nrhpinv>{{Cite web | last = Apple | first = Russell A. | author2 = Benjamin Levy | title = Pearl Harbor | work = National Register of Historic Places – Nomination and Inventory | publisher = [[National Park Service]] | date = February 8, 1974 | url = https://npgallery.nps.gov/NRHP/GetAsset/NHLS/66000940_text | format = pdf | access-date = 25 May 2012 | archive-date = June 16, 2023 | archive-url = https://web.archive.org/web/20230616032031/https://npgallery.nps.gov/NRHP/GetAsset/NHLS/66000940_text | url-status = live }}</ref><ref name = nrhpphotos>{{Cite web | title = Pearl Harbor | work = Photographs | publisher = [[National Park Service]] | url = https://npgallery.nps.gov/NRHP/GetAsset/NHLS/66000940_photos | format = pdf | access-date = 25 May 2012 | archive-date = June 16, 2023 | archive-url = https://web.archive.org/web/20230616032032/https://npgallery.nps.gov/NRHP/GetAsset/NHLS/66000940_photos | url-status = live }}</ref>""".stripMargin
+
+    val expected = Snippet(
+      firstParagraph = Some(
+        value =
+          "Pearl Harbor is a lagoon harbor on the island of Oahu, Hawaii, United States, west of Honolulu. It was often visited by the naval fleet of the United States, before it was acquired from the Hawaiian Kingdom by the U.S. with the signing of the Reciprocity Treaty of 1875. Much of the harbor and surrounding lands are now a United States Navy deep-water naval base. It is also the headquarters of the United States Pacific Fleet. The U.S. government first obtained exclusive use of the inlet and the right to maintain a repair and coaling station for ships here in 1887. The surprise attack on the harbor by the Imperial Japanese Navy on December 7, 1941, led the United States to declare war on the Empire of Japan, marking the United States' entry into World War II."
+      ),
+      firstSentence = Some(
+        value = "Pearl Harbor is a lagoon harbor on the island of Oahu, Hawaii, United States, west of Honolulu."
+      )
+    )
+
+    val wp      = new WikitextParser(EnglishLanguageLogic)
+    val parsed  = wp.parse("Pearl Harbor", wt)
+    val snippet = EnglishLanguageLogic.getSnippet(parsed)
+
+    snippet shouldBe expected
   }
 
   behavior of "FrenchLanguageLogic.getSnippet"
