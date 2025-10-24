@@ -81,15 +81,22 @@ class WikiServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(status_code, 200, "Ping endpoint should return 200 OK")
         self.assertTrue(data.startswith("PONG"), "Ping endpoint should return 'PONG'")
 
-    def test_ping_endpoint(self):
-        """Test the /ping endpoint returns PONG with correct content type."""
-        data, status_code, headers = self.http_get("/ping")
+    def test_stats_endpoint(self):
+        """Test the /stats endpoint returns cumulative call counts."""
+        data, status_code, headers = self.http_get("/stats")
 
         # Verify response
-        self.assertEqual(status_code, 200, "Ping endpoint should return 200 OK")
-        self.assertTrue(data.startswith("PONG"), "Ping endpoint should return 'PONG'")
+        self.assertEqual(status_code, 200, "Stats endpoint should return 200 OK")
+        deserialized = json.loads(data)
+        stats_count = deserialized["stats"]
+        self.assertTrue(stats_count >= 1)
 
-    def test_doc_labels_1(self):
+        # Second call should increase "stats" call count by one
+        data, status_code, headers = self.http_get("/stats")
+        stats_count_new = json.loads(data)["stats"]
+        self.assertEqual(stats_count + 1, stats_count_new)
+
+    def test_labels_1(self):
         """Test processing a very short document."""
         text = """Mercury (Latin: Mercurius) is the god of trade, trickery, merchants and thieves."""
         req = {"doc": text}
@@ -99,6 +106,89 @@ class WikiServiceIntegrationTest(unittest.TestCase):
         sample_titles = ["Latin", "Mercury (mythology)", "Mercury (planet)", "God", "Deity"]
         for t in sample_titles:
             self.assertTrue(t in context_page_titles)
+
+    def test_labels_2(self):
+        """Test processing a very short document with the simplified labels endpoint."""
+        text = """Mercury (Latin: Mercurius) is the god of trade, trickery, merchants and thieves."""
+        req = {"doc": text}
+        data, status_code, headers = self.http_post("/doc/labels/simple", req)
+        deserialized = json.loads(data)
+        context_page_titles = [p["page"]["title"] for p in deserialized["contextPages"]]
+        sample_titles = ["Latin", "Mercury (mythology)", "Mercury (planet)", "God", "Deity"]
+        for t in sample_titles:
+            self.assertTrue(t in context_page_titles)
+
+    def test_labels_3(self):
+        """Test processing a small document for labels/context."""
+        text = "So what did the people I asked know about the war? Nobody could tell me the first thing about it. Once they got past who won they almost drew a blank. All they knew were those big totemic names -- Pearl Harbor, D-Day, Auschwitz, Hiroshima -- whose unfathomable reaches of experience had been boiled down to an abstract atrocity. The rest was gone. Kasserine, Leyte Gulf, Corregidor, Falaise, the Ardennes didn't provoke a glimmer of recognition; they might as well have been off-ramps on some exotic interstate. I started getting the creepy feeling that the war had actually happened a thousand years ago, and so it was forgivable if people were a little vague on the difference between the Normandy invasion and the Norman Conquest and couldn't say offhand whether the boats sailed from France to England or the other way around."
+        req = {"doc": text}
+
+        data, status_code, headers = self.http_post("/doc/labels", req)
+        deserialized = json.loads(data)
+
+        # A sampling of expected context pages
+        expected_context_titles = ["Normandy landings",
+                                   "Norman Conquest",
+                                   "France",
+                                   "Pearl Harbor",
+                                   "Interstate Highway System",
+                                   "World War II",
+                                   "Operation Overlord"]
+        context_page_titles = [p["page"]["title"] for p in deserialized["context"]["pages"]]
+        for title in expected_context_titles:
+            self.assertTrue(title in context_page_titles)
+
+    def test_labels_4(self):
+        """Test processing an empty document."""
+        text = ""
+        req = {"doc": text}
+        data, status_code, headers = self.http_post("/doc/labels", req)
+        deserialized = json.loads(data)
+        context_page_titles = [p["page"]["title"] for p in deserialized["context"]["pages"]]
+
+        self.assertEqual([], context_page_titles)
+
+    def test_excerpts_1(self):
+        """Test getting first-paragraph excerpts for pages."""
+        text = """Mercury (Latin: Mercurius) is the god of trade, trickery, merchants and thieves."""
+        req = {"doc": text}
+        data, status_code, headers = self.http_post("/doc/labels/simple", req)
+        simple_labels = json.loads(data)
+        page_ids = sorted(list(set([p["page"]["id"] for p in simple_labels["resolvedLabels"]])))
+
+        req = {"ids": page_ids}
+        data, status_code, headers = self.http_post("/wiki/excerpts", req)
+        excerpts = json.loads(data)
+        self.assertEqual(len(excerpts), len(page_ids))
+        for excerpt in excerpts:
+            self.assertTrue(excerpt["pageId"] in page_ids)
+            self.assertTrue(excerpt["firstParagraph"])
+
+    def test_excerpts_2(self):
+        """Test getting first-paragraph excerpts with bad page IDs."""
+        text = """Mercury (Latin: Mercurius) is the god of trade, trickery, merchants and thieves."""
+        req = {"doc": text}
+        data, status_code, headers = self.http_post("/doc/labels/simple", req)
+        simple_labels = json.loads(data)
+        page_ids = sorted(list(set([p["page"]["id"] for p in simple_labels["resolvedLabels"]])))
+
+        # All bad IDs: empty result
+        all_bad_page_ids = [-1, -2]
+        mixed_page_ids = page_ids + all_bad_page_ids
+        req = {"ids": all_bad_page_ids}
+        data, status_code, headers = self.http_post("/wiki/excerpts", req)
+        excerpts = json.loads(data)
+        self.assertEqual([], excerpts)
+
+        # Mixed case: bad IDs ignored
+        req = {"ids": mixed_page_ids}
+        data, status_code, headers = self.http_post("/wiki/excerpts", req)
+        excerpts = json.loads(data)
+        self.assertEqual(len(excerpts), len(page_ids))
+        for excerpt in excerpts:
+            self.assertTrue(excerpt["pageId"] in page_ids)
+            self.assertTrue(excerpt["firstParagraph"])
+
 
     def test_get_article_by_page_id_success(self):
         """Test retrieving an article by page ID."""
@@ -127,10 +217,8 @@ class WikiServiceIntegrationTest(unittest.TestCase):
         endpoint = f"/wiki/page_title/{encoded_title}"
         data, status_code, headers = self.http_get(endpoint)
 
-        # Verify response
         self.assertEqual(status_code, 200, f"Page title endpoint should return 200 OK for title '{test_page_title}'")
 
-        # Verify it's valid JSON
         try:
             json_data = json.loads(data)
             self.assertIsInstance(json_data, (dict, list), "Response should be valid JSON")
@@ -165,12 +253,13 @@ class WikiServiceIntegrationTest(unittest.TestCase):
         try:
             self.http_get("/ping")
         except Exception as e:
-            self.fail(f"Service is not accessible at {self.BASE_URL}. Make sure the WebService is running on port 7777. Error: {e}")
+            self.fail(
+                f"Service is not accessible at {self.BASE_URL}. Make sure the WebService is running on port 7777. Error: {e}")
 
     def test_page_id_and_title_return_same_data(self):
         """Test that querying by page ID and title returns the same article data."""
         # Get data by page ID
-        test_page_id=12240
+        test_page_id = 12240
         page_id_endpoint = f"/wiki/page_id/{test_page_id}"
         id_data, id_status, _ = self.http_get(page_id_endpoint)
         page = json.loads(id_data)
@@ -185,28 +274,17 @@ class WikiServiceIntegrationTest(unittest.TestCase):
         self.assertEqual(title_status, 200, "Page title request should succeed")
         self.assertEqual(json.loads(title_data), page)
 
-    def test_doc_labels(self):
-        """Test processing a small document for labels/context."""
-        text = "So what did the people I asked know about the war? Nobody could tell me the first thing about it. Once they got past who won they almost drew a blank. All they knew were those big totemic names -- Pearl Harbor, D-Day, Auschwitz, Hiroshima -- whose unfathomable reaches of experience had been boiled down to an abstract atrocity. The rest was gone. Kasserine, Leyte Gulf, Corregidor, Falaise, the Ardennes didn't provoke a glimmer of recognition; they might as well have been off-ramps on some exotic interstate. I started getting the creepy feeling that the war had actually happened a thousand years ago, and so it was forgivable if people were a little vague on the difference between the Normandy invasion and the Norman Conquest and couldn't say offhand whether the boats sailed from France to England or the other way around."
-        req = {"doc": text}
-
-        data, status_code, headers = self.http_post("/doc/labels", req)
-        deserialized = json.loads(data)
-
-        # A sampling of expected context pages
-        expected_context_titles = ["Normandy landings",
-                                   "Norman Conquest",
-                                   "France",
-                                   "Attack on Pearl Harbor",
-                                   "D-Day (military term)",
-                                   "World War II",
-                                   "Corregidor",
-                                   "Operation Overlord"]
-        context_page_titles = [p["page"]["title"] for p in deserialized["context"]["pages"]]
-        for title in expected_context_titles:
-            self.assertTrue(title in context_page_titles)
-
 
 if __name__ == '__main__':
-    # Run the tests
-    unittest.main(verbosity=2)
+    import sys
+
+    if len(sys.argv) == 2:
+        # User provided a single test name - run only that test
+        test_name = sys.argv[1]
+        suite = unittest.TestSuite()
+        suite.addTest(WikiServiceIntegrationTest(test_name))
+        runner = unittest.TextTestRunner(verbosity=2)
+        runner.run(suite)
+    else:
+        # Run all tests with default behavior
+        unittest.main(verbosity=2)

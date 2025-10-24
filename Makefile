@@ -128,7 +128,7 @@ train_disambiguation:
 		elif [ $$LANG_COUNT -gt 1 ]; then \
 			echo "Error: Multiple language CSV files found: $$AVAILABLE_LANGS"; \
 			echo "Please set WP_LANG environment variable to specify which language to use."; \
-			echo "Example: WP_LANG=en make train-disambiguation"; \
+			echo "Example: WP_LANG=en make train_disambiguation"; \
 			exit 1; \
 		else \
 			LANG_CODE="$$AVAILABLE_LANGS"; \
@@ -190,7 +190,7 @@ train_link_detector:
 		elif [ $$LANG_COUNT -gt 1 ]; then \
 			echo "Error: Multiple language CSV files found: $$AVAILABLE_LANGS"; \
 			echo "Please set WP_LANG environment variable to specify which language to use."; \
-			echo "Example: WP_LANG=en make train-link-detector"; \
+			echo "Example: WP_LANG=en make train_link_detector"; \
 			exit 1; \
 		else \
 			LANG_CODE="$$AVAILABLE_LANGS"; \
