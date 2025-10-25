@@ -2,12 +2,14 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
+import org.sweble.wikitext.parser.nodes.*
 import wiki.extractor.language.types.{NGram, Snippet}
 import wiki.extractor.types.Language
 import wiki.util.Logging
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.util.{Failure, Success, Try}
 
 trait LanguageLogic {
@@ -48,6 +50,17 @@ trait LanguageLogic {
   }
 
   /**
+    * Get snippet starting from wikitext. This properly handles articles where
+    * the first thing on the page is an image by discarding the WtImage nodes.
+    *
+    * @param input WtNode objects to process for extraction
+    * @return      A snippet of extracted text content
+    */
+  def getSnippet(input: Array[WtNode]): Snippet = {
+    getSnippet(input.map(textualize).mkString)
+  }
+
+  /**
     * Generate word NGrams and filter them against the valid set of NGrams.
     * This is intended for use during Wikipedia document label counting, where
     * the only labels we want to count are those that have been previously
@@ -85,6 +98,23 @@ trait LanguageLogic {
     }
 
     buffer.toArray
+  }
+
+  private def textualize(wtNode: WtNode): String = wtNode match {
+    case node: WtText                           => node.getContent
+    case node: WtInternalLink if !node.hasTitle => textualize(node.getTarget)
+    case node: WtInternalLink if node.hasTitle  => textualize(node.getTitle)
+    case node: WtListItem                       => "\n" + node.iterator().asScala.map(textualize).mkString
+    case node: WtTableHeader                    => " : " + node.iterator().asScala.map(textualize).mkString
+    case node: WtTableCell                      => " | " + node.iterator().asScala.map(textualize).mkString
+
+    // Eliminate all of these, as they are not desirable elements to include in excerpts
+    case _: WtImageLink     => ""
+    case _: WtTemplate      => ""
+    case _: WtXmlAttributes => ""
+    case _: WtTagExtension  => ""
+
+    case other: WtNode => other.iterator().asScala.map(textualize).mkString
   }
 
   private[language] def fastNGrams(input: String, valid: mutable.Set[String]): Array[String] = {

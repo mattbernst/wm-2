@@ -5,7 +5,7 @@ import org.apache.commons.lang3.StringUtils
 import upickle.default.*
 import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
-import wiki.extractor.language.types.{NGram, Snippet}
+import wiki.extractor.language.types.NGram
 import wiki.extractor.types.*
 import wiki.extractor.{ArticleComparer, Contextualizer}
 import wiki.ml.*
@@ -34,12 +34,6 @@ object LabelsAndLinks {
 case class ServiceParams(minSenseProbability: Double, cacheSize: Int)
 
 class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties {
-
-  def getSnippet(pageId: Int): Option[Snippet] =
-    db.page
-      .readMarkupAuto(pageId)
-      .flatMap(_.parseResult)
-      .map(_.snippet)
 
   /**
     * Get all valid labels derivable from a document, their resolved senses,

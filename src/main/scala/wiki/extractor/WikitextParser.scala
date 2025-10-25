@@ -56,7 +56,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
     nodes.flatMap(collectNodes)
   }
 
-  private[extractor] def parse(title: String, markup: String): Array[WtNode] = {
+  def parse(title: String, markup: String): Array[WtNode] = {
     parser.parseArticle(markup, title).iterator().asScala.toArray
   }
 
@@ -73,7 +73,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
     }.filter(_.anchorText.trim.nonEmpty)
 
     val text    = cleanString(nodesToText(input))
-    val snippet = languageLogic.getSnippet(text)
+    val snippet = languageLogic.getSnippet(input)
     ParseResult(
       snippet = snippet,
       text = text,
