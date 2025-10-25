@@ -118,8 +118,14 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   @cask.get("/stats")
   def stats(): Response[String] = {
     incrementEndpoint("stats")
+
+    val current = JdwpDetector.getDebugPort match {
+      case Some(debugPort) => Map("JWDPPort" -> debugPort) ++ endpointCount.toMap
+      case None            => endpointCount.toMap
+    }
+
     cask.Response(
-      data = write(endpointCount.toMap),
+      data = write(current),
       headers = Seq("Content-Type" -> "text/plain")
     )
   }

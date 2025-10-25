@@ -8,7 +8,7 @@ WEB_SERVICE_MAIN := wiki.service.WebService
 SHRINK_MAIN := wiki.service.ShrinkDatabase
 # N.B. the Sweble wikitext parser needs a large Xss to run quickly and without
 # encountering StackOverflowErrors during extraction
-JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=5000,suspend=n
+JAVA_OPTS := -Xmx14G -Xss16m -agentlib:jdwp=transport=dt_socket,server=y,address=*:0,suspend=n
 
 clean:
 	sbt clean
