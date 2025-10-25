@@ -7,7 +7,9 @@ import wiki.db.Storage
 import wiki.extractor.types.Page
 import wiki.util.{FileHelpers, Logging}
 
+import java.net.BindException
 import java.nio.file.NoSuchFileException
+import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 
 case class DocumentProcessingRequest(doc: String)
@@ -198,9 +200,23 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     logger.info(s"Starting web service on port $port with db $databaseFileName")
 
     initialize()
-    // The Main in cask does not actually make use of command line args.
-    // Call it with empty args to make that explicit.
-    super.main(Array())
+
+    // Retry loop for binding to the port
+    val retryDelay = 5
+    var bound      = false
+    while (!bound) {
+      try {
+        // The Main in cask does not actually make use of command line args.
+        // Call it with empty args to make that explicit.
+        super.main(Array())
+        bound = true
+      } catch {
+        case e: RuntimeException if e.getCause != null && e.getCause.isInstanceOf[BindException] =>
+          logger.warn(s"Port $port is already in use. Retrying in $retryDelay seconds...")
+          Thread.sleep(TimeUnit.SECONDS.toMillis(retryDelay))
+        case e: Throwable => throw e // Re-throw other exceptions
+      }
+    }
   }
 }
 
