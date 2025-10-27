@@ -92,7 +92,7 @@ trait LanguageLogic {
       buffer.append(ng)
       if (ng.isSentenceStart) {
         val uncapitalized = language.unCapitalizeFirst(ng.stringContent)
-        val variant       = ng.copy(stringContent = uncapitalized)
+        val variant       = ng.copy(stringContent = uncapitalized, isDowncased = true)
         buffer.append(variant)
       }
     }
