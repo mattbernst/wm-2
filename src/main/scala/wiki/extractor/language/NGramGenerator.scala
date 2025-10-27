@@ -60,7 +60,8 @@ class NGramGenerator(
         tokenSpans = tokenSpansLocalToNgram.toArray,
         caseContext = caseContext,
         stringContent = text.substring(globalStart, globalEnd),
-        isSentenceStart = left == 0
+        isSentenceStart = left == 0,
+        isDowncased = false
       )
     }
 

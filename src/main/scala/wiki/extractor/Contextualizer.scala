@@ -79,6 +79,11 @@ class Contextualizer(
     * label.link_doc_count >= minInLinks and
     * (label.link_count / label.occurrence_count) >= minLinkProbability.
     *
+    * If short labels from the original document would be entirely covered
+    * by long labels, only the long labels are retained. This prevents
+    * bad labeling like "Pac" extracted from a document where it is
+    * mentioned within the longer label "Pac-Man."
+    *
     * A label is an NGram that has been used as anchor text anywhere in
     * Wikipedia.
     *
@@ -90,12 +95,19 @@ class Contextualizer(
     // Also capture NGrams that may have been obscured by punctuation
     val simpleText = Text.filterToLettersAndDigits(text)
     val ng2        = languageLogic.wordNGrams(language, simpleText)
+    val combined   = ng1 ++ ng2
 
-    (ng1 ++ ng2)
+    val detected = combined
       .filter(n => goodLabels.contains(n.stringContent))
       .filter(l => labelCounter.getLinkOccurrenceDocCount(l.stringContent).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l.stringContent).exists(_ >= minLinkProbability))
       .distinct
+
+    // This is necessary so that downcased variants don't get incidentally
+    // removed by filterShadowed (since they occupy the exact same spans).
+    val (downcased, natural) = detected.partition(_.isDowncased)
+
+    (Contextualizer.filterShadowed(downcased) ++ Contextualizer.filterShadowed(natural)).distinct
   }
 
   /**
@@ -245,4 +257,46 @@ class Contextualizer(
   private val goodLabels  = mutable.Set.from(labelToId.keys)
   private val dateStrings = language.generateValidDateStrings()
   private val datePageIds = dateStrings.flatMap(d => db.getPage(d)).map(_.id)
+}
+
+object Contextualizer {
+
+  /**
+    * Filter NGrams to exclude short spans that are entirely shadowed by longer
+    * spans. For example, in the sentence
+    *
+    * "Namco released Pac-Man in May."
+    *
+    * We can find Namco, May, Pac, Man, and Pac-Man. But Pac and Man are
+    * entirely covered (shadowed) by the longer span Pac-Man and should be
+    * filtered out.
+    *
+    * @param input A sequence of NGrams that may contain shadowed entries
+    * @return      NGrams without shadowed entries
+    */
+  def filterShadowed(input: Array[NGram]): Array[NGram] = {
+    // Sort by start position (ascending), then by end position (descending)
+    // to ensure that longer intervals come before shorter ones when they
+    // start at the same position. Also put start-of-sentence spans earlier
+    // so we can include casing variants for them.
+    val sorted = input.sortBy(ng => (ng.start, -ng.end, !ng.isSentenceStart))
+
+    val result = scala.collection.mutable.ArrayBuffer[NGram]()
+    var maxEnd = Int.MinValue
+
+    var j = 0
+    while (j < sorted.length) {
+      val ngram = sorted(j)
+      // If this interval extends beyond all previous intervals, it's not shadowed.
+      // Otherwise, it's completely contained within a previous (longer) interval.
+      if (ngram.end > maxEnd) {
+        if (ngram.isSentenceStart) {}
+        result += ngram
+        maxEnd = ngram.end
+      }
+      j += 1
+    }
+
+    result.toArray
+  }
 }
