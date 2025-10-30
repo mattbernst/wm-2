@@ -39,9 +39,7 @@ object PageStorage {
   }
 
   /**
-    * Get already-processed page IDs to accelerate partially completed stage01
-    * page extraction. Any known ID can be skipped as soon as the page ID has
-    * been extracted from its page fragment.
+    * Get already-processed page IDs.
     *
     * @return The set of all completed page IDs
     */
