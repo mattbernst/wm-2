@@ -62,7 +62,7 @@ all_in_one:
 	java $(JAVA_OPTS) -cp $(JAR) $(LOAD_DISAMBIGUATION_MAIN); \
 	\
 	echo "Step 4/7: Preparing link training data..."; \
-	java $(P_JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN); \
+	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN); \
 	\
 	echo "Step 5/7: Training link detector..."; \
 	$(MAKE) train_link_detector WP_LANG=$$LANG_CODE; \
@@ -108,7 +108,7 @@ prepare_link_training: build
 	java $(JAVA_OPTS) -cp $(JAR) $(PREPARE_LINK_TRAINING_MAIN) $(input)
 
 shrink: build
-	java $(JAVA_OPTS) -cp $(JAR) $(SHRINK_MAIN) $(input)
+	java $(AVA_OPTS) -cp $(JAR) $(SHRINK_MAIN) $(input)
 
 run_web_service: build
 	java $(JAVA_OPTS) -cp $(JAR) $(WEB_SERVICE_MAIN) $(input)

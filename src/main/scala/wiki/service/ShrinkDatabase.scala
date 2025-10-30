@@ -2,6 +2,7 @@ package wiki.service
 
 import wiki.db.Storage
 import wiki.extractor.types.{PageMarkup, PageMarkup_U, PageMarkup_Z}
+import wiki.extractor.util.Progress
 import wiki.util.{FileHelpers, Logging}
 
 import java.nio.file.NoSuchFileException
@@ -30,6 +31,7 @@ object ShrinkDatabase extends ModelProperties with Logging {
     val ops = new ServiceOps(db, defaultServiceParams)
     ops.validateWordSenseModel()
     ops.validateLinkingModel()
+    logger.info("Pruning non-essential page contents data")
     pruneMarkup()
     logger.info("Vacuuming database to reclaim space")
     db.executeUnsafely("VACUUM;")
@@ -38,21 +40,51 @@ object ShrinkDatabase extends ModelProperties with Logging {
     logger.info(s"Completed optimization. Size before: $beforeSize After: $afterSize Ratio: $ratio")
   }
 
+  private class MarkupWriter[T](serialize: PageMarkup => T, write: Seq[T] => Unit) {
+    private val queue      = new ArrayBlockingQueue[T](Storage.batchSqlSize * 2)
+    private var nProcessed = 0
+
+    def add(pm: PageMarkup): Unit = {
+      queue.add(serialize(pm))
+      if (queue.size() >= Storage.batchSqlSize) {
+        flush()
+      }
+    }
+
+    def flush(): Unit = queue.synchronized {
+      if (!queue.isEmpty) {
+        val toWrite = new java.util.ArrayList[T]()
+        queue.drainTo(toWrite)
+        nProcessed += toWrite.size()
+        Progress.tick(count = nProcessed, marker = ".")
+        if (!toWrite.isEmpty) {
+          write(toWrite.asScala.toSeq)
+        }
+      }
+    }
+  }
+
   /**
-    *
-    * Selectively prune unneeded data from the markup table once model training
-    * has completed. This reclaims a large amount of database space.
-    */
-  /**
-    *
-    * Selectively prune unneeded data from the markup table once model training
-    * has completed. This reclaims a large amount of database space.
+    * Selectively prune unneeded data from the markup table once model
+    * training has completed. This reclaims a large amount of database space.
     */
   private def pruneMarkup(): Unit = {
-    val usingCompression = db.page.usingCompression
-    val pages            = db.page.getCompletedPageIds().toSeq
-    val pool             = new ForkJoinPool(props.nWorkers)
-    val taskSupport      = new ForkJoinTaskSupport(pool)
+    val pages       = db.page.getCompletedPageIds().toSeq.sorted
+    val pool        = new ForkJoinPool(props.nWorkers)
+    val taskSupport = new ForkJoinTaskSupport(pool)
+
+    // Select appropriate writer based on compression setting
+    val writer = if (db.page.usingCompression) {
+      new MarkupWriter[PageMarkup_Z](
+        PageMarkup.serializeCompressed,
+        db.page.writeMarkups_Z
+      )
+    } else {
+      new MarkupWriter[PageMarkup_U](
+        PageMarkup.serializeUncompressed,
+        db.page.writeMarkups
+      )
+    }
 
     val parPages = pages.par
     parPages.tasksupport = taskSupport
@@ -63,71 +95,20 @@ object ShrinkDatabase extends ModelProperties with Logging {
           // It drops raw wikitext, raw page text, and link sequences. This
           // preserves only the data used by the live service (model training
           // does not work once this data has been removed).
-          val smaller =
-            pm.copy(wikitext = None, parseResult = pm.parseResult.map(pr => pr.copy(text = "", links = Seq())))
-
-          if (usingCompression) {
-            val prunedEntry: PageMarkup_Z = PageMarkup.serializeCompressed(smaller)
-            pzQueue.add(prunedEntry)
-
-            // Write batch when queue reaches threshold
-            if (pzQueue.size() >= Storage.batchSqlSize) {
-              flushQueue()
-            }
-          } else {
-            val prunedEntry: PageMarkup_U = PageMarkup.serializeUncompressed(smaller)
-            puQueue.add(prunedEntry)
-
-            // Write batch when queue reaches threshold
-            if (puQueue.size() >= Storage.batchSqlSize) {
-              flushQueue()
-            }
-          }
+          val smaller = pm.copy(
+            wikitext = None,
+            parseResult = pm.parseResult.map(pr => pr.copy(text = "", links = Seq()))
+          )
+          writer.add(smaller)
 
         case None =>
       }
     }
 
     pool.shutdown()
-
-    // Flush any remaining entries
-    if (!puQueue.isEmpty) {
-      val remaining = new java.util.ArrayList[PageMarkup_U]()
-      puQueue.drainTo(remaining)
-      db.page.writeMarkups(remaining.asScala.toSeq)
-    }
-
-    if (!pzQueue.isEmpty) {
-      val remaining = new java.util.ArrayList[PageMarkup_Z]()
-      pzQueue.drainTo(remaining)
-      db.page.writeMarkups_Z(remaining.asScala.toSeq)
-    }
+    writer.flush()
   }
 
-  private def flushQueue(): Unit = {
-    puQueue.synchronized {
-      if (puQueue.size() >= Storage.batchSqlSize) {
-        val toWrite = new java.util.ArrayList[PageMarkup_U]()
-        puQueue.drainTo(toWrite)
-        if (!toWrite.isEmpty) {
-          db.page.writeMarkups(toWrite.asScala.toSeq)
-        }
-      }
-    }
-
-    pzQueue.synchronized {
-      if (pzQueue.size() >= Storage.batchSqlSize) {
-        val toWrite = new java.util.ArrayList[PageMarkup_Z]()
-        pzQueue.drainTo(toWrite)
-        if (!toWrite.isEmpty) {
-          db.page.writeMarkups_Z(toWrite.asScala.toSeq)
-        }
-      }
-    }
-  }
-
-  private var db: Storage  = _
-  private lazy val props   = db.configuration.readConfiguredPropertiesOptimistic()
-  private lazy val puQueue = new ArrayBlockingQueue[PageMarkup_U](Storage.batchSqlSize * 2)
-  private lazy val pzQueue = new ArrayBlockingQueue[PageMarkup_Z](Storage.batchSqlSize * 2)
+  private var db: Storage = _
+  private lazy val props  = db.configuration.readConfiguredPropertiesOptimistic()
 }

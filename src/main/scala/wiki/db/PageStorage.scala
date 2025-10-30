@@ -252,7 +252,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO markup ($cols) VALUES $values""".update()
+        sql"""INSERT OR REPLACE INTO markup ($cols) VALUES $values""".update()
       }
     }
   }
@@ -364,7 +364,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO markup_z ($cols) VALUES $values""".update()
+        sql"""INSERT OR REPLACE INTO markup_z ($cols) VALUES $values""".update()
       }
     }
   }
