@@ -5,7 +5,6 @@ import org.rogach.scallop.*
 import upickle.default.*
 import wiki.db.Storage
 import wiki.extractor.types.Page
-import wiki.extractor.util.Progress
 import wiki.util.{FileHelpers, Logging}
 
 import java.net.BindException
@@ -265,41 +264,31 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   }
 
   /**
-    * Prewarm caches so that service is responsive as soon
-    * as it binds to its port. Otherwise, a request to process a moderately
-    * sized document can take several minutes with a cold cache.
+    * Prewarm caches so that service becomes more responsive.
+    * A request to process a moderately sized document can take
+    * minutes with a cold cache.
     */
   private def prewarm(): Unit = {
-    // Also warm caches
-    val delay  = 2000
-    val nPages = 1000
-    logger.info(s"Warming caches with $nPages random pages")
-    val rand    = new scala.util.Random(1)
-    val pageIds = mutable.Set[Int]()
-    val maxPage = ops.db.page.getMaxMarkup()
-    while (pageIds.size < nPages) {
-      val randPage = rand.nextInt(maxPage)
-      if (ops.db.page.readMarkupAuto(randPage).nonEmpty) {
-        pageIds.add(randPage)
+    val delay        = 2000
+    val nPages       = 100
+    val popularPages = ops.comparer.getMostLinkedPages(nPages)
+    logger.info(s"Warming caches with $nPages popular pages")
+
+    var j = 0
+    popularPages.foreach { pageId =>
+      getFirstParagraph(pageId).foreach { paragraph =>
+        val req = DocumentProcessingRequest(paragraph)
+        // Don't try to prewarm cache while other requests are active.
+        while (rt.getCounts().values.sum > 0) {
+          Thread.sleep(delay)
+        }
+
+        ops.getLabelsAndLinks(req)
+        j += 1
       }
     }
-    var j = 0
-    pageIds
-      .take(nPages)
-      .foreach { pageId =>
-        getFirstParagraph(pageId).foreach { paragraph =>
-          val req = DocumentProcessingRequest(paragraph)
-          Progress.tick(j, "*", 1)
 
-          // Don't try to prewarm cache while other requests are active.
-          while (rt.getCounts().values.sum > 0) {
-            Thread.sleep(delay)
-          }
-
-          ops.getLabelsAndLinks(req)
-          j += 1
-        }
-      }
+    logger.info(s"Finished warming caches with $nPages popular pages")
   }
 }
 

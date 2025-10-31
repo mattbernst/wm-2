@@ -4,10 +4,20 @@ import scalikejdbc.*
 import wiki.extractor.types.GroupedLinks
 
 import java.util
+import scala.collection.mutable
 
 case class ResolvedLink(source: Int, destination: Int, anchorText: String)
 case class DeadLink(source: Int, destination: String, anchorText: String)
 
+/**
+  * A memory-efficient class for tracking per-page counts. The page IDs
+  * and their counts are stored in two parallel arrays so that a given
+  * page's count can be located by binary search, then read out of the
+  * counts array. This takes less space than a hashmap.
+  *
+  * @param pageIds The page IDs with associated counts
+  * @param counts  The count for each associated page ID
+  */
 case class PageCount(pageIds: Array[Int], counts: Array[Int]) {
   require(pageIds.length == counts.length)
 
@@ -18,6 +28,42 @@ case class PageCount(pageIds: Array[Int], counts: Array[Int]) {
     } else {
       0
     }
+  }
+
+  /**
+    * Get the top N page IDs according to their counts.
+    *
+    * @param n The maximum number of page IDs to return
+    * @return  A sequence of page IDs
+    */
+  def getTopN(n: Int): Array[Int] = {
+    if (n <= 0) return Array.empty[Int]
+    if (n >= pageIds.length) return pageIds.clone()
+
+    // Min-heap to keep the top N elements (smallest count at the head)
+    implicit val ord: Ordering[(Int, Int)] = Ordering.by(_._2)
+    val minHeap                            = mutable.PriorityQueue.empty[(Int, Int)](ord.reverse)
+
+    var j = 0
+    while (j < pageIds.length) {
+      val pageId = pageIds(j)
+      val count  = counts(j)
+
+      if (minHeap.size < n) {
+        // Heap not full yet, just add
+        minHeap.enqueue((pageId, count))
+      } else if (count > minHeap.head._2) {
+        // Current count is larger than smallest in heap, replace it
+        minHeap.dequeue()
+        minHeap.enqueue((pageId, count))
+      }
+
+      j += 1
+    }
+
+    minHeap.dequeueAll
+      .map((t: (Int, Int)) => t._1)
+      .toArray
   }
 
   def grouped(n: Int): Iterator[PageCount] = {
