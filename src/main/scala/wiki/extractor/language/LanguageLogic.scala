@@ -3,6 +3,7 @@ package wiki.extractor.language
 import opennlp.tools.sentdetect.SentenceDetectorME
 import opennlp.tools.tokenize.TokenizerME
 import org.sweble.wikitext.parser.nodes.*
+import wiki.db.Storage
 import wiki.extractor.language.types.{NGram, Snippet}
 import wiki.extractor.types.Language
 import wiki.util.Logging
@@ -10,7 +11,6 @@ import wiki.util.Logging
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import scala.util.{Failure, Success, Try}
 
 trait LanguageLogic {
 
@@ -135,23 +135,15 @@ object LanguageLogic extends Logging {
     * yet defined and mapped for the given language code.
     *
     * @param languageCode An ISO 639-1 language code e.g. "en"
+    * @param db           A database storage object
     * @return             Language-specific NLP logic
     */
-  def getLanguageLogic(languageCode: String): LanguageLogic = {
-    Try(logicForLanguage(languageCode)) match {
-      case Success(res) =>
-        res
-      case Failure(ex: NoSuchElementException) =>
-        logger.error(s"No LanguageLogic defined for language code '$languageCode'")
-        throw ex
-      case Failure(ex) =>
-        throw ex
+  def getLanguageLogic(languageCode: String, db: Storage): LanguageLogic = {
+    lazy val languageModel = new LanguageModel(db)
+    languageCode match {
+      case "en"        => new EnglishLanguageLogic(languageModel)
+      case "en_simple" => new EnglishLanguageLogic(languageModel)
+      case "fr"        => new FrenchLanguageLogic(languageModel)
     }
   }
-
-  private val logicForLanguage: Map[String, LanguageLogic] = Map(
-    "en"        -> EnglishLanguageLogic,
-    "en_simple" -> EnglishLanguageLogic,
-    "fr"        -> FrenchLanguageLogic
-  )
 }

@@ -13,7 +13,7 @@ object MLModelStorage {
     */
   def write(name: String, data: Array[Byte]): Unit = {
     DB.autoCommit { implicit session =>
-      sql"""INSERT INTO $table
+      sql"""INSERT OR REPLACE INTO $table
            (name, data) VALUES ($name, $data)""".update(): Unit
     }
   }

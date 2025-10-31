@@ -6,7 +6,9 @@ import wiki.extractor.types.*
 import wiki.extractor.util.Progress
 import wiki.util.{FileHelpers, Logging}
 
+import java.io.File
 import java.util
+import scala.util.Random
 
 /**
   * A SQLite database storage writer and reader for representing and mining
@@ -290,6 +292,26 @@ object Storage extends Logging {
       }
     }
     loop(sqls.toList, Nil)
+  }
+
+  /**
+    * Get a Storage instance with a random SQLite db instance for testing.
+    * The on-disk db instance will be deleted when all tests complete.
+    *
+    * @return A database storage object
+    */
+  def getTestDb(): Storage = {
+    val id       = Random.nextLong().abs.toString
+    val fileName = s"${id}_test.db"
+    val instance = new Storage(fileName)
+
+    Runtime.getRuntime.addShutdownHook(new Thread {
+      override def run(): Unit = {
+        new File(fileName).delete()
+      }
+    })
+
+    instance
   }
 
   val batchSqlSize: Int = 5_000

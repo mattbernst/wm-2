@@ -2,7 +2,8 @@ package wiki.extractor
 
 import de.fau.cs.osr.utils.visitor.VisitingException
 import org.sweble.wikitext.parser.nodes.WtListItem
-import wiki.extractor.language.EnglishLanguageLogic
+import wiki.db.Storage
+import wiki.extractor.language.{EnglishLanguageLogic, LanguageModel}
 import wiki.extractor.types.LocatedLink
 import wiki.util.{FileHelpers, UnitSpec}
 
@@ -199,5 +200,5 @@ class WikitextParserSpec extends UnitSpec {
     listItems.length shouldBe 116
   }
 
-  private lazy val parser = new WikitextParser(EnglishLanguageLogic)
+  private lazy val parser = new WikitextParser(new EnglishLanguageLogic(new LanguageModel(Storage.getTestDb())))
 }

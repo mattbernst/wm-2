@@ -1,5 +1,6 @@
 package wiki.extractor
 
+import wiki.db.Storage
 import wiki.extractor.types.*
 import wiki.util.{FileHelpers, UnitSpec}
 
@@ -141,5 +142,9 @@ class XMLStructuredPageProcessorSpec extends UnitSpec {
     )
   )
 
-  private lazy val fragmentProcessor = new XMLStructuredPageProcessor(siteInfo, language)
+  private lazy val fragmentProcessor = new XMLStructuredPageProcessor(
+    siteInfo = siteInfo,
+    language = language,
+    db = Storage.getTestDb()
+  )
 }

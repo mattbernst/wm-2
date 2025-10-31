@@ -1,5 +1,6 @@
 package wiki.extractor.language
 
+import wiki.db.Storage
 import wiki.extractor.WikitextParser
 import wiki.extractor.language.types.Snippet
 import wiki.extractor.types.{Language, TrainingProfile}
@@ -14,7 +15,7 @@ class LanguageLogicSpec extends UnitSpec {
         "Mr. Vinken is chairman of Elsevier N.V., the Dutch publishing group. " +
         "Rudolph Agnew, 55 years old and former chairman of Consolidated Gold Fields PLC, " +
         "was named a director of this British industrial conglomerate."
-    val snippet = EnglishLanguageLogic.getSnippet(input)
+    val snippet = englishLanguageLogic.getSnippet(input)
     snippet.firstParagraph shouldBe Some(input)
     snippet.firstSentence shouldBe Some(
       "Pierre Vinken, 61 years old, will join the board as a nonexecutive director Nov. 29."
@@ -22,7 +23,7 @@ class LanguageLogicSpec extends UnitSpec {
   }
 
   it should "gracefully handle empty input" in {
-    val snippet = EnglishLanguageLogic.getSnippet("")
+    val snippet = englishLanguageLogic.getSnippet("")
     snippet shouldBe Snippet(firstParagraph = None, firstSentence = None)
   }
 
@@ -32,7 +33,7 @@ class LanguageLogicSpec extends UnitSpec {
         |Mafic is an adjective describing a silicate mineral or rock that is rich in magnesium and iron. Most mafic minerals are dark in color. Common mafic rocks include basalt, dolerite and gabbro.
         |""".stripMargin
 
-    val snippet = EnglishLanguageLogic.getSnippet(input)
+    val snippet = englishLanguageLogic.getSnippet(input)
     val efp =
       "Mafic is an adjective describing a silicate mineral or rock that is rich in magnesium and iron. Most mafic minerals are dark in color. Common mafic rocks include basalt, dolerite and gabbro."
     snippet.firstParagraph shouldBe Some(efp)
@@ -46,7 +47,7 @@ class LanguageLogicSpec extends UnitSpec {
       """Chemically, mafic rocks are on the other side of the rock spectrum from the felsic rocks.
         |""".stripMargin
 
-    val snippet = EnglishLanguageLogic.getSnippet(input)
+    val snippet = englishLanguageLogic.getSnippet(input)
     snippet.firstParagraph shouldBe None
     snippet.firstSentence shouldBe Some(
       "Chemically, mafic rocks are on the other side of the rock spectrum from the felsic rocks."
@@ -78,9 +79,9 @@ class LanguageLogicSpec extends UnitSpec {
       )
     )
 
-    val wp      = new WikitextParser(EnglishLanguageLogic)
+    val wp      = new WikitextParser(englishLanguageLogic)
     val parsed  = wp.parse("Pearl Harbor", wt)
-    val snippet = EnglishLanguageLogic.getSnippet(parsed)
+    val snippet = englishLanguageLogic.getSnippet(parsed)
 
     snippet shouldBe expected
   }
@@ -88,14 +89,14 @@ class LanguageLogicSpec extends UnitSpec {
   behavior of "FrenchLanguageLogic.getSnippet"
 
   it should "gracefully handle empty input" in {
-    val snippet = FrenchLanguageLogic.getSnippet("")
+    val snippet = frenchLanguageLogic.getSnippet("")
     snippet shouldBe Snippet(firstParagraph = None, firstSentence = None)
   }
 
   it should "get the first sentence and the first paragraph" in {
     val input =
       "Le 1er novembre 2000, Sega Enterprises, Ltd. change son nom en Sega Corporation. En France, la devise de Sega est « Sega, c’est plus fort que toi ! »."
-    val snippet = FrenchLanguageLogic.getSnippet(input)
+    val snippet = frenchLanguageLogic.getSnippet(input)
     snippet.firstParagraph shouldBe Some(input)
     // Note: OpenNLP's answer is wrong here (as it frequently is)
     // Java's BreakIterator handles this correctly but is wrong
@@ -187,9 +188,13 @@ class LanguageLogicSpec extends UnitSpec {
       "."
     )
 
-    val nGrams = EnglishLanguageLogic.wordNGrams(language = englishLanguage, documentText = input)
+    val nGrams = englishLanguageLogic.wordNGrams(language = englishLanguage, documentText = input)
     nGrams.map(_.stringContent).toList shouldBe expected.toList
   }
+
+  private lazy val lm                   = new LanguageModel(Storage.getTestDb())
+  private lazy val englishLanguageLogic = new EnglishLanguageLogic(lm)
+  private lazy val frenchLanguageLogic  = new FrenchLanguageLogic(lm)
 
   private lazy val englishLanguage = Language(
     code = "en",
