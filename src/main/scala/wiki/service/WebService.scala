@@ -5,6 +5,7 @@ import org.rogach.scallop.*
 import upickle.default.*
 import wiki.db.Storage
 import wiki.extractor.types.Page
+import wiki.extractor.util.Progress
 import wiki.util.{FileHelpers, Logging}
 
 import java.net.BindException
@@ -89,11 +90,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     val artReq = read[MultiArticleRequest](req.text())
 
     val excerpts = artReq.ids.flatMap { pageId =>
-      val firstParagraph = ops.db.page
-        .readMarkupAuto(pageId)
-        .flatMap(_.parseResult)
-        .flatMap(_.snippet.firstParagraph)
-
+      val firstParagraph = getFirstParagraph(pageId)
       firstParagraph.map(text => PageExcerpt(pageId = pageId, firstParagraph = text))
     }
 
@@ -201,6 +198,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     ops.contextualizer
     logger.info(s"Starting web service on port $port with db $databaseFileName")
 
+
     initialize()
 
     // Retry loop for binding to the port
@@ -219,6 +217,52 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
         case e: Throwable => throw e // Re-throw other exceptions
       }
     }
+
+    prewarm()
+  }
+
+  /**
+    * Get the first paragraph of the plain text of a Wikipedia article.
+    *
+    * @param pageId The numeric ID of the Wikipedia page
+    * @return       The first paragraph of article text, if found
+    */
+  private def getFirstParagraph(pageId: Int): Option[String] = {
+    ops.db.page
+      .readMarkupAuto(pageId)
+      .flatMap(_.parseResult)
+      .flatMap(_.snippet.firstParagraph)
+  }
+
+  /**
+    * Load data and prewarm caches so that service is responsive as soon
+    * as it binds to its port. Otherwise, a request to process a moderately
+    * sized document can take several minutes with a cold cache.
+    */
+  private def prewarm(): Unit = {
+    // Also warm caches
+    val nPages = 1000
+    logger.info(s"Warming caches with $nPages random pages")
+    val rand    = new scala.util.Random(1)
+    val pageIds = mutable.Set[Int]()
+    val maxPage = ops.db.page.getMaxMarkup()
+    while (pageIds.size < nPages) {
+      val randPage = rand.nextInt(maxPage)
+      if (ops.db.page.readMarkupAuto(randPage).nonEmpty) {
+        pageIds.add(randPage)
+      }
+    }
+    var j = 0
+    pageIds
+      .take(nPages)
+      .foreach { pageId =>
+        getFirstParagraph(pageId).foreach { paragraph =>
+          val req = DocumentProcessingRequest(paragraph)
+          Progress.tick(j, "*", 1)
+          ops.getLabelsAndLinks(req)
+          j += 1
+        }
+      }
   }
 }
 
