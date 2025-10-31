@@ -31,6 +31,8 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   private var configuredPort  = 0
   private var ops: ServiceOps = _
   private val startedAt: Long = System.currentTimeMillis()
+  private val endpointCount   = mutable.Map[String, Int]()
+  private val rt              = new RequestTracker
 
   /**
     * Get labels and links from an arbitrary text document. This endpoint
@@ -42,10 +44,15 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     */
   @cask.post("/doc/labels")
   def getDocumentLabels(req: cask.Request): Response[String] = {
-    incrementEndpoint("getDocumentLabels")
-    val docReq                 = read[DocumentProcessingRequest](req.text())
-    val result: LabelsAndLinks = ops.getLabelsAndLinks(docReq)
-    jsonResponse(write(result))
+    val name = "getDocumentLabels"
+    rt.track(
+      name, {
+        incrementEndpoint(name)
+        val docReq                 = read[DocumentProcessingRequest](req.text())
+        val result: LabelsAndLinks = ops.getLabelsAndLinks(docReq)
+        jsonResponse(write(result))
+      }
+    )
   }
 
   /**
@@ -58,22 +65,27 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     */
   @cask.post("/doc/labels/simple")
   def getDocumentLabelsSimple(req: cask.Request): Response[String] = {
-    incrementEndpoint("getDocumentLabelsSimple")
-    val docReq = read[DocumentProcessingRequest](req.text())
-    val res    = ops.getLabelsAndLinks(docReq)
-
+    val name                          = "getDocumentLabelsSimple"
     def simplify(p: Page): SimplePage = SimplePage(p.id, p.title)
 
-    val simplified = StreamlinedLinks(
-      contextPages = res.context.pages.map(p => SimpleRepresentativePage(simplify(p.page.get), p.weight)),
-      contextQuality = res.context.quality,
-      labels = res.labels,
-      resolvedLabels =
-        res.resolvedLabels.map(l => SimpleResolvedLabel(l.label, simplify(l.page), l.scoredSenses.scores.toMap)),
-      links = res.links.map(t => (simplify(t._1), t._2))
-    )
+    rt.track(
+      name, {
+        incrementEndpoint(name)
+        val docReq = read[DocumentProcessingRequest](req.text())
+        val res    = ops.getLabelsAndLinks(docReq)
 
-    jsonResponse(write(simplified))
+        val simplified = StreamlinedLinks(
+          contextPages = res.context.pages.map(p => SimpleRepresentativePage(simplify(p.page.get), p.weight)),
+          contextQuality = res.context.quality,
+          labels = res.labels,
+          resolvedLabels =
+            res.resolvedLabels.map(l => SimpleResolvedLabel(l.label, simplify(l.page), l.scoredSenses.scores.toMap)),
+          links = res.links.map(t => (simplify(t._1), t._2))
+        )
+
+        jsonResponse(write(simplified))
+      }
+    )
   }
 
   /**
@@ -86,15 +98,20 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     */
   @cask.post("/wiki/excerpts")
   def getArticleExcerpts(req: cask.Request): Response[String] = {
-    incrementEndpoint("getArticleExcerpts")
-    val artReq = read[MultiArticleRequest](req.text())
+    val name = "getArticleExcerpts"
+    rt.track(
+      name, {
+        incrementEndpoint(name)
+        val artReq = read[MultiArticleRequest](req.text())
 
-    val excerpts = artReq.ids.flatMap { pageId =>
-      val firstParagraph = getFirstParagraph(pageId)
-      firstParagraph.map(text => PageExcerpt(pageId = pageId, firstParagraph = text))
-    }
+        val excerpts = artReq.ids.flatMap { pageId =>
+          val firstParagraph = getFirstParagraph(pageId)
+          firstParagraph.map(text => PageExcerpt(pageId = pageId, firstParagraph = text))
+        }
 
-    jsonResponse(write(excerpts))
+        jsonResponse(write(excerpts))
+      }
+    )
   }
 
   /**
@@ -116,17 +133,25 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     */
   @cask.get("/stats")
   def stats(): Response[String] = {
-    incrementEndpoint("stats")
+    val name = "stats"
+    rt.track(
+      name, {
+        incrementEndpoint(name)
 
-    val current = jwdpPort match {
-      case Some(debugPort) => Map("JWDPPort" -> debugPort) ++ endpointCount.toMap
-      case None            => endpointCount.toMap
-    }
+        val epc = endpointCount.map(e => ("reqCount:" + e._1, e._2))
 
-    cask.Response(
-      data = write(current),
-      headers = Seq("Content-Type" -> "text/plain")
+        val current = jwdpPort match {
+          case Some(debugPort) => Map("JWDPPort" -> debugPort) ++ epc
+          case None            => epc
+        }
+
+        cask.Response(
+          data = write(current),
+          headers = Seq("Content-Type" -> "text/plain")
+        )
+      }
     )
+
   }
 
   /**
@@ -137,11 +162,14 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     */
   @cask.get("/wiki/page_id/:pageId")
   def getArticleByPageId(pageId: Int): Response[String] = {
-    incrementEndpoint("getArticleByPageId")
-    ops.db.getPage(pageId) match {
-      case Some(page) => jsonResponse(write(page))
-      case None       => cask.Response(data = "", statusCode = 404)
-    }
+    val name = "getArticleByPageId"
+    rt.track(name, {
+      incrementEndpoint(name)
+      ops.db.getPage(pageId) match {
+        case Some(page) => jsonResponse(write(page))
+        case None       => cask.Response(data = "", statusCode = 404)
+      }
+    })
   }
 
   /**
@@ -152,14 +180,17 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     */
   @cask.get("/wiki/page_title/:pageTitle")
   def getArticleByPageTitle(pageTitle: String): Response[String] = {
-    incrementEndpoint("getArticleByPageTitle")
-    ops.db.getPage(pageTitle) match {
-      case Some(page) => jsonResponse(write(page))
-      case None       => cask.Response(data = "", statusCode = 404)
-    }
+    val name = "getArticleByPageTitle"
+    rt.track(
+      name, {
+        incrementEndpoint(name)
+        ops.db.getPage(pageTitle) match {
+          case Some(page) => jsonResponse(write(page))
+          case None       => cask.Response(data = "", statusCode = 404)
+        }
+      }
+    )
   }
-
-  private val endpointCount = mutable.Map[String, Int]()
 
   private def incrementEndpoint(name: String): Unit = this.synchronized {
     if (endpointCount.contains(name)) {
@@ -198,7 +229,6 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
     ops.contextualizer
     logger.info(s"Starting web service on port $port with db $databaseFileName")
 
-
     initialize()
 
     // Retry loop for binding to the port
@@ -235,12 +265,13 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   }
 
   /**
-    * Load data and prewarm caches so that service is responsive as soon
+    * Prewarm caches so that service is responsive as soon
     * as it binds to its port. Otherwise, a request to process a moderately
     * sized document can take several minutes with a cold cache.
     */
   private def prewarm(): Unit = {
     // Also warm caches
+    val delay  = 2000
     val nPages = 1000
     logger.info(s"Warming caches with $nPages random pages")
     val rand    = new scala.util.Random(1)
@@ -259,6 +290,12 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
         getFirstParagraph(pageId).foreach { paragraph =>
           val req = DocumentProcessingRequest(paragraph)
           Progress.tick(j, "*", 1)
+
+          // Don't try to prewarm cache while other requests are active.
+          while (rt.getCounts().values.sum > 0) {
+            Thread.sleep(delay)
+          }
+
           ops.getLabelsAndLinks(req)
           j += 1
         }
