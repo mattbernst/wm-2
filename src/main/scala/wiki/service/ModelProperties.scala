@@ -2,7 +2,7 @@ package wiki.service
 
 import wiki.db.PhaseState.COMPLETED
 import wiki.db.Storage
-import wiki.util.{Config, FileHelpers}
+import wiki.util.FileHelpers
 
 import java.nio.file.NoSuchFileException
 
@@ -19,18 +19,18 @@ trait ModelProperties {
     * @return The name of the file (if it can be inferred)
     */
   def inferDbFile(): Option[String] = {
-    val autoName = Config.props.language.code + "_wiki.db"
+    val suffix = "_wiki.db"
     val candidates = FileHelpers
       .glob("./*.db")
-      .filter(_.contains(autoName))
+      .filter(_.contains(suffix))
     if (candidates.isEmpty) {
       println(
-        s"No db file found in current directory matching $autoName. Givee db file name via command line or generate one."
+        s"No db file found in current directory matching $suffix. Give db file name via command line or generate one."
       )
       None
     } else if (candidates.length > 1) {
       println(
-        s"Found multiple db files matching $autoName: ${candidates.mkString(", ")}. Give db file name via command line."
+        s"Found multiple db files matching $suffix: ${candidates.mkString(", ")}. Give db file name via command line."
       )
       None
     } else {
