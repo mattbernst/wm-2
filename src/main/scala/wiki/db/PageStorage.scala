@@ -39,9 +39,7 @@ object PageStorage {
   }
 
   /**
-    * Get already-processed page IDs to accelerate partially completed stage01
-    * page extraction. Any known ID can be skipped as soon as the page ID has
-    * been extracted from its page fragment.
+    * Get already-processed page IDs.
     *
     * @return The set of all completed page IDs
     */
@@ -254,7 +252,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO markup ($cols) VALUES $values""".update()
+        sql"""INSERT OR REPLACE INTO markup ($cols) VALUES $values""".update()
       }
     }
   }
@@ -366,7 +364,7 @@ object PageStorage {
             )
         )
         val values: SQLSyntax = sqls.csv(params.map(param => sqls"(${sqls.csv(param *)})") *)
-        sql"""INSERT OR IGNORE INTO markup_z ($cols) VALUES $values""".update()
+        sql"""INSERT OR REPLACE INTO markup_z ($cols) VALUES $values""".update()
       }
     }
   }
