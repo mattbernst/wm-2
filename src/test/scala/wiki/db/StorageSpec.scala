@@ -1,15 +1,14 @@
 package wiki.db
 
-import org.scalatest.BeforeAndAfterAll
 import org.slf4j.event.Level
-import wiki.extractor.language.EnglishLanguageLogic
+import wiki.extractor.language.{EnglishLanguageLogic, LanguageModel}
 import wiki.extractor.types.*
 import wiki.extractor.{TitleFinder, WikitextParser}
-import wiki.util.{ConfiguredProperties, FileHelpers, UnitSpec}
+import wiki.util.{ConfiguredProperties, UnitSpec}
 
 import scala.collection.mutable
 
-class StorageSpec extends UnitSpec with BeforeAndAfterAll {
+class StorageSpec extends UnitSpec {
   behavior of "Storage.getPage"
 
   it should "get nothing for an unknown page" in {
@@ -205,13 +204,8 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
     storage.sense.getSenseByLabelId(labelId) shouldBe Some(sense)
   }
 
-  override def afterAll(): Unit = {
-    super.afterAll()
-    FileHelpers.deleteFileIfExists(testDbName)
-  }
-
   private lazy val storage = {
-    val db = new Storage(testDbName)
+    val db = Storage.getTestDb()
     db.createTableDefinitions(0.to(PhaseStorage.lastPhase))
     db.createIndexes(0.to(PhaseStorage.lastPhase))
     db
@@ -285,6 +279,5 @@ class StorageSpec extends UnitSpec with BeforeAndAfterAll {
                                     |{{R from CamelCase}}
                                     |}}""".stripMargin
 
-  private lazy val parser     = new WikitextParser(EnglishLanguageLogic)
-  private lazy val testDbName = s"test_${randomLong()}.db"
+  private lazy val parser = new WikitextParser(new EnglishLanguageLogic(new LanguageModel(storage)))
 }

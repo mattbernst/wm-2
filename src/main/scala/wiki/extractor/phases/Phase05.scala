@@ -15,7 +15,7 @@ class Phase05(db: Storage) extends Phase(db: Storage) {
     db.label.clearOccurrenceCounts()
     DBLogging.info("Loading link label statistics from db")
     val counter     = db.label.read()
-    val ll          = LanguageLogic.getLanguageLogic(props.language.code)
+    val ll          = LanguageLogic.getLanguageLogic(props.language.code, db)
     val goodLabels  = counter.getLabels()
     val source      = new PageMarkupSource(db)
     val accumulator = new LabelAccumulator(counter)

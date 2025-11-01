@@ -50,6 +50,7 @@ class Phase01(db: Storage) extends Phase(db: Storage) with Logging {
     val processor = new XMLStructuredPageProcessor(
       siteInfo = siteInfo,
       language = props.language,
+      db = db,
       completedPages = completedPages
     )
 

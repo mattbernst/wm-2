@@ -107,6 +107,15 @@ class ArticleComparer(db: Storage, cacheSize: Int = 500_000) extends Logging {
   }
 
   /**
+    * Get the N most commonly linked-to pages.
+    *
+    * @param n The number of pages to return
+    * @return  The most frequently linked to pages in this Wikipedia dataset
+    */
+  def getMostLinkedPages(n: Int): Array[Int] =
+    distinctLinksIn.getTopN(n)
+
+  /**
     * Calculates similarity metrics between two Wikipedia articles using their link structures.
     *
     * For a pair of article IDs, computes four different similarity measures:

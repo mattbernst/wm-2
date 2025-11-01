@@ -252,7 +252,7 @@ class Contextualizer(
   private val minLinkProbability = 0.0025
   private val minInLinks         = language.trainingProfile.minInLinks
 
-  private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code)
+  private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code, db)
 
   private val goodLabels  = mutable.Set.from(labelToId.keys)
   private val dateStrings = language.generateValidDateStrings()

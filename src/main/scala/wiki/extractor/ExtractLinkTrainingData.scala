@@ -30,7 +30,7 @@ object ExtractLinkTrainingData extends ModelProperties with Logging {
     val processor = new LinkFeatureProcessor(db)
     db.linkTraining.deleteAll()
     val profile  = props.language.trainingProfile
-    val ll       = LanguageLogic.getLanguageLogic(props.language.code)
+    val ll       = LanguageLogic.getLanguageLogic(props.language.code, db)
     val selector = new ArticleSelector(db, ll)
 
     val used: Set[Int] = profile.disambiguatorGroup

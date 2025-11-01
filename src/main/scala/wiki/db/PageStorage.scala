@@ -369,7 +369,17 @@ object PageStorage {
     }
   }
 
-  lazy val compressedMax: Int = {
+  /**
+    * Get the maximum page ID currently written in the markup tables.
+    * Automatically accounts for compressed/uncompressed storage.
+    *
+    * @return The greatest page ID of already-processed markup
+    */
+  def getMaxMarkup(): Int = {
+    math.max(compressedMax, uncompressedMax)
+  }
+
+  private lazy val compressedMax: Int = {
     DB.autoCommit { implicit session =>
       sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM markup_z"""
         .map(rs => rs.int("m"))
@@ -378,7 +388,7 @@ object PageStorage {
     }
   }
 
-  lazy val uncompressedMax: Int = {
+  private lazy val uncompressedMax: Int = {
     DB.autoCommit { implicit session =>
       sql"""SELECT COALESCE(MAX(page_id), 0) AS m FROM markup"""
         .map(rs => rs.int("m"))

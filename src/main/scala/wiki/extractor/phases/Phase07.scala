@@ -28,7 +28,7 @@ class Phase07(db: Storage) extends Phase(db: Storage) {
     db.phase.createPhase(number, s"Building word sense disambiguation training/test data")
     db.createTableDefinitions(number)
 
-    val ll        = LanguageLogic.getLanguageLogic(props.language.code)
+    val ll        = LanguageLogic.getLanguageLogic(props.language.code, db)
     val selector  = new ArticleSelector(db, ll)
     val processor = new WordSenseFeatureProcessor(db, props)
 

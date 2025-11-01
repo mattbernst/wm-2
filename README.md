@@ -177,6 +177,8 @@ make load_disambiguation
 make prepare_link_training
 make train_link_detector
 make load_linking
+# Reduces database size post-training
+make shrink
 ```
 
 to train a CatBoost model for linkability detection.

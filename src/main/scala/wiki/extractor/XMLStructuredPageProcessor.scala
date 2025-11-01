@@ -1,6 +1,6 @@
 package wiki.extractor
 
-import wiki.db.PageSink
+import wiki.db.{PageSink, Storage}
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.*
 import wiki.extractor.util.{DBLogging, Progress}
@@ -18,6 +18,7 @@ case class StructuredPage(page: Page, markup: PageMarkup)
 class XMLStructuredPageProcessor(
   siteInfo: SiteInfo,
   language: Language,
+  db: Storage,
   completedPages: mutable.Set[Int] = mutable.Set())
     extends Logging {
 
@@ -193,7 +194,7 @@ class XMLStructuredPageProcessor(
   }
 
   private val parser: WikitextParser =
-    new WikitextParser(LanguageLogic.getLanguageLogic(language.code))
+    new WikitextParser(LanguageLogic.getLanguageLogic(language.code, db))
 
   // Counting transclusions that end a page can be useful to find the
   // most common disambiguation transclusions for configuring the
