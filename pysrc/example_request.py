@@ -65,7 +65,7 @@ class Processor:
         response = json.loads(data)
         elapsed = int((time.time() - t0) * 1000)
 
-        context_pages = response["context"]["pages"]
+        context_pages = response["context"]["pages"] + response["broadContext"]["pages"]
         context_page_titles = [p["page"]["title"] for p in context_pages]
         context_page_weights = [p["weight"] for p in context_pages]
         context_page_ids = [p["page"]["id"] for p in context_pages]
@@ -90,6 +90,8 @@ class Processor:
             "context": list(zip(context_page_titles, context_page_ids, context_page_weights))
         }
 
+        pprint.pprint(response)
+
         return results
 
 
@@ -98,6 +100,7 @@ if __name__ == '__main__':
         text = infile.read()
         processor = Processor()
         labels = processor.extract_labels(text)
+        pprint.pprint(labels["context"])
         context_pages = [e[1] for e in labels["context"]]
         pprint.pprint(context_pages)
         pprint.pprint(processor.get_categories(context_pages))

@@ -23,6 +23,7 @@ case class NGResolvedLabel(nGram: NGram, resolvedLabel: ResolvedLabel)
 
 case class LabelsAndLinks(
   context: Context,
+  broadContext: Context,
   labels: Seq[String],
   resolvedLabels: Seq[ResolvedLabel],
   links: Seq[(Page, TopicPage)])
@@ -48,14 +49,16 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
     */
   def getLabelsAndLinks(req: DocumentProcessingRequest): LabelsAndLinks = {
     val labels          = contextualizer.getLabels(req.doc)
-    val context         = contextualizer.getContext(labels.map(_.stringContent), params.minSenseProbability)
+    val labelStrings    = labels.map(_.stringContent)
+    val context         = contextualizer.getContext(labelStrings, params.minSenseProbability)
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
+    val broadContext    = enrichContext(contextualizer.getBroadContext(labelStrings, params.minSenseProbability))
     val resolvedLabels  = resolveSenses(cleanedLabels, context)
     val linkedTopics = getLinkedTopics(req.doc, resolvedLabels, context)
       .sortBy(-_.linkPrediction)
     // Store linked pages as a tuple of (Page, TopicPage) for each topic in
-    // linkedTopics. The reason to have add the Page is to carry the non-numeric
+    // linkedTopics. The reason to add the Page is to carry the non-numeric
     // page attributes.
     // The data in linkedPages is similar to that found in the WikiminerEntity
     // from the old wikipedia-miner:
@@ -67,6 +70,7 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
 
     LabelsAndLinks(
       context = enrichedContext,
+      broadContext = broadContext,
       labels = cleanedLabels.map(_.stringContent).toSeq.distinct,
       resolvedLabels = resolvedLabels.map(_.resolvedLabel).toSeq,
       links = linkedPages.toSeq
@@ -306,7 +310,8 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
 
     // Get page info for all destinations to filter to categories
     val allDestinations: Set[Int] = linksBySource.values.flatten.toSet
-    val destinationPages: Map[Int, Page] = db.getPages(allDestinations.toSeq)
+    val destinationPages: Map[Int, Page] = db
+      .getPages(allDestinations.toSeq)
       .map(p => (p.id, p))
       .toMap
 
@@ -316,8 +321,7 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
     }
 
     // Count frequency: how many input pages link to each category
-    val categoryFrequency: Map[Int, Int] = linksBySource.values
-      .flatten
+    val categoryFrequency: Map[Int, Int] = linksBySource.values.flatten
       .filter(categoryPages.contains)
       .groupBy(identity)
       .view
@@ -326,17 +330,18 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
 
     // Score categories (frequency normalized, with log boost for appearing in multiple inputs)
     val totalInputPages = validPageIds.size.toDouble
-    val scoredCategories = categoryFrequency.map { case (catId, freq) =>
-      val normalizedFreq = freq.toDouble / totalInputPages
-      val score = normalizedFreq * math.log(freq + 1)
-      val page = categoryPages(catId)
+    val scoredCategories = categoryFrequency.map {
+      case (catId, freq) =>
+        val normalizedFreq = freq.toDouble / totalInputPages
+        val score          = normalizedFreq * math.log(freq + 1)
+        val page           = categoryPages(catId)
 
-      ScoredCategory(
-        categoryId = catId,
-        title = page.title,
-        score = score,
-        frequency = freq
-      )
+        ScoredCategory(
+          categoryId = catId,
+          title = page.title,
+          score = score,
+          frequency = freq
+        )
     }.toSeq
 
     // Sort by score descending, take top N
