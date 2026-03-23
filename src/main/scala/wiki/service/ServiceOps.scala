@@ -9,7 +9,7 @@ import wiki.extractor.language.types.NGram
 import wiki.extractor.types.*
 import wiki.extractor.{ArticleComparer, Contextualizer}
 import wiki.ml.*
-import wiki.util.ConfiguredProperties
+import wiki.util.{ConfiguredProperties, Logging}
 
 import scala.collection.mutable
 
@@ -23,6 +23,7 @@ case class NGResolvedLabel(nGram: NGram, resolvedLabel: ResolvedLabel)
 
 case class LabelsAndLinks(
   context: Context,
+  broadContext: Context,
   labels: Seq[String],
   resolvedLabels: Seq[ResolvedLabel],
   links: Seq[(Page, TopicPage)])
@@ -33,7 +34,7 @@ object LabelsAndLinks {
 
 case class ServiceParams(minSenseProbability: Double, cacheSize: Int)
 
-class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties {
+class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties with Logging {
 
   /**
     * Get all valid labels derivable from a document, their resolved senses,
@@ -48,14 +49,16 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
     */
   def getLabelsAndLinks(req: DocumentProcessingRequest): LabelsAndLinks = {
     val labels          = contextualizer.getLabels(req.doc)
-    val context         = contextualizer.getContext(labels.map(_.stringContent), params.minSenseProbability)
+    val labelStrings    = labels.map(_.stringContent)
+    val context         = contextualizer.getContext(labelStrings, params.minSenseProbability)
     val cleanedLabels   = removeNoisyLabels(labels, params.minSenseProbability)
     val enrichedContext = enrichContext(context)
+    val broadContext    = enrichContext(contextualizer.getBroadContext(labelStrings, params.minSenseProbability))
     val resolvedLabels  = resolveSenses(cleanedLabels, context)
     val linkedTopics = getLinkedTopics(req.doc, resolvedLabels, context)
       .sortBy(-_.linkPrediction)
     // Store linked pages as a tuple of (Page, TopicPage) for each topic in
-    // linkedTopics. The reason to have add the Page is to carry the non-numeric
+    // linkedTopics. The reason to add the Page is to carry the non-numeric
     // page attributes.
     // The data in linkedPages is similar to that found in the WikiminerEntity
     // from the old wikipedia-miner:
@@ -67,6 +70,7 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
 
     LabelsAndLinks(
       context = enrichedContext,
+      broadContext = broadContext,
       labels = cleanedLabels.map(_.stringContent).toSeq.distinct,
       resolvedLabels = resolvedLabels.map(_.resolvedLabel).toSeq,
       links = linkedPages.toSeq
@@ -278,6 +282,75 @@ class ServiceOps(val db: Storage, params: ServiceParams) extends ModelProperties
       .map(rep => rep.copy(page = Some(pageCache.get(rep.pageId))))
 
     context.copy(pages = enriched)
+  }
+
+  /**
+    * Get the most relevant categories shared across multiple Wikipedia pages.
+    * Categories are ranked by how many input pages link to them.
+    *
+    * @param pageIds    Sequence of page IDs to find related categories for
+    * @param maxResults Maximum number of categories to return
+    * @return           A RelatedCategoriesResponse with ranked categories
+    */
+  def getRelatedCategories(pageIds: Seq[Int], maxResults: Int = 20): RelatedCategoriesResponse = {
+    val (validPages, invalidPages) = db.getPages(pageIds).partition(_.pageType == PageType.ARTICLE)
+    if (invalidPages.nonEmpty) {
+      val pages = invalidPages.map(_.id).sorted.mkString(", ")
+      logger.warn(s"Got page IDs not corresponding to articles for related categories: $pages")
+    }
+
+    val validPageIds = validPages.map(_.id)
+
+    if (validPageIds.isEmpty) {
+      return RelatedCategoriesResponse(categories = Seq.empty, inputCount = 0)
+    }
+
+    // Get all outbound links for input pages
+    val linksBySource: Map[Int, Array[Int]] = db.link.getDestinationsBySource(validPageIds)
+
+    // Get page info for all destinations to filter to categories
+    val allDestinations: Set[Int] = linksBySource.values.flatten.toSet
+    val destinationPages: Map[Int, Page] = db
+      .getPages(allDestinations.toSeq)
+      .map(p => (p.id, p))
+      .toMap
+
+    // Filter to only CATEGORY pages
+    val categoryPages: Map[Int, Page] = destinationPages.filter {
+      case (_, page) => page.pageType == PageType.CATEGORY
+    }
+
+    // Count frequency: how many input pages link to each category
+    val categoryFrequency: Map[Int, Int] = linksBySource.values.flatten
+      .filter(categoryPages.contains)
+      .groupBy(identity)
+      .view
+      .mapValues(_.size)
+      .toMap
+
+    // Score categories (frequency normalized, with log boost for appearing in multiple inputs)
+    val totalInputPages = validPageIds.size.toDouble
+    val scoredCategories = categoryFrequency.map {
+      case (catId, freq) =>
+        val normalizedFreq = freq.toDouble / totalInputPages
+        val score          = normalizedFreq * math.log(freq + 1)
+        val page           = categoryPages(catId)
+
+        ScoredCategory(
+          categoryId = catId,
+          title = page.title,
+          score = score,
+          frequency = freq
+        )
+    }.toSeq
+
+    // Sort by score descending, take top N
+    val rankedCategories = scoredCategories.sortBy(-_.score).take(maxResults)
+
+    RelatedCategoriesResponse(
+      categories = rankedCategories,
+      inputCount = validPageIds.size
+    )
   }
 
   def validateWordSenseModel(): Unit = {

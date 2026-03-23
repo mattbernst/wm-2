@@ -164,7 +164,7 @@ train_disambiguation:
 	echo "Setting up Python virtual environment..."; \
 	if [ ! -d "pysrc/.venv" ]; then \
 		echo "Creating virtual environment and installing requirements..."; \
-		cd pysrc && uv venv && uv pip install -r requirements.txt && cd ..; \
+		cd pysrc && uv venv --python 3.12 && uv pip install -r requirements.txt && cd ..; \
 	else \
 		echo "Virtual environment already exists"; \
 	fi; \
@@ -226,7 +226,7 @@ train_link_detector:
 	echo "Setting up Python virtual environment..."; \
 	if [ ! -d "pysrc/.venv" ]; then \
 		echo "Creating virtual environment and installing requirements..."; \
-		cd pysrc && uv venv && uv pip install -r requirements.txt && cd ..; \
+		cd pysrc && uv venv --python 3.12 && uv pip install -r requirements.txt && cd ..; \
 	else \
 		echo "Virtual environment already exists"; \
 	fi; \

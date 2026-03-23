@@ -114,6 +114,26 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
   }
 
   /**
+    * Get the most relevant categories shared across multiple Wikipedia pages.
+    * Categories are ranked by how many input pages link to them.
+    *
+    * @param req A MultiArticleRequest object as JSON
+    * @return    A RelatedCategoriesResponse object as JSON
+    */
+  @cask.post("/wiki/related-categories")
+  def getRelatedCategories(req: cask.Request): Response[String] = {
+    val name = "getRelatedCategories"
+    rt.track(
+      name, {
+        incrementEndpoint(name)
+        val artReq = read[MultiArticleRequest](req.text())
+        val result = ops.getRelatedCategories(artReq.ids)
+        jsonResponse(write(result))
+      }
+    )
+  }
+
+  /**
     * A very basic health check.
     *
     * @return The magic word PONG plus uptime in milliseconds

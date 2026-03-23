@@ -21,6 +21,8 @@ class Contextualizer(
   language: Language)
     extends Logging {
 
+  private type LabelsToPagesFn = (Array[String], Double) => Array[RepresentativePage]
+
   /**
     * Construct a context containing top candidate Wikipedia pages from an
     * existing Wikipedia page. Since we have the ground truth about how
@@ -51,7 +53,8 @@ class Contextualizer(
   /**
     * Construct a context containing top candidate Wikipedia pages from an
     * arbitrary array of labels. Labels can be generated from freeform text
-    * with getLinkLabels.
+    * with getLinkLabels. The context generated with this function favors
+    * pages that are likely to be linked from within Wikipedia.
     *
     * The Milne papers say things like "The context is obtained by
     * gathering all concepts that relate to unambiguous labels within
@@ -69,7 +72,25 @@ class Contextualizer(
     *                            pages
     */
   def getContext(labels: Array[String], minSenseProbability: Double): Context = {
-    val candidates    = collectCandidates(labels.distinct, minSenseProbability)
+    val candidates    = collectCandidates(labels.distinct, minSenseProbability, likelyLinkedPages)
+    val topCandidates = collectTopTopicCandidates(candidates)
+    Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
+  }
+
+  /**
+    * Construct a context containing top candidate Wikipedia pages from an
+    * arbitrary array of labels. Labels can be generated from freeform text
+    * with getLinkLabels. The context generated with this function favors
+    * pages that represent what the document is "mostly about."
+    *
+    * @param labels              NGram strings from the document text
+    * @param minSenseProbability The minimum prior probability for any word
+    *                            sense
+    * @return                    A Context containing top candidate Wikipedia
+    *                            pages
+    */
+  def getBroadContext(labels: Array[String], minSenseProbability: Double): Context = {
+    val candidates    = collectCandidates(labels.distinct, minSenseProbability, centralLinkedPages)
     val topCandidates = collectTopTopicCandidates(candidates)
     Context(pages = topCandidates, quality = topCandidates.map(_.weight).sum)
   }
@@ -151,10 +172,15 @@ class Contextualizer(
     * @param labels               Distinct labels from a single document
     * @param minSenseProbability  Minimum sense prior probability allowed in
     *                             generated candidates
-    * @return                     A set of candidate representative pages
+    * @param labelsToPages        A function that transforms input labels to
+    *                             representative pages
+    * @return                     A sequence of candidate representative pages
     */
-  private def collectCandidates(labels: Array[String], minSenseProbability: Double): Array[RepresentativePage] = {
-    val pages = ListBuffer[RepresentativePage]()
+  private def collectCandidates(
+    labels: Array[String],
+    minSenseProbability: Double,
+    labelsToPages: LabelsToPagesFn
+  ): Array[RepresentativePage] = {
     // Filtering out of dates is not mentioned in any of the publications
     // related to Wikipedia Miner, but it is a step in the original
     // Context.java. Filter out labels that are dates as well as any senses
@@ -165,8 +191,36 @@ class Contextualizer(
     val labelIds = goodLabels
       .flatMap(label => labelCounter.getLinkProbability(label).map(_ => labelToId(label)))
     labelIdToSense.getAll(labelIds)
+    val pages = labelsToPages(goodLabels, minSenseProbability)
 
-    goodLabels.foreach { label =>
+    // Sometimes a page may repeat with different weights. Keep only the
+    // highest-weight page for each page ID.
+    pages
+      .sortBy(-_.weight)
+      .distinctBy(_.pageId)
+      .take(maxContextSize * 5)
+  }
+
+  /**
+    * Find representative pages for a collection of labels that favor pages
+    * likely to be link-worthy. For example, an article about Blitzkrieg
+    * warfare may have many mentions of "World War II," but "World War II" is
+    * not going to be a top link-worthy label because it's so well known.
+    * Instead, narrower pages like "Siege of Leningrad" and "Vichy France"
+    * will be favored as link-worthy.
+    *
+    * The results from this approach are good at identifying lesser-known
+    * concepts that readers may want linked for their edification, but they
+    * don't function as well to indicate what the document is "mostly about."
+    *
+    * @param labels               Distinct labels from a single document
+    * @param minSenseProbability  Minimum sense prior probability allowed in
+    *                             generated candidates
+    * @return                     A sequence of candidate representative pages
+    */
+  private def likelyLinkedPages(labels: Array[String], minSenseProbability: Double): Array[RepresentativePage] = {
+    val pages = ListBuffer[RepresentativePage]()
+    labels.foreach { label =>
       // Get linkProbability for label, then for all senses of label get sense
       // prior probability (e.g. Mercury-the-planet v.s. Mercury-the-god prior
       // probability)
@@ -186,13 +240,38 @@ class Contextualizer(
         }
     }
 
-    // Sometimes a page may repeat with different weights. Keep only the
-    // highest-weight page for each page ID.
-    pages
-      .sortBy(-_.weight)
-      .distinctBy(_.pageId)
-      .take(maxContextSize * 5)
-      .toArray
+    pages.toArray
+  }
+
+  /**
+    * Find representative pages for a collection of labels that favor
+    * commonly known concepts.
+    *
+    * The results from this approach are better at identifying what the
+    * document is "mostly about."
+    *
+    * @param labels               Distinct labels from a single document
+    * @param minSenseProbability  Minimum sense prior probability allowed in
+    *                             generated candidates
+    * @return                     A sequence of candidate representative pages
+    */
+  private def centralLinkedPages(labels: Array[String], minSenseProbability: Double): Array[RepresentativePage] = {
+    val pages = ListBuffer[RepresentativePage]()
+    labels.foreach { label =>
+      labelIdToSense.get(labelToId(label)).foreach { sense =>
+        sense.senseCounts.keys.foreach { senseId =>
+          val sensePriorProbability = sense.commonness(senseId)
+          val isDatePage            = datePageIds.contains(senseId)
+          if (!isDatePage && sensePriorProbability > minSenseProbability) {
+            val inLinkCount = distinctLinksIn.count(senseId)
+            val weight      = sensePriorProbability * math.log(inLinkCount + 1)
+            pages.append(RepresentativePage(senseId, weight, page = None))
+          }
+        }
+      }
+    }
+
+    pages.toArray
   }
 
   /**
@@ -254,9 +333,10 @@ class Contextualizer(
 
   private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code, db)
 
-  private val goodLabels  = mutable.Set.from(labelToId.keys)
-  private val dateStrings = language.generateValidDateStrings()
-  private val datePageIds = dateStrings.flatMap(d => db.getPage(d)).map(_.id)
+  private val goodLabels           = mutable.Set.from(labelToId.keys)
+  private val dateStrings          = language.generateValidDateStrings()
+  private val datePageIds          = dateStrings.flatMap(d => db.getPage(d)).map(_.id)
+  private lazy val distinctLinksIn = db.link.readSourceCountsByDestination()
 }
 
 object Contextualizer {
