@@ -40,3 +40,6 @@ assembly / assemblyMergeStrategy := {
 }
 
 run / fork := true
+// Storage uses a global singleton connection pool (ConnectionPool.singleton),
+// so concurrent test classes overwrite each other's database connections.
+Test / parallelExecution := false
