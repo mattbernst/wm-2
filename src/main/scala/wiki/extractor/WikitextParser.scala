@@ -87,8 +87,8 @@ class WikitextParser(languageLogic: LanguageLogic) {
   private[extractor] def textualize(wtNode: WtNode): String = wtNode match {
     case node: WtText                           => node.getContent
     case node: WtImageLink if node.hasTitle     => textualize(node.getTitle)
-    case node: WtInternalLink if !node.hasTitle => textualize(node.getTarget)
-    case node: WtInternalLink if node.hasTitle  => textualize(node.getTitle)
+    case node: WtInternalLink if !node.hasTitle => textualize(node.getTarget) + node.getPostfix
+    case node: WtInternalLink if node.hasTitle  => textualize(node.getTitle) + node.getPostfix
     case node: WtListItem                       => "\n" + node.iterator().asScala.map(textualize).mkString
     case node: WtTableHeader                    => " : " + node.iterator().asScala.map(textualize).mkString
     case node: WtTableCell                      => " | " + node.iterator().asScala.map(textualize).mkString

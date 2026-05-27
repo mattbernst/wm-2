@@ -126,15 +126,8 @@ class WikitextParserSpec extends UnitSpec {
     parsed.text shouldBe expectedText
     parsed.links shouldBe expectedLinks
 
-    // The original markup for this sentence was
-    // "Most mafic-lava volcanoes are [[shield volcano]]es, like those in [[Hawaii]]."
-    // Appears to be Sweble error (node list from raw parse loses "es" also)
-    // Related to special handling of blend links?
-    // https://en.wikipedia.org/wiki/Help:Wikitext#Blend_link
-    val error1   = "Most mafic-lava volcanoes are shield volcano, like those in Hawaii."
-    val correct1 = "Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii."
-    parsed.text.contains(error1) shouldBe true
-    parsed.text.contains(correct1) shouldBe false
+    val blendLink1 = "Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii."
+    parsed.text.contains(blendLink1) shouldBe true
   }
 
   it should "extract some links from a trickier page" in {
@@ -174,7 +167,7 @@ class WikitextParserSpec extends UnitSpec {
 
     val parsed = parser.parseMarkup(title, markup).get
     val expectedText =
-      """This page lists breed of domestic cat. The list includes breeds that are old traditional breeds, and also rare breeds or new breeds that are still being developed. Please see individual articles for more information.
+      """This page lists breeds of domestic cats. The list includes breeds that are old traditional breeds, and also rare breeds or new breeds that are still being developed. Please see individual articles for more information.
         |
         |Breeds
         |: Breed : Country : Origin : Body type : Coat : Pattern : Image

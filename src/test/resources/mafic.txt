@@ -3,7 +3,7 @@ Mafic is an adjective describing a silicate mineral or rock that is rich in magn
 
 Chemically, mafic rocks are on the other side of the rock spectrum from the felsic rocks. The term roughly corresponds to the older basic rock class.
 
-Mafic lava, before cooling, has a low viscosity, in comparison to felsic lava, due to the lower silica content in mafic magma. Water and other volatiles can more easily and gradually escape from mafic lava, so eruptions of volcanoes made of mafic lavas are less explosively violent than felsic-lava eruptions. Most mafic-lava volcanoes are shield volcano, like those in Hawaii.
+Mafic lava, before cooling, has a low viscosity, in comparison to felsic lava, due to the lower silica content in mafic magma. Water and other volatiles can more easily and gradually escape from mafic lava, so eruptions of volcanoes made of mafic lavas are less explosively violent than felsic-lava eruptions. Most mafic-lava volcanoes are shield volcanoes, like those in Hawaii.
 
 : Rock texture
 : Name of mafic rock
