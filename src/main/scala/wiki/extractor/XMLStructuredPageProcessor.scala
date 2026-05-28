@@ -11,7 +11,9 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.xml.XML
+import scala.xml.{XML, Elem}
+import scala.xml.factory.XMLLoader
+import javax.xml.parsers.SAXParserFactory
 
 case class StructuredPage(page: Page, markup: PageMarkup)
 
@@ -35,7 +37,7 @@ class XMLStructuredPageProcessor(
     *                or None if the page was already completed
     */
   def extract(pageXML: String): Option[StructuredPage] = {
-    val xml = XML.loadString(pageXML)
+    val xml = permissiveXML.loadString(pageXML)
     val id  = (xml \ "id").text.toInt
     if (completedPages.contains(id)) {
       None
@@ -191,6 +193,20 @@ class XMLStructuredPageProcessor(
   private def incrementTransclusion(transclusion: String): Unit = this.synchronized {
     val count = lastTransclusions.getOrElse(transclusion, 0)
     lastTransclusions.put(transclusion, count + 1): Unit
+  }
+
+  private val permissiveXMLFactory: SAXParserFactory = {
+    val factory = SAXParserFactory.newInstance()
+    factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+    factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+    factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+    factory
+  }
+
+  private def permissiveXML: XMLLoader[Elem] = {
+    val saxParser = permissiveXMLFactory.newSAXParser()
+    saxParser.setProperty("http://www.oracle.com/xml/jaxp/properties/totalEntitySizeLimit", 0)
+    XML.withSAXParser(saxParser)
   }
 
   private val parser: WikitextParser =
