@@ -35,6 +35,7 @@ object SimpleResolvedLabel {
 case class StreamlinedLinks(
   contextPages: Array[SimpleRepresentativePage],
   contextQuality: Double,
+  broadContextPages: Array[SimpleRepresentativePage],
   labels: Seq[String],
   resolvedLabels: Seq[SimpleResolvedLabel],
   links: Seq[(SimplePage, TopicPage)])

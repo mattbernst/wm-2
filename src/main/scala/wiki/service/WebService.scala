@@ -76,6 +76,7 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
         val simplified = StreamlinedLinks(
           contextPages = res.context.pages.map(p => SimpleRepresentativePage(simplify(p.page.get), p.weight)),
           contextQuality = res.context.quality,
+          broadContextPages = res.broadContext.pages.map(p => SimpleRepresentativePage(simplify(p.page.get), p.weight)),
           labels = res.labels,
           resolvedLabels =
             res.resolvedLabels.map(l => SimpleResolvedLabel(l.label, simplify(l.page), l.scoredSenses.scores.toMap)),
