@@ -273,15 +273,20 @@ object WebService extends cask.MainRoutes with ModelProperties with Logging {
 
   /**
     * Get the first paragraph of the plain text of a Wikipedia article.
+    * If the first paragraph is missing, try returning the first sentence.
     *
     * @param pageId The numeric ID of the Wikipedia page
     * @return       The first paragraph of article text, if found
     */
   private def getFirstParagraph(pageId: Int): Option[String] = {
-    ops.db.page
+    val snippet = ops.db.page
       .readMarkupAuto(pageId)
       .flatMap(_.parseResult)
-      .flatMap(_.snippet.firstParagraph)
+      .map(_.snippet)
+
+    snippet
+      .flatMap(_.firstParagraph)
+      .orElse(snippet.flatMap(_.firstSentence))
   }
 
   /**

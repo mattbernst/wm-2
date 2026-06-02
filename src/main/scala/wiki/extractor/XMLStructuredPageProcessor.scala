@@ -11,7 +11,7 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.xml.{XML, Elem}
+import scala.xml.{Elem, XML}
 import scala.xml.factory.XMLLoader
 import javax.xml.parsers.SAXParserFactory
 
