@@ -177,6 +177,28 @@ class WikitextParserSpec extends UnitSpec {
     parsed.text shouldBe expectedText
   }
 
+  it should "produce streamlined plain text (1)" in {
+    val title = "Bedroom (film)"
+    val markup =
+      "'''''Bedroom''''' ({{langx|bn|বেডরুম}}) is a 2012 Indian [[Bengali language|Bengali]] [[drama film]] directed by [[Mainak Bhaumik]]. ''Bedroom'' stars Abir Chatterjee, Rudranil Ghosh, Ushasie, Parno Mitra, Paoli Dam, Rahul, Tanushree, Anubroto Basu & others."
+    val expectedText =
+      "Bedroom is a 2012 Indian Bengali drama film directed by Mainak Bhaumik. Bedroom stars Abir Chatterjee, Rudranil Ghosh, Ushasie, Parno Mitra, Paoli Dam, Rahul, Tanushree, Anubroto Basu & others."
+    val parsed = parser.parseMarkup(title, markup).get
+
+    parsed.text shouldBe expectedText
+  }
+
+  it should "produce streamlined plain text (2)" in {
+    val title = "Tonne"
+    val markup =
+      "The '''tonne''' ({{IPAc-en|audio=En-us-tonne.ogg|t|ʌ|n}} or {{IPAc-en|t|ɒ|n}}; symbol: '''t''') is a [[unit of mass]] equal to 1,000 [[kilogram]]s. It is also referred to as a '''''metric ton''''' in the United States to distinguish it from the [[ton|non-metric unit]]s of the ''[[short ton]]'' and the ''[[long ton]]''."
+    val expectedText =
+      "The tonne is a unit of mass equal to 1,000 kilograms. It is also referred to as a metric ton in the United States to distinguish it from the non-metric units of the short ton and the long ton."
+    val parsed = parser.parseMarkup(title, markup).get
+
+    parsed.text shouldBe expectedText
+  }
+
   "parse" should "fail on Departments of Nicaragua (VisitingException)" in {
     val title  = "Departments of Nicaragua"
     val markup = FileHelpers.readTextFile("src/test/resources/departments_of_nicaragua.wikitext")

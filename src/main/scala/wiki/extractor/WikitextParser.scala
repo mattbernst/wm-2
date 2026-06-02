@@ -4,7 +4,7 @@ import org.sweble.wikitext.parser.nodes.*
 import org.sweble.wikitext.parser.utils.NonExpandingParser
 import wiki.extractor.language.LanguageLogic
 import wiki.extractor.types.{Link, LocatedLink, ParseResult}
-import wiki.extractor.util.DBLogging
+import wiki.extractor.util.{DBLogging, Text}
 
 import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.IteratorHasAsScala
@@ -64,10 +64,14 @@ class WikitextParser(languageLogic: LanguageLogic) {
     // Links as extracted here match the page text exactly.
     // Properly casing the target and stripping sub-page sections happens later.
     val links = extractNodes[WtInternalLink](input).map { link =>
+      // Strip any template placeholder so it never leaks into link text.
+      def linkText(node: WtNode): String =
+        textualize(node).replace(Text.templatePlaceholder, "").trim
+
       if (link.hasTitle) {
-        Link(target = textualize(link.getTarget).trim, textualize(link.getTitle).trim)
+        Link(target = linkText(link.getTarget), anchorText = linkText(link.getTitle))
       } else {
-        val target = textualize(link.getTarget).trim
+        val target = linkText(link.getTarget)
         Link(target = target, anchorText = target)
       }
     }.filter(_.anchorText.trim.nonEmpty)
@@ -97,7 +101,7 @@ class WikitextParser(languageLogic: LanguageLogic) {
     // template noise, untitled images, XML attributes, and WtTagExtensions
     // (like citations).
     case node: WtImageLink if !node.hasTitle => ""
-    case _: WtTemplate                       => ""
+    case _: WtTemplate                       => Text.templatePlaceholder
     case _: WtXmlAttributes                  => ""
     case _: WtTagExtension                   => ""
 
@@ -115,7 +119,8 @@ class WikitextParser(languageLogic: LanguageLogic) {
   }
 
   private[extractor] def cleanString(input: String): String = {
-    input
+    Text
+      .removeMarkedParentheticals(input)      // Drop parentheticals that only held template markup
       .replaceAll("[ \t]+", " ")              // Replace multiple spaces or tabs with a single space
       .replaceAll("(?m)^ +| +$", "")          // Remove leading/trailing spaces from each line
       .replaceAll("\n{3,}", "\n\n")           // Replace 3+ newlines with 2 newlines

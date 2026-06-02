@@ -3,6 +3,38 @@ package wiki.extractor.util
 object Text {
 
   /**
+    * A sentinel emitted in place of stripped template markup (WtTemplate) during
+    * wikitext-to-plain-text conversion. It marks where a template used to be so
+    * that an enclosing parenthetical can later be deleted wholesale. This is a
+    * Unicode private-use character: it never appears in real wikitext and is left
+    * untouched by the whitespace-normalizing regexes applied downstream.
+    */
+  val templatePlaceholder: String = ""
+
+  /**
+    * Remove parentheticals that contained template markup. Many templates (e.g.
+    * `{{langx|bn|...}}`, `{{IPAc-en|...}}`) render to nothing useful in plain
+    * text, and when one is the substance of a parenthetical it would otherwise
+    * leave behind an empty or nonsensical `(...)`. Templates are replaced with
+    * [[templatePlaceholder]] during conversion; here we delete any parenthetical
+    * that contains the placeholder, then strip any remaining placeholders left by
+    * templates that were not inside parentheses.
+    *
+    * Note: only the innermost level of parentheses is considered, so deeply
+    * nested parens containing a template are not fully removed. This is
+    * vanishingly rare in practice; any leftover double spaces are collapsed by
+    * later cleanup.
+    *
+    * @param input Text that may contain [[templatePlaceholder]] sentinels
+    * @return      Text with template-bearing parentheticals and sentinels removed
+    */
+  def removeMarkedParentheticals(input: String): String = {
+    input
+      .replaceAll("""\([^()]*""" + templatePlaceholder + """[^()]*\)""", "")
+      .replace(templatePlaceholder, "")
+  }
+
+  /**
     * Extract one XML slice from an input source by looking for matched opening
     * and closing tags. This works assuming that opening tags appear as single
     * strings (ignoring whitespace) in the source and that the input does not

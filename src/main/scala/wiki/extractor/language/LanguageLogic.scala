@@ -6,6 +6,7 @@ import org.sweble.wikitext.parser.nodes.*
 import wiki.db.Storage
 import wiki.extractor.language.types.{NGram, Snippet}
 import wiki.extractor.types.Language
+import wiki.extractor.util.Text
 import wiki.util.Logging
 
 import scala.collection.mutable
@@ -57,7 +58,7 @@ trait LanguageLogic {
     * @return      A snippet of extracted text content
     */
   def getSnippet(input: Array[WtNode]): Snippet = {
-    getSnippet(input.map(textualize).mkString)
+    getSnippet(Text.removeMarkedParentheticals(input.map(textualize).mkString))
   }
 
   /**
@@ -110,7 +111,7 @@ trait LanguageLogic {
 
     // Eliminate all of these, as they are not desirable elements to include in excerpts
     case _: WtImageLink     => ""
-    case _: WtTemplate      => ""
+    case _: WtTemplate      => Text.templatePlaceholder
     case _: WtXmlAttributes => ""
     case _: WtTagExtension  => ""
 
