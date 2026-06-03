@@ -205,6 +205,13 @@ class XMLStructuredPageProcessor(
 
   private def permissiveXML: XMLLoader[Elem] = {
     val saxParser = permissiveXMLFactory.newSAXParser()
+    // Large Wikipedia pages routinely exceed JDK's XML processing limits. The
+    // failure observed in production is the maxGeneralEntitySizeLimit (default
+    // 100,000 in hardened JDK builds), which counts the expanded length of the
+    // "[xml]" document entity. Setting totalEntitySizeLimit alone does NOT lift
+    // it. A value of 0 disables each limit. These per-parser properties override
+    // any value inherited from a system property or jaxp.properties file.
+    saxParser.setProperty("http://www.oracle.com/xml/jaxp/properties/maxGeneralEntitySizeLimit", 0)
     saxParser.setProperty("http://www.oracle.com/xml/jaxp/properties/totalEntitySizeLimit", 0)
     XML.withSAXParser(saxParser)
   }
