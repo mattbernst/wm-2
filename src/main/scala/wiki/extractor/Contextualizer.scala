@@ -3,7 +3,7 @@ package wiki.extractor
 import com.github.blemale.scaffeine.LoadingCache
 import wiki.db.Storage
 import wiki.extractor.language.LanguageLogic
-import wiki.extractor.language.types.NGram
+import wiki.extractor.language.types.{CaseContext, NGram}
 import wiki.extractor.types.*
 import wiki.extractor.util.Text
 import wiki.util.Logging
@@ -118,17 +118,33 @@ class Contextualizer(
     val ng2        = languageLogic.wordNGrams(language, simpleText)
     val combined   = ng1 ++ ng2
 
-    val detected = combined
+    // For NGrams whose surface form is not itself a known label, also try a
+    // title-cased variant so that variant capitalizations like "iceland" or
+    // "ICELAND" can still match the canonical label "Iceland". This is gated
+    // on the natural form being unknown, so that case is preserved as a
+    // word-sense signal (e.g. lowercase "apple" the fruit is not forced to
+    // "Apple" when "apple" is itself a known label).
+    val withVariants = combined.flatMap { ng =>
+      if (goodLabels.contains(ng.stringContent)) Array(ng)
+      else ng +: Contextualizer.caseVariants(ng, language)
+    }
+
+    val detected = withVariants
       .filter(n => goodLabels.contains(n.stringContent))
       .filter(l => labelCounter.getLinkOccurrenceDocCount(l.stringContent).exists(_ >= minInLinks))
       .filter(l => labelCounter.getLinkProbability(l.stringContent).exists(_ >= minLinkProbability))
       .distinct
 
-    // This is necessary so that downcased variants don't get incidentally
-    // removed by filterShadowed (since they occupy the exact same spans).
-    val (downcased, natural) = detected.partition(_.isDowncased)
+    // Filter each kind of variant in its own bucket so that synthetic variants
+    // (downcased, recased) don't get incidentally removed by filterShadowed
+    // against the natural NGram they share a span with.
+    val recased   = detected.filter(_.isRecased)
+    val downcased = detected.filter(n => n.isDowncased && !n.isRecased)
+    val natural   = detected.filter(n => !n.isDowncased && !n.isRecased)
 
-    (Contextualizer.filterShadowed(downcased) ++ Contextualizer.filterShadowed(natural)).distinct
+    (Contextualizer.filterShadowed(natural) ++
+      Contextualizer.filterShadowed(downcased) ++
+      Contextualizer.filterShadowed(recased)).distinct
   }
 
   /**
@@ -378,5 +394,56 @@ object Contextualizer {
     }
 
     result.toArray
+  }
+
+  /**
+    * Generate title-cased variants of an NGram whose natural surface form did
+    * not match any known label. Only LOWER and UPPER case NGrams are recased;
+    * MIXED and UPPER_FIRST NGrams are left as the author wrote them. Returns an
+    * empty array when recasing would not change the surface form.
+    *
+    * @param ng       An NGram whose stringContent is not a known label
+    * @param language The language used for locale-aware capitalization
+    * @return         Zero or one title-cased variant NGrams
+    */
+  def caseVariants(ng: NGram, language: Language): Array[NGram] =
+    ng.caseContext match {
+      case CaseContext.LOWER | CaseContext.UPPER =>
+        val titled = titleCaseByToken(ng, language)
+        if (titled != ng.stringContent)
+          Array(ng.copy(stringContent = titled, isRecased = true, isDowncased = false))
+        else Array.empty
+      case _ => Array.empty
+    }
+
+  /**
+    * Title-case an NGram token by token. For UPPER case NGrams the body is
+    * lowercased first, then the first grapheme of each token is capitalized
+    * using the grapheme- and locale-aware Language.capitalizeFirst. Characters
+    * between tokens (spaces, hyphens) are preserved. For example "ICELAND"
+    * becomes "Iceland" and "new york" becomes "New York".
+    *
+    * @param ng       An NGram with LOWER or UPPER case context
+    * @param language The language used for locale-aware capitalization
+    * @return         The title-cased surface form
+    */
+  def titleCaseByToken(ng: NGram, language: Language): String = {
+    val base = ng.caseContext match {
+      case CaseContext.UPPER => ng.stringContent.toLowerCase(language.locale)
+      case _                 => ng.stringContent
+    }
+    val sb     = new StringBuilder
+    var cursor = 0
+    ng.tokenSpans.sortBy(_.getStart).foreach { span =>
+      val s = span.getStart
+      val e = span.getEnd
+      if (s >= cursor && e <= base.length) {
+        sb.append(base.substring(cursor, s))                      // inter-token chars (spaces, hyphens)
+        sb.append(language.capitalizeFirst(base.substring(s, e))) // capitalize this token
+        cursor = e
+      }
+    }
+    sb.append(base.substring(cursor))
+    sb.toString
   }
 }

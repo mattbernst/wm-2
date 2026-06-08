@@ -1,7 +1,9 @@
 package wiki.extractor
 
-import wiki.extractor.language.types.CaseContext.MIXED
-import wiki.extractor.language.types.NGram
+import opennlp.tools.util.Span
+import wiki.extractor.language.types.CaseContext.{LOWER, MIXED, UPPER, UPPER_FIRST}
+import wiki.extractor.language.types.{CaseContext, NGram}
+import wiki.extractor.types.{Language, TrainingProfile}
 import wiki.util.UnitSpec
 
 class ContextualizerSpec extends UnitSpec {
@@ -71,4 +73,82 @@ class ContextualizerSpec extends UnitSpec {
     val result = Contextualizer.filterShadowed(input)
     result shouldBe expected
   }
+
+  it should "retain a recased variant that shares a span with a natural NGram" in {
+    val natural = ngram("iceland", LOWER, isRecased = false)
+    val recased = natural.copy(stringContent = "Iceland", isRecased = true)
+
+    // Both occupy the same span. filterShadowed should keep whichever one is
+    // passed in (it does not drop a single NGram), and the caller buckets them
+    // separately, so both survive when bucketed by recasing.
+    Contextualizer.filterShadowed(Array(natural)) shouldBe Array(natural)
+    Contextualizer.filterShadowed(Array(recased)) shouldBe Array(recased)
+  }
+
+  behavior of "Contextualizer.caseVariants"
+
+  it should "title-case a lowercase single-token NGram" in {
+    val variants = Contextualizer.caseVariants(ngram("iceland", LOWER), language)
+    variants.map(_.stringContent).toSeq shouldBe Seq("Iceland")
+    variants.head.isRecased shouldBe true
+    variants.head.isDowncased shouldBe false
+  }
+
+  it should "title-case an uppercase single-token NGram" in {
+    val variants = Contextualizer.caseVariants(ngram("ICELAND", UPPER), language)
+    variants.map(_.stringContent).toSeq shouldBe Seq("Iceland")
+  }
+
+  it should "title-case each token of a multi-token NGram, preserving separators" in {
+    Contextualizer
+      .caseVariants(multiTokenNgram("new york", Array(new Span(0, 3), new Span(4, 8)), LOWER), language)
+      .map(_.stringContent)
+      .toSeq shouldBe Seq("New York")
+
+    Contextualizer
+      .caseVariants(multiTokenNgram("NEW YORK", Array(new Span(0, 3), new Span(4, 8)), UPPER), language)
+      .map(_.stringContent)
+      .toSeq shouldBe Seq("New York")
+  }
+
+  it should "produce no variant for MIXED or UPPER_FIRST NGrams" in {
+    Contextualizer.caseVariants(ngram("iPhone", MIXED), language) shouldBe Array.empty[NGram]
+    Contextualizer.caseVariants(ngram("Iceland", UPPER_FIRST), language) shouldBe Array.empty[NGram]
+  }
+
+  it should "produce no variant when title-casing would not change the surface form" in {
+    // A single lowercase letter title-cases to itself only if already capital;
+    // a token with no cased characters (digits) is unchanged.
+    Contextualizer.caseVariants(ngram("2024", LOWER), language) shouldBe Array.empty[NGram]
+  }
+
+  private def ngram(content: String, caseContext: CaseContext, isRecased: Boolean = false): NGram =
+    NGram(
+      start = 0,
+      end = content.length,
+      tokenSpans = Array(new Span(0, content.length)),
+      caseContext = caseContext,
+      stringContent = content,
+      isSentenceStart = false,
+      isDowncased = false,
+      isRecased = isRecased
+    )
+
+  private def multiTokenNgram(content: String, tokenSpans: Array[Span], caseContext: CaseContext): NGram =
+    NGram(
+      start = 0,
+      end = content.length,
+      tokenSpans = tokenSpans,
+      caseContext = caseContext,
+      stringContent = content,
+      isSentenceStart = false,
+      isDowncased = false
+    )
+
+  private lazy val language = Language(
+    code = "en",
+    name = "English",
+    disambiguationPrefixes = Seq("disambiguation", "disambig", "geodis"),
+    trainingProfile = TrainingProfile.empty
+  )
 }
