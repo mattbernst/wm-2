@@ -85,6 +85,23 @@ class ContextualizerSpec extends UnitSpec {
     Contextualizer.filterShadowed(Array(recased)) shouldBe Array(recased)
   }
 
+  behavior of "Contextualizer.labelVariants"
+
+  it should "recase an NGram whose natural form is not a usable label" in {
+    // "iceland" is technically a known label but too rare to pass thresholds,
+    // so it is not usable. It must still be expanded to the strong canonical
+    // "Iceland" rather than being kept as-is and later filtered away.
+    val out = Contextualizer.labelVariants(ngram("iceland", LOWER), language, isUsableLabel = _ == "Iceland")
+    out.map(_.stringContent).toSeq shouldBe Seq("iceland", "Iceland")
+  }
+
+  it should "keep a usable natural label as-is, without recasing" in {
+    // "apple" the fruit is a meaningful lowercase label, so its case is
+    // preserved as a word-sense signal and it is not forced to "Apple".
+    val out = Contextualizer.labelVariants(ngram("apple", LOWER), language, isUsableLabel = _ == "apple")
+    out.map(_.stringContent).toSeq shouldBe Seq("apple")
+  }
+
   behavior of "Contextualizer.caseVariants"
 
   it should "title-case a lowercase single-token NGram" in {

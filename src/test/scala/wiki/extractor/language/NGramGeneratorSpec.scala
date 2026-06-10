@@ -2,7 +2,7 @@ package wiki.extractor.language
 
 import opennlp.tools.sentdetect.{SentenceDetectorME, SentenceModel}
 import opennlp.tools.tokenize.{TokenizerME, TokenizerModel}
-import wiki.extractor.language.types.NGram
+import wiki.extractor.language.types.{CaseContext, NGram}
 import wiki.util.UnitSpec
 
 import java.io.FileInputStream
@@ -403,6 +403,23 @@ class NGramGeneratorSpec extends UnitSpec {
 
     resultRaw.length should be > resultFiltered.length
     resultFiltered shouldBe expected
+  }
+
+  it should "assign each NGram its own case context, not the whole sentence's" in {
+    // A lowercase word that happens to share a sentence with capitalized words
+    // must still be recognized as LOWER so that case recasing can later map it
+    // to a canonical label (e.g. "iceland" -> "Iceland"). Previously the case
+    // context was computed once for the entire sentence, so this single-token
+    // NGram inherited MIXED and never qualified for recasing.
+    val ngg    = generator(2)
+    val input  = "The wasp factory iceland photography"
+    val result = ngg.generate(input)
+
+    val iceland = result.find(ng => input.substring(ng.start, ng.end) == "iceland").get
+    iceland.caseContext shouldBe CaseContext.LOWER
+
+    val the = result.find(ng => input.substring(ng.start, ng.end) == "The").get
+    the.caseContext shouldBe CaseContext.UPPER_FIRST
   }
 
   def generator(maxTokens: Int, allowedStrings: mutable.Set[String] = mutable.Set()) = {

@@ -118,21 +118,22 @@ class Contextualizer(
     val ng2        = languageLogic.wordNGrams(language, simpleText)
     val combined   = ng1 ++ ng2
 
-    // For NGrams whose surface form is not itself a known label, also try a
+    // For NGrams whose surface form is not itself a *usable* label, also try a
     // title-cased variant so that variant capitalizations like "iceland" or
     // "ICELAND" can still match the canonical label "Iceland". This is gated
-    // on the natural form being unknown, so that case is preserved as a
-    // word-sense signal (e.g. lowercase "apple" the fruit is not forced to
-    // "Apple" when "apple" is itself a known label).
+    // on the natural form being usable (rather than merely present in the label
+    // set) so that case is preserved as a word-sense signal only when the
+    // natural form is strong enough to survive filtering. Otherwise a rare
+    // lowercase label like "iceland" (which fails minInLinks) would suppress
+    // recasing and shadow the strong canonical label "Iceland". A genuinely
+    // meaningful lowercase label like "apple" the fruit still passes the
+    // thresholds and so is not forced to "Apple".
     val withVariants = combined.flatMap { ng =>
-      if (goodLabels.contains(ng.stringContent)) Array(ng)
-      else ng +: Contextualizer.caseVariants(ng, language)
+      Contextualizer.labelVariants(ng, language, isUsableLabel)
     }
 
     val detected = withVariants
-      .filter(n => goodLabels.contains(n.stringContent))
-      .filter(l => labelCounter.getLinkOccurrenceDocCount(l.stringContent).exists(_ >= minInLinks))
-      .filter(l => labelCounter.getLinkProbability(l.stringContent).exists(_ >= minLinkProbability))
+      .filter(n => isUsableLabel(n.stringContent))
       .distinct
 
     // Filter each kind of variant in its own bucket so that synthetic variants
@@ -347,6 +348,21 @@ class Contextualizer(
   private val minLinkProbability = 0.0025
   private val minInLinks         = language.trainingProfile.minInLinks
 
+  /**
+    * A label is usable if it is a known label that is also link-worthy enough
+    * to survive the minInLinks and minLinkProbability thresholds. Rare labels
+    * that are present in the label set but below these thresholds are not
+    * usable: they contribute no senses to a context and should not suppress
+    * case recasing of their surface form.
+    *
+    * @param label A candidate label surface form
+    * @return      True if the label is present and passes both thresholds
+    */
+  private def isUsableLabel(label: String): Boolean =
+    goodLabels.contains(label) &&
+      labelCounter.getLinkOccurrenceDocCount(label).exists(_ >= minInLinks) &&
+      labelCounter.getLinkProbability(label).exists(_ >= minLinkProbability)
+
   private val languageLogic: LanguageLogic = LanguageLogic.getLanguageLogic(language.code, db)
 
   private val goodLabels           = mutable.Set.from(labelToId.keys)
@@ -395,6 +411,29 @@ object Contextualizer {
 
     result.toArray
   }
+
+  /**
+    * Decide which NGram variants to keep for a single NGram during label
+    * detection. If the NGram's natural surface form is already a usable label,
+    * keep it as-is so that its capitalization is preserved as a word-sense
+    * signal. Otherwise also emit title-cased recasing variants so that variant
+    * capitalizations (e.g. "iceland", "ICELAND") can still match a canonical
+    * label like "Iceland".
+    *
+    * Gating on usability rather than mere presence in the label set is
+    * important: a rare lowercase label such as "iceland" is technically a known
+    * label but fails the link-worthiness thresholds, so without recasing it
+    * would silently shadow the strong canonical "Iceland".
+    *
+    * @param ng            An NGram to expand into label candidates
+    * @param language      The language used for locale-aware capitalization
+    * @param isUsableLabel Predicate: is a surface form a threshold-passing label
+    * @return              The natural NGram, plus recasing variants when the
+    *                      natural form is not itself a usable label
+    */
+  def labelVariants(ng: NGram, language: Language, isUsableLabel: String => Boolean): Array[NGram] =
+    if (isUsableLabel(ng.stringContent)) Array(ng)
+    else ng +: caseVariants(ng, language)
 
   /**
     * Generate title-cased variants of an NGram whose natural surface form did
