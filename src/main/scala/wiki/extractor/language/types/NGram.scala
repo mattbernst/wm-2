@@ -9,7 +9,8 @@ case class NGram(
   caseContext: CaseContext,
   stringContent: String,
   isSentenceStart: Boolean,
-  isDowncased: Boolean)
+  isDowncased: Boolean,
+  isRecased: Boolean = false)
     extends Span(start, end) {
 
   override def equals(other: Any): Boolean = other match {
@@ -19,7 +20,8 @@ case class NGram(
         caseContext == that.caseContext &&
         stringContent == that.stringContent &&
         isSentenceStart == that.isSentenceStart &&
-        isDowncased == that.isDowncased
+        isDowncased == that.isDowncased &&
+        isRecased == that.isRecased
     case _ => false
   }
 
@@ -32,6 +34,7 @@ case class NGram(
     result = prime * result + stringContent.hashCode
     result = prime * result + (if (isSentenceStart) 1 else 0)
     result = prime * result + (if (isDowncased) 1 else 0)
+    result = prime * result + (if (isRecased) 1 else 0)
     result
   }
 }

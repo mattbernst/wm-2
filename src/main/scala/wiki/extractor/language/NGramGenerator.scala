@@ -38,10 +38,14 @@ class NGramGenerator(
       sentenceSpan      <- sentenceDetector.sentPosDetect(line)
       sentence                = line.substring(sentenceSpan.getStart, sentenceSpan.getEnd)
       tokenSpans: Array[Span] = tokenizer.tokenizePos(sentence)
-      caseContext             = identifyCaseContext(sentence, tokenSpans)
       left  <- tokenSpans.indices
       right <- left.to(math.min(left + n, tokenSpans.length - 1))
     } yield {
+      // Compute the case context from only this NGram's own tokens rather than
+      // the whole sentence. A lowercase word sharing a sentence with
+      // capitalized words must still be recognized as LOWER so it can qualify
+      // for case recasing downstream (e.g. "iceland" -> "Iceland").
+      val caseContext = identifyCaseContext(sentence, tokenSpans.slice(left, right + 1))
       val globalStart = lineStart + sentenceSpan.getStart + tokenSpans(left).getStart
       val globalEnd   = lineStart + sentenceSpan.getStart + tokenSpans(right).getEnd
       val ngramStart  = tokenSpans(left).getStart

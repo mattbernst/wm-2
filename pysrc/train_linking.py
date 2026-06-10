@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
 from sklearn.metrics import f1_score, roc_auc_score, classification_report, confusion_matrix
-from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 
 warnings.filterwarnings('ignore')
 
@@ -156,19 +156,37 @@ class LinkValidityPredictor:
         """
         self.logger.info(f"Performing {self.cv_folds}-fold cross-validation...")
 
-        # Initialize CatBoost classifier
-        self.model = CatBoostClassifier(**self.model_params)
-
         # Set up cross-validation
         cv = StratifiedKFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_seed)
 
-        # Perform cross-validation for F1 score
-        f1_scores = cross_val_score(self.model, X, y, cv=cv, scoring='f1')
+        # Perform cross-validation manually with a fresh model per fold.
+        # We avoid sklearn's cross_val_score because CatBoost (<= 1.2.8) does not
+        # implement __sklearn_tags__, which scikit-learn >= 1.6 requires.
+        f1_scores = []
+        auc_scores = []
+        for fold_num, (train_idx, val_idx) in enumerate(cv.split(X, y), start=1):
+            X_fold_train, X_fold_val = X.iloc[train_idx], X.iloc[val_idx]
+            y_fold_train, y_fold_val = y.iloc[train_idx], y.iloc[val_idx]
 
-        # Perform cross-validation for AUC score
-        auc_scores = cross_val_score(self.model, X, y, cv=cv, scoring='roc_auc')
+            fold_model = CatBoostClassifier(**self.model_params)
+            fold_model.fit(X_fold_train, y_fold_train)
+
+            y_pred = fold_model.predict(X_fold_val)
+            y_pred_proba = fold_model.predict_proba(X_fold_val)[:, 1]
+
+            fold_f1 = f1_score(y_fold_val, y_pred)
+            fold_auc = roc_auc_score(y_fold_val, y_pred_proba)
+            f1_scores.append(fold_f1)
+            auc_scores.append(fold_auc)
+            self.logger.info(
+                f"Fold {fold_num}/{self.cv_folds}: F1={fold_f1:.4f}, AUC={fold_auc:.4f}"
+            )
+
+        f1_scores = np.array(f1_scores)
+        auc_scores = np.array(auc_scores)
 
         # Train final model on full dataset
+        self.model = CatBoostClassifier(**self.model_params)
         self.model.fit(X, y)
 
         return f1_scores, auc_scores, self.model
