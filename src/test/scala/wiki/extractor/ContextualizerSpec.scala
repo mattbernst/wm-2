@@ -102,6 +102,19 @@ class ContextualizerSpec extends UnitSpec {
     out.map(_.stringContent).toSeq shouldBe Seq("apple")
   }
 
+  it should "recase a multi-word phrase to its sentence-cased canonical label" in {
+    // Wikipedia article titles are sentence-cased ("Blue-gray tanager"), not
+    // title-cased ("Blue-Gray Tanager"). A lowercase multi-word phrase must
+    // therefore be expanded to its sentence-cased form so it can match.
+    val ng = multiTokenNgram(
+      "blue-gray tanager",
+      Array(new Span(0, 4), new Span(4, 5), new Span(5, 9), new Span(10, 17)),
+      LOWER
+    )
+    val out = Contextualizer.labelVariants(ng, language, isUsableLabel = _ == "Blue-gray tanager")
+    out.map(_.stringContent).toSeq should contain("Blue-gray tanager")
+  }
+
   behavior of "Contextualizer.caseVariants"
 
   it should "title-case a lowercase single-token NGram" in {
@@ -116,16 +129,19 @@ class ContextualizerSpec extends UnitSpec {
     variants.map(_.stringContent).toSeq shouldBe Seq("Iceland")
   }
 
-  it should "title-case each token of a multi-token NGram, preserving separators" in {
+  it should "produce both title-cased and sentence-cased variants of a multi-token NGram" in {
+    // Wikipedia uses title case for some multi-word titles ("New York") and
+    // sentence case for others ("Blue-gray tanager"), so both candidates are
+    // generated and the usable one is selected downstream.
     Contextualizer
       .caseVariants(multiTokenNgram("new york", Array(new Span(0, 3), new Span(4, 8)), LOWER), language)
       .map(_.stringContent)
-      .toSeq shouldBe Seq("New York")
+      .toSeq should contain theSameElementsAs Seq("New York", "New york")
 
     Contextualizer
       .caseVariants(multiTokenNgram("NEW YORK", Array(new Span(0, 3), new Span(4, 8)), UPPER), language)
       .map(_.stringContent)
-      .toSeq shouldBe Seq("New York")
+      .toSeq should contain theSameElementsAs Seq("New York", "New york")
   }
 
   it should "produce no variant for MIXED or UPPER_FIRST NGrams" in {

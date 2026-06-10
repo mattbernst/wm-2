@@ -448,12 +448,35 @@ object Contextualizer {
   def caseVariants(ng: NGram, language: Language): Array[NGram] =
     ng.caseContext match {
       case CaseContext.LOWER | CaseContext.UPPER =>
-        val titled = titleCaseByToken(ng, language)
-        if (titled != ng.stringContent)
-          Array(ng.copy(stringContent = titled, isRecased = true, isDowncased = false))
-        else Array.empty
+        // Wikipedia article titles use two conventions: title case for proper
+        // nouns ("New York") and sentence case for common-noun phrases
+        // ("Blue-gray tanager"). Generate both candidates and let downstream
+        // usability filtering select whichever matches a real label.
+        Seq(titleCaseByToken(ng, language), sentenceCase(ng, language)).distinct
+          .filter(_ != ng.stringContent)
+          .map(s => ng.copy(stringContent = s, isRecased = true, isDowncased = false))
+          .toArray
       case _ => Array.empty
     }
+
+  /**
+    * Sentence-case an NGram: capitalize only the first grapheme of the whole
+    * surface form, leaving the remaining characters as written. For UPPER case
+    * NGrams the body is lowercased first. For example "blue-gray tanager"
+    * becomes "Blue-gray tanager" and "BLUE-GRAY TANAGER" becomes
+    * "Blue-gray tanager".
+    *
+    * @param ng       An NGram with LOWER or UPPER case context
+    * @param language The language used for locale-aware capitalization
+    * @return         The sentence-cased surface form
+    */
+  def sentenceCase(ng: NGram, language: Language): String = {
+    val base = ng.caseContext match {
+      case CaseContext.UPPER => ng.stringContent.toLowerCase(language.locale)
+      case _                 => ng.stringContent
+    }
+    language.capitalizeFirst(base)
+  }
 
   /**
     * Title-case an NGram token by token. For UPPER case NGrams the body is

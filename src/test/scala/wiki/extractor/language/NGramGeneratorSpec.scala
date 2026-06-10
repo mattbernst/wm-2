@@ -422,6 +422,19 @@ class NGramGeneratorSpec extends UnitSpec {
     the.caseContext shouldBe CaseContext.UPPER_FIRST
   }
 
+  it should "treat a lowercase hyphenated phrase as LOWER, not MIXED" in {
+    // The phrase "blue-gray tanager" tokenizes to ["blue", "-", "gray",
+    // "tanager"]. The "-" token has no cased letter; it must not poison the
+    // aggregate case context to MIXED, or the phrase can never be recased to
+    // the canonical sentence-cased label "Blue-gray tanager".
+    val ngg    = generator(10)
+    val input  = "The image shows a blue-gray tanager bird perched on a branch."
+    val result = ngg.generate(input)
+
+    val phrase = result.find(ng => input.substring(ng.start, ng.end) == "blue-gray tanager").get
+    phrase.caseContext shouldBe CaseContext.LOWER
+  }
+
   def generator(maxTokens: Int, allowedStrings: mutable.Set[String] = mutable.Set()) = {
     val sd = {
       val inStream = new FileInputStream("opennlp/en/opennlp-en-ud-ewt-sentence-1.1-2.4.0.bin")
