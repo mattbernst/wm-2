@@ -129,12 +129,17 @@ class NGramGenerator(
   }
 
   private def identifyCaseContext(text: String, tokenSpans: Array[Span]): CaseContext = {
-    val contexts = tokenSpans.map { span =>
-      val token = text.substring(span.getStart, span.getEnd)
-      identifyCaseContext(token)
-    }
+    // Only tokens that contain a cased letter carry a case signal. Punctuation
+    // tokens such as "-", ",", or "." have no case and must be ignored, or a
+    // lowercase hyphenated phrase like "blue-gray tanager" would be classified
+    // MIXED and never qualify for recasing to "Blue-gray tanager".
+    val contexts = tokenSpans
+      .map(span => text.substring(span.getStart, span.getEnd))
+      .filter(_.exists(_.isLetter))
+      .map(identifyCaseContext)
 
-    if (contexts.forall(_ == CaseContext.UPPER)) CaseContext.UPPER
+    if (contexts.isEmpty) CaseContext.MIXED
+    else if (contexts.forall(_ == CaseContext.UPPER)) CaseContext.UPPER
     else if (contexts.forall(_ == CaseContext.LOWER)) CaseContext.LOWER
     else if (contexts.forall(c => c == CaseContext.UPPER || c == CaseContext.UPPER_FIRST)) CaseContext.UPPER_FIRST
     else CaseContext.MIXED
